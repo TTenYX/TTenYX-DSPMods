@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<OutputType>Library</OutputType>
+		<RootNamespace>DarkFogWorkshop</RootNamespace>
+		<AssemblyName>DarkFogWorkshop</AssemblyName>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<FileAlignment>512</FileAlignment>
+		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<PackageId>DarkFogWorkshop</PackageId>
+		<BepInExPluginGuid>TTenYX.DSP.DarkFogWorkshop</BepInExPluginGuid>
+		<Description>Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵产出黑雾材料</Description>
+		<Version>1.9.2</Version>
+		<Authors>TTenYX</Authors>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+		<DebugType>full</DebugType>
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<DebugType>none</DebugType>
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="BepInEx.Core" Version="5.4.17" />
+		<PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
+		<PackageReference Include="UnityEngine.Modules" Version="2022.3.53" IncludeAssets="compile" />
+		<PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+	</ItemGroup>
+	<PropertyGroup>
+		<ProfileDir Condition=" '$(ProfileDir)' == '' ">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\0.10.35 new</ProfileDir>
+		<DeployDir Condition=" '$(DeployDir)' == '' ">$(ProfileDir)\BepInEx\plugins\TTenYX-DarkFogWorkshop</DeployDir>
+	</PropertyGroup>
+	<!-- 游戏运行时 dll 被占用会复制失败，只报警告不让编译失败 -->
+	<Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
+		<ItemGroup>
+			<DeployFiles Include="$(TargetPath);manifest.json;README.md" />
+			<DeployFiles Include="icon.png" Condition="Exists('icon.png')" />
+		</ItemGroup>
+		<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(DeployDir)" Retries="0" ContinueOnError="WarnAndContinue" />
+		<Message Importance="high" Text="已部署到 $(DeployDir)" Condition=" '$(MSBuildLastTaskResult)' == 'true' " />
+		<Message Importance="high" Text="部署失败：游戏可能正在运行，关闭游戏后重新编译即可" Condition=" '$(MSBuildLastTaskResult)' != 'true' " />
+	</Target>
+</Project>
