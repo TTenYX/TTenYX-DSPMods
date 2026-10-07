@@ -1,5 +1,51 @@
 # 更新日志
 
+## 2.2.0 — **完整移除自动改名功能**
+
+按需求删除全部自动改名相关代码与配置项。
+
+### 删除的配置项（`[4. 界面]` 分区）
+
+| 项 | 说明 |
+|---|---|
+| `AutoRenameStation` | 自动改名开关 |
+| `StationName` | 自动改名写入的名字 |
+| `LogActivation` | 改名动作日志 |
+
+`[4. 界面]` 现在**只剩 `DiagnosticLog`**。
+
+### 删除的代码
+
+| 文件 | 删除内容 |
+|---|---|
+| `DarkFogWorkshopConfig.cs` | 3 个 ConfigEntry 及绑定；分区常量 `ui` 保留（`DiagnosticLog` 仍在用） |
+| `DarkFogWorkshop.cs` | `DEFAULT_STATION_NAME` 常量、`StationName` 属性 |
+| `DarkFogWorkshopPatch.cs` | `SyncStationName`、`TryFindStationEntity`、`ApplyStationRenameOnMainThread`、`RenameDbg`、`LogRenameStatus`、`DescribeRename`、`DescribeEntitySearch`、`DescribeStationEntity`、`DescribeEntity`、`TryWriteExtraInfoDirect`、`HasWorkshopItems`、`ResolveStationFactory`；`State` 里 8 个改名字段；`Tick` 里 2 处调用点；`ResetState` 里的字段复位 |
+| `UIStationWindowPatch.cs` | `QueueStationRename`、`FlushRenameQueue`、`RequestWindowNameRefresh`、`FlushNameRefresh`、`SyncWindowName`、改名队列/刷新队列字段、`_OnUpdate` 里的两个调用 |
+
+### 验证
+
+- 全工程搜索 `Rename|改名|StationName|WriteExtraInfoOnEntity|ReadExtraInfoOnEntity|nameInput` 均无残留；
+- **本 MOD 现在完全不再读写任何塔名**（`ExtraInfo` / `MarkerName` 相关调用为 0）；
+- 编译 0 错误 0 警告。
+
+功能范围收敛为：**物流塔把科学矩阵兑换成黑雾材料** + 悬停提示。
+
+## 2.1.0 — 放弃四列，回到**单列两列**（= v1.9.2 布局）
+
+四列尝试的结论（2.0.0 / 2.0.1）：
+
+- 四列**能成形**（`科学矩阵 / 算力 / 黑雾材料 / 算力` 都渲染出来了）；
+- 但**第 2 组无法独立成列** —— 实测其名称被并在"第 1 组数值"的段落里；
+- 受控实验（四列等宽 250px）也未能得到等距分开的四列，
+  说明 **>2 列时 `tableColWidths` 的映射规律与"像素累加"的理解不一致**，
+  继续摸索的收益很低。
+
+本版**直接回退**到玩家确认"显示完全没有问题"的 v1.9.2 代码
+（`git checkout stable`），仅把版本号提到 2.1.0 以便与已部署的 2.0.1 区分。
+
+**当前布局**：两张表各自换行，每张两列（名称 | 算力）。
+
 ## 1.9.2
 
 按反馈修三处：

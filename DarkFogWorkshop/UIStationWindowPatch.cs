@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -79,31 +79,6 @@ namespace DarkFogWorkshop
         {
             return _mainThreadId == 0
                    || System.Threading.Thread.CurrentThread.ManagedThreadId == _mainThreadId;
-        }
-
-        /// <summary>
-        /// 由核心逻辑（**可能在工作线程**）调用：把"给这座塔改名"投递到主线程队列。
-        ///
-        /// 为什么必须投递而不是"等下一帧"：实测 `PlanetTransport.GameTick` 在本环境下
-        /// **每帧都在工作线程**（装了 DSPOptimizations 之类的性能 mod），
-        /// 所以"下一帧主线程那次 tick 会补上"这种假设不成立。
-        /// 唯一可靠的主线程时机是 `UIStationWindow._OnUpdate`。
-        /// </summary>
-        internal static void QueueStationRename(int stationId)
-        {
-            if (stationId <= 0)
-            {
-                return;
-            }
-            lock (renameQueueLock)
-            {
-                // 每次 tick 都可能投递同一座塔，去重避免队列堆积。
-                if (!pendingRenameIds.Add(stationId))
-                {
-                    return;
-                }
-                pendingRenames.Enqueue(stationId);
-            }
         }
 
         /// <summary>行距倍率（1.5 倍行距）。</summary>
@@ -196,44 +171,6 @@ namespace DarkFogWorkshop
             }
         }
 
-        /// <summary>主线程：执行队列里的改名写入。</summary>
-        private static void FlushRenameQueue()
-        {
-            while (true)
-            {
-                int stationId;
-                lock (renameQueueLock)
-                {
-                    if (pendingRenames.Count == 0)
-                    {
-                        return;
-                    }
-                    stationId = pendingRenames.Dequeue();
-                    pendingRenameIds.Remove(stationId);
-                }
-                try
-                {
-                    DarkFogWorkshopPatch.ApplyStationRenameOnMainThread(stationId);
-                }
-                catch (System.Exception e)
-                {
-                    DarkFogWorkshop.Log.LogWarning($"[改名] 主线程改名失败（塔{stationId}）：{e}");
-                }
-            }
-        }
-
-        /// <summary>挂起的"刷新窗口塔名"请求（stationId）。核心逻辑在工作线程登记。</summary>
-        private static int pendingNameRefresh;
-        private static readonly object nameRefreshLock = new object();
-
-        /// <summary>待改名队列（工作线程投递，主线程执行）。只放 stationId 这种值类型。</summary>
-        private static readonly System.Collections.Generic.Queue<int> pendingRenames =
-            new System.Collections.Generic.Queue<int>();
-        /// <summary>已在队列里的 stationId，用于去重。</summary>
-        private static readonly System.Collections.Generic.HashSet<int> pendingRenameIds =
-            new System.Collections.Generic.HashSet<int>();
-        private static readonly object renameQueueLock = new object();
-
         [HarmonyPostfix]
         [HarmonyPatch("_OnCreate")]
         public static void OnCreate_Postfix(UIStationWindow __instance)
@@ -271,9 +208,6 @@ namespace DarkFogWorkshop
         [HarmonyPatch("_OnUpdate")]
         public static void OnUpdate_Postfix(UIStationWindow __instance)
         {
-            // 主线程：先执行工作线程投递过来的改名写入，再处理刷新请求与常规刷新。
-            FlushRenameQueue();
-            FlushNameRefresh();
             EnsureWidget(__instance);
             Refresh(__instance);
         }
@@ -531,123 +465,8 @@ namespace DarkFogWorkshop
             {
                 UpdateHelpTip(station);
             }
-            SyncWindowName(window, station);
         }
 
-        /// <summary>
-        /// 由核心逻辑（**可能在工作线程**）调用：登记一次"稍后刷新窗口塔名"的请求。
-        ///
-        /// ⚠️ 绝对不要在这里直接碰 Unity 对象。核心逻辑跑在 `PlanetTransport.GameTick` 里，
-        /// 该 tick 是多线程的；从工作线程反射调用 `UIStationWindow.OnStationIdChange`
-        /// （会操作窗口、InputField 等 Unity 对象）实测导致**原生崩溃**
-        /// （UnityPlayer.dll，异常码 0x80000003，游戏直接闪退）。
-        ///
-        /// 这里只把一个 stationId 放进队列，真正的刷新在 `_OnUpdate`（主线程）里做。
-        /// </summary>
-        internal static void RequestWindowNameRefresh(int stationId)
-        {
-            if (stationId <= 0)
-            {
-                return;
-            }
-            lock (nameRefreshLock)
-            {
-                pendingNameRefresh = stationId;
-            }
-        }
-
-        /// <summary>主线程：处理挂起的塔名刷新请求。</summary>
-        private static void FlushNameRefresh()
-        {
-            int id;
-            lock (nameRefreshLock)
-            {
-                id = pendingNameRefresh;
-                pendingNameRefresh = 0;
-            }
-            if (id <= 0)
-            {
-                return;
-            }
-            UIStationWindow window = _window;
-            if (window == null || !window.active || window.stationId != id)
-            {
-                // 窗口没打开、或开着别的塔：保留请求，等用户打开这座塔时再刷。
-                lock (nameRefreshLock)
-                {
-                    if (pendingNameRefresh == 0)
-                    {
-                        pendingNameRefresh = id;
-                    }
-                }
-                return;
-            }
-            try
-            {
-                var method = AccessTools.Method(typeof(UIStationWindow), "OnStationIdChange");
-                if (method == null)
-                {
-                    DarkFogWorkshop.Log.LogWarning("[改名] 找不到 UIStationWindow.OnStationIdChange，无法刷新窗口");
-                    return;
-                }
-                method.Invoke(window, null);
-                DarkFogWorkshop.Log.LogInfo($"[改名] 已在主线程刷新窗口塔名（塔{id}）");
-            }
-            catch (System.Exception e)
-            {
-                DarkFogWorkshop.Log.LogWarning($"[改名] 刷新窗口塔名失败：{e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 把窗口里显示的塔名同步成工厂里存的塔名。
-        ///
-        /// 自动改名写的是工厂侧的存储（`PlanetFactory.ReadExtraInfoOnEntity` / `WriteExtraInfoOnEntity`），
-        /// 窗口上那个输入框不会自己刷新，所以读回值不一致时回填一次。
-        ///
-        /// 两个必须的守卫：
-        ///   1. 玩家正在输入（`isFocused`）时绝不回填，否则会把玩家打的字覆盖掉；
-        ///   2. 只有读到非空值才回填，避免把字段清空。
-        /// </summary>
-        private static void SyncWindowName(UIStationWindow window, StationComponent station)
-        {
-            if (!ModConfig.AutoRenameStation.Value || station == null || station.entityId <= 0)
-            {
-                return;
-            }
-            InputField input = window.nameInput;
-            if (input == null || input.isFocused)
-            {
-                return;
-            }
-            PlanetFactory factory = GameMain.data != null
-                                    && GameMain.data.factories != null
-                                    && station.planetId >= 0
-                                    && station.planetId < GameMain.data.factories.Length
-                ? GameMain.data.factories[station.planetId]
-                : null;
-            if (factory == null)
-            {
-                return;
-            }
-            try
-            {
-                string stored = factory.ReadExtraInfoOnEntity(station.entityId);
-                if (string.IsNullOrEmpty(stored) || input.text == stored)
-                {
-                    return;
-                }
-                input.text = stored;
-                if (window.nameUIInput != null && window.nameUIInput.inputField != null)
-                {
-                    window.nameUIInput.inputField.text = stored;
-                }
-            }
-            catch (System.Exception)
-            {
-                // 读不到就跳过，不影响其它功能。
-            }
-        }
 
         /// <summary>
         /// 悬停提示：标题固定为「黑雾工坊DarkFogWorkshop」，正文是本塔的消耗/产出明细。

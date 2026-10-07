@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 
@@ -26,30 +26,9 @@ namespace DarkFogWorkshop
     {
         public const string PLUGIN_GUID = "TTenYX.DSP.DarkFogWorkshop";
         public const string PLUGIN_NAME = "DarkFogWorkshop";
-        /// <summary>自动改名的默认名字（实际取自 config 的 StationName）。</summary>
-        public const string DEFAULT_STATION_NAME = "黑雾工坊";
-        /// <summary>
-        /// 满足条件时自动改成的塔名。取自 config 的 `StationName`（默认「黑雾工坊」）。
-        /// 不是 const —— 允许玩家在 cfg 里改成任意名字，改完即时生效。
-        /// </summary>
-        public static string StationName
-        {
-            get
-            {
-                try
-                {
-                    string configured = ModConfig.StationName != null ? ModConfig.StationName.Value : null;
-                    return string.IsNullOrEmpty(configured) ? DEFAULT_STATION_NAME : configured;
-                }
-                catch (System.Exception)
-                {
-                    return DEFAULT_STATION_NAME;
-                }
-            }
-        }
         /// <summary>问号提示的标题。</summary>
         public const string HELP_TITLE = "黑雾工坊 DarkFogWorkshop";
-        public const string PLUGIN_VERSION = "2.1.0";
+        public const string PLUGIN_VERSION = "2.2.0";
 
         private static readonly Harmony harmony = new Harmony(PLUGIN_GUID);
         internal static ManualLogSource Log;

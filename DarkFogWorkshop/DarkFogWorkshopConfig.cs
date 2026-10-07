@@ -42,10 +42,6 @@ namespace DarkFogWorkshop
         /* ---- 其它 ---- */
         /// <summary>参与兑换的材料槽位上限（格号，2 = 只到第 2 格）。</summary>
         internal static ConfigEntry<int> OutputSlotLimit;
-        internal static ConfigEntry<bool> AutoRenameStation;
-        /// <summary>自动改名写入的名字。</summary>
-        internal static ConfigEntry<string> StationName;
-        internal static ConfigEntry<bool> LogActivation;
         internal static ConfigEntry<bool> DiagnosticLog;
 
         internal static void Bind(ConfigFile config)
@@ -110,20 +106,6 @@ namespace DarkFogWorkshop
                 "本项只限制产出侧；第 1 格（矩阵）始终参与。装运输塔扩容后想用更多格就填更大。\n" +
                 "每种材料各占一份算力，格数越多矩阵消耗越快。",
                 new AcceptableValueRange<int>(2, 20)));
-
-            AutoRenameStation = config.Bind(ui, "AutoRenameStation", true, new ConfigDescription(
-                "是否启用自动改名。\n" +
-                "true（默认）：物流塔满足黑雾工坊条件（第 1 格本地需求的科学矩阵 + 第 2 格起有黑雾材料）\n" +
-                "  且塔名还是空的，就自动改成 StationName 指定的名字。\n" +
-                "false：完全不动塔名；已经被改过的名字也不会被还原。\n" +
-                "改动本项**立即生效**（无需重启游戏）。", null));
-
-            StationName = config.Bind(ui, "StationName", "黑雾工坊", new ConfigDescription(
-                "自动改名写入的名字。默认「黑雾工坊」。\n" +
-                "注意：只对名字还为空 的塔生效；已经有名字（你自己起的或本 mod 写过的）不会被覆盖。", null));
-
-            LogActivation = config.Bind(ui, "LogActivation", false, new ConfigDescription(
-                "把自动改名等动作写入 BepInEx 日志（调试用）。", null));
 
             DiagnosticLog = config.Bind(ui, "DiagnosticLog", false, new ConfigDescription(
                 "把每座塔每 2 秒的兑换判定过程写入 BepInEx 日志，用于排查「不兑换」的问题。\n" +
