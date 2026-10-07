@@ -1,4 +1,4 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -51,7 +51,7 @@ namespace DarkFogWorkshop
         /// 提示框宽度。1.3.2 的排版里"第 N 槽位（产出）：物品名"加上图标后更宽，
         /// 太窄会折行破坏对齐，所以给足宽度。
         /// </summary>
-        private const int TipWidth = 465;
+        private const int TipWidth = 560;
 
         private static UIStationWindow _window;
         private static UIButton _helpButton;
@@ -127,14 +127,16 @@ namespace DarkFogWorkshop
         /// 这里用**像素绝对值**（与游戏指引文件里 `tablerowheights=30` 的用法一致）。
         ///
         /// 宽度依据实测字宽：图标 ≈28px、汉字 ≈13px、数字 ≈7px、空格 ≈7px。
-        /// - 名称列：最长 `物质重组器` = 28 + 65 = 93px，**再加名称侧间隔 4 空格 ≈28px**
-        ///   ⇒ 需求 ≈121px → 取 **140**（留少量余量）
-        /// - 算力列：最长 `3000` = 28px → 取 **80**（右对齐余量）
+        /// - 名称列：最长 `物质重组器` = 28 + 65 = 93px，**加名称侧间隔到 24 单位 ≈168px**
+        ///   ⇒ 取 **170**
+        /// - 算力列：最长 `3000` = 28px，右对齐需余量 ⇒ 取 **80**
+        ///
+        /// 四列合计 = 170 + 80 + 170 + 80 = **500px**，`TipWidth = 560` 留有余量。
         /// </summary>
-        private static readonly float[] TipTableColWidths = { 140f, 80f };
+        private static readonly float[] TipTableColWidths = { 170f, 80f, 170f, 80f };
 
         /// <summary>
-        /// 表格行高（像素）。行数 = 表头 1 + 矩阵 6 + **空行 1** + 小标题 1 + 材料 6 = **14**。
+        /// 表格行高（像素）。行数 = 表头 1 + 数据 6 = **7**（四列七行）。
         ///
         /// ⚠️ **必须非空**：`TextGenerationSettings.get_useTable` 的 IL 要求
         /// `tableColWidths` 与 `tableRowHeights` **两者都非空**，表格模式才启用
@@ -143,7 +145,6 @@ namespace DarkFogWorkshop
         private static readonly float[] TipTableRowHeights =
         {
             24f, 24f, 24f, 24f, 24f, 24f, 24f,
-            24f, 24f, 24f, 24f, 24f, 24f, 24f,
         };
 
         /// <summary>
@@ -151,10 +152,11 @@ namespace DarkFogWorkshop
         ///
         /// ⚠️ **数组长度必须 ≥ 列数**：`GetColAlignment` 的 IL 在
         /// `col &lt; 0 || col &gt;= tableColAlignments.Length` 时**回退到 `textAnchor`**，
-        /// 属于静默失效。所以两列就要给两个元素。
+        /// 属于静默失效。四列就给四个元素（两列名称左对齐、两列算力右对齐）。
         /// </summary>
         private static readonly Text.HorzAlignment[] TipTableColAlignments =
         {
+            Text.HorzAlignment.Left, Text.HorzAlignment.Right,
             Text.HorzAlignment.Left, Text.HorzAlignment.Right,
         };
 

@@ -1365,31 +1365,21 @@ namespace DarkFogWorkshop
                 }
             }
 
-            // —— 算力表：**单列两列**（名称 | 算力），全部交给游戏表格模式排版 ——
+            // —— 算力表：**四列七行**（科学矩阵 | 算力 ‖ 黑雾材料 | 算力）——
             //
-            // 从"四列并排"改回单列的原因：四列 + 图标 + 中文名称的宽度需求接近提示框上限，
-            // 实测把列宽调大后引擎会压缩列、右对齐数值反而各行漂移（1.5.1 比 1.5.0 更乱）。
-            // 单列只有 2 列、宽度需求约 260px，约束简单，能一次调准。
+            // 行数 = 表头 1 + 数据 6 = **7**，必须与
+            // `UIStationWindowPatch.TipTableRowHeights` 的数组长度一致。
             //
-            // 表格靠"制表符分列 + Text.tableColWidths/tableRowHeights"（游戏自带机制），
-            // 行数必须与 `UIStationWindowPatch.TipTableRowHeights` 的数组长度一致。
+            // 每行的两个「名称 + 算力」单元格都补齐到同一制表位，
+            // 因此四列的制表位在 7 行里全部一致（这是对齐的前提）。
             sb.AppendLine();
-            sb.AppendLine(Line(TableHeader2()));
-            sb.AppendLine(Line(TableRow2(6001, MatrixPointsOf(6001))));
-            sb.AppendLine(Line(TableRow2(6002, MatrixPointsOf(6002))));
-            sb.AppendLine(Line(TableRow2(6003, MatrixPointsOf(6003))));
-            sb.AppendLine(Line(TableRow2(6004, MatrixPointsOf(6004))));
-            sb.AppendLine(Line(TableRow2(6005, MatrixPointsOf(6005))));
-            sb.AppendLine(Line(TableRow2(6006, MatrixPointsOf(6006))));
-            // 两段之间空一行（表格内空行，见 `TableBlankRow`）。
-            sb.AppendLine(Line(TableBlankRow()));
-            sb.AppendLine(Line(TableSectionHeader(DarkFogWorkshop.Tr("黑雾材料算力", "Dark fog materials"))));
-            sb.AppendLine(Line(TableRow2(EnergyFragmentId, MaterialPointsOf(EnergyFragmentId))));
-            sb.AppendLine(Line(TableRow2(DarkFogMatrixId, MaterialPointsOf(DarkFogMatrixId))));
-            sb.AppendLine(Line(TableRow2(SiliconNeuronId, MaterialPointsOf(SiliconNeuronId))));
-            sb.AppendLine(Line(TableRow2(NegentropySingularityId, MaterialPointsOf(NegentropySingularityId))));
-            sb.AppendLine(Line(TableRow2(MatterReassemblerId, MaterialPointsOf(MatterReassemblerId))));
-            sb.AppendLine(Line(TableRow2(CoreElementId, MaterialPointsOf(CoreElementId))));
+            sb.AppendLine(Line(TableHeader4()));
+            sb.AppendLine(Line(TableRow4(6001, MatrixPointsOf(6001), EnergyFragmentId, MaterialPointsOf(EnergyFragmentId))));
+            sb.AppendLine(Line(TableRow4(6002, MatrixPointsOf(6002), DarkFogMatrixId, MaterialPointsOf(DarkFogMatrixId))));
+            sb.AppendLine(Line(TableRow4(6003, MatrixPointsOf(6003), SiliconNeuronId, MaterialPointsOf(SiliconNeuronId))));
+            sb.AppendLine(Line(TableRow4(6004, MatrixPointsOf(6004), NegentropySingularityId, MaterialPointsOf(NegentropySingularityId))));
+            sb.AppendLine(Line(TableRow4(6005, MatrixPointsOf(6005), MatterReassemblerId, MaterialPointsOf(MatterReassemblerId))));
+            sb.AppendLine(Line(TableRow4(6006, MatrixPointsOf(6006), CoreElementId, MaterialPointsOf(CoreElementId))));
 
             sb.AppendLine();
             sb.AppendLine(Line(DarkFogWorkshop.Tr("Tips: 各物品算力可在配置文件中修改",
@@ -1414,7 +1404,37 @@ namespace DarkFogWorkshop
         //    而且必然对不准（空格与数字宽度比不等于 2:1，实测每多一位数字右移 ≈3px）。
         // ————————————————————————————————————————————————————————————
 
-        /// <summary>表头：`科学矩阵 | 算力`。</summary>
+        /// <summary>四列表头：`科学矩阵 | 算力 | 黑雾材料 | 算力`。</summary>
+        private static string TableHeader4()
+        {
+            return CellHeader(DarkFogWorkshop.Tr("科学矩阵", "Matrix"), DarkFogWorkshop.Tr("算力", "Pts"))
+                 + CellHeader(DarkFogWorkshop.Tr("黑雾材料", "DarkFog"), DarkFogWorkshop.Tr("算力", "Pts"));
+        }
+
+        /// <summary>
+        /// 表头单元格：名称也**当成图标那样补齐到固定宽度**。
+        ///
+        /// 表头名「科学矩阵」只有 8 单位，若按 `Cell2` 的实际宽度补齐，
+        /// 制表位会与数据行不同 ⇒ 表头「算力」与下面的数值不在同一列。
+        /// 这里用 `NameFieldUnits - NameUnits` 作为名称宽度，与数据行一致。
+        /// </summary>
+        private static string CellHeader(string name, string valueText)
+        {
+            int pad = Math.Max(NameValueGapSpaces, NameFieldUnits - NameUnits);
+            return name + new string(' ', pad) + "\t" + valueText;
+        }
+
+        /// <summary>表头名称占用的固定宽度（显示单位）：按 4 个中文字符宽计。</summary>
+        private const int NameUnits = 8;
+
+        /// <summary>四列数据行：左「矩阵 + 算力」、右「材料 + 算力」。</summary>
+        private static string TableRow4(int leftItem, double leftValue, int rightItem, double rightValue)
+        {
+            return Cell2(ItemLabel(leftItem), ValueText(leftValue), true)
+                 + Cell2(ItemLabel(rightItem), ValueText(rightValue), true);
+        }
+
+        /// <summary>表头：`科学矩阵 | 算力`（两列版，保留备用）。</summary>
         private static string TableHeader2()
         {
             return Cell2(DarkFogWorkshop.Tr("科学矩阵", "Matrix"), DarkFogWorkshop.Tr("算力", "Pts"), false);
