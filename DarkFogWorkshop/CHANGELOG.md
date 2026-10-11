@@ -1,5 +1,17 @@
 # 更新日志
 
+## 1.0.1
+
+### 修复
+
+- **修正 Thunderstore 依赖声明**：原先误写为通用的 `BepInEx-BepInExPack-5.4.2100`
+  （那是 Valheim / Lethal Company 等游戏用的），改为 **DSP 社区专用的
+  `xiaoye97-BepInEx-5.4.17`**。
+  原先的写法会让 r2modman 在 DSP 配置里拉取错误的 BepInEx，请更新到此版本。
+- 补充 `website_url`（指向源码仓库）。
+
+> 功能与 1.0.0 相同，本版为重新发布。
+
 ## 1.0.0 — 首个发布版
 
 **黑雾工坊 DarkFogWorkshop** 首次发布：用物流塔把**科学矩阵**兑换成**黑雾材料**。

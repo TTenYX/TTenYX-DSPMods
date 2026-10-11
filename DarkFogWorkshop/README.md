@@ -281,6 +281,13 @@ dotnet build 'DSP-DarkFogWorkshop\DarkFogWorkshop.csproj' -c Release
 
 ## 更新日志
 
+### 1.0.1
+
+- **修正 Thunderstore 依赖声明**：由通用的 `BepInEx-BepInExPack-5.4.2100` 改为
+  DSP 社区专用的 **`xiaoye97-BepInEx-5.4.17`**。原先的写法会让 r2modman
+  在 DSP 配置里拉取错误的 BepInEx。
+- 补充 `website_url`。功能与 1.0.0 相同。
+
 ### 1.0.0 — 首个发布版
 
 - 用物流塔把**科学矩阵**兑换成**黑雾材料**。

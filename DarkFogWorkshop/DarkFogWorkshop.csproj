@@ -26,7 +26,7 @@
 		<PackageId>DarkFogWorkshop</PackageId>
 		<BepInExPluginGuid>TTenYX.DSP.DarkFogWorkshop</BepInExPluginGuid>
 		<Description>Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵产出黑雾材料</Description>
-		<Version>1.0.0</Version>
+		<Version>1.0.1</Version>
 		<Authors>TTenYX</Authors>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
