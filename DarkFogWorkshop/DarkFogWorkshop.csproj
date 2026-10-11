@@ -12,6 +12,17 @@
 		<Deterministic>true</Deterministic>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<!--
+		  不要把 git 修订号编进 AssemblyInformationalVersion（.NET 的默认行为）。
+
+		  默认下 ProductVersion 形如 `1.0.0+472fdc3...`，于是**每次提交都会改变 DLL 的
+		  SHA256** —— 而本项目一直用 SHA256 校验部署产物与发布包，校验值因此无谓漂移；
+		  换个 git 仓库或换个目录构建，也会得到不同的哈希。
+
+		  关掉后构建与 git 状态、绝对路径均无关：任意检出、任意路径都产出同一个 DLL。
+		  版本溯源改用 git 标签（如 release-1.0.0）。
+		-->
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<PackageId>DarkFogWorkshop</PackageId>
 		<BepInExPluginGuid>TTenYX.DSP.DarkFogWorkshop</BepInExPluginGuid>
 		<Description>Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵产出黑雾材料</Description>
