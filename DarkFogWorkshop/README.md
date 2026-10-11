@@ -190,6 +190,7 @@ BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg
 | `AccumulatePartialPoints` | `true` | 单帧算力买不起 1 个材料时，是否攒零头凑够 1 个 |
 | `VerboseLog` | `false` | 详细诊断日志：每次兑换逐槽位打印物品/数量/上限/单价/配额/产出 |
 | `OutputSlotLimit` | `6` | 参与兑换的材料槽位上限（第几格），范围 2–20 |
+| `MetadataMatrixPerMinute` | `600` | 勾选「元数据兑换科学矩阵」后的兑换速率（个/分钟） |
 
 ### `[2. 科学矩阵算力]`
 
@@ -222,6 +223,15 @@ BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg
 | 配置项 | 默认 | 说明 |
 |---|---|---|
 | `DiagnosticLog` | `false` | 把每座塔每 2 秒的兑换判定过程写入日志，排查"不兑换"用 |
+
+### 元数据兑换科学矩阵
+
+当第 1 格放入科学矩阵、并设置为**本地仓储**时，物流塔窗口上方会出现
+「元数据兑换科学矩阵」勾选框。勾选后，MOD 会按第 1 格当前矩阵的对应元数据余额，
+自动兑换该矩阵并直接补入第 1 格，默认速率为 **600 个/分钟**。
+
+速率可通过 `[1. 通用]` 中的 `MetadataMatrixPerMinute` 修改。
+兑换受槽位容量和元数据余额限制；取消勾选即可停止。
 
 ### 常见调参
 
@@ -280,6 +290,11 @@ dotnet build 'DSP-DarkFogWorkshop\DarkFogWorkshop.csproj' -c Release
 - 编译后会自动部署到 r2modman 的 profile（游戏运行中会部署失败，关掉游戏再编译）。
 
 ## 更新日志
+
+### 1.0.2
+
+- 当物流塔第 1 格为科学矩阵且设为**本地仓储**时，显示「元数据兑换科学矩阵」勾选框。
+- 勾选后按 `MetadataMatrixPerMinute` 自动兑换对应科学矩阵并补入第 1 格，默认 600 个/分钟。
 
 ### 1.0.1
 

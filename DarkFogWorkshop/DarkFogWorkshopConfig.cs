@@ -20,6 +20,8 @@ namespace DarkFogWorkshop
         internal static ConfigEntry<double> SpeedMultiplier;
         /// <summary>每帧算力买不起 1 个矩阵时，是否攒零头凑够 1 个。</summary>
         internal static ConfigEntry<bool> AccumulatePartialPoints;
+        /// <summary>元数据自动兑换科学矩阵的速率（个/分钟），默认 600。</summary>
+        internal static ConfigEntry<int> MetadataMatrixPerMinute;
         /// <summary>详细诊断日志（逐槽位）。</summary>
         internal static ConfigEntry<bool> VerboseLog;
 
@@ -85,6 +87,10 @@ namespace DarkFogWorkshop
                 "false：严格按单帧算力结算。此时若「每分钟算力 / 3600」小于单价，就会永远兑换不出来——\n" +
                 "  例如每分钟算力 3600 点（=1 点/帧）时，物质重组器 100 点、核心素 300 点都买不起，\n" +
                 "  结果是「只有能量碎片(50 点)能产出」，其它材料永远为 0。", null));
+
+            MetadataMatrixPerMinute = config.Bind(general, "MetadataMatrixPerMinute", 600, new ConfigDescription(
+                "勾选物流塔上的「元数据兑换科学矩阵」后，按此速率兑换对应矩阵（个/分钟）。默认 600。",
+                new AcceptableValueRange<int>(1, 1000000)));
 
             VerboseLog = config.Bind(general, "VerboseLog", false, new ConfigDescription(
                 "详细诊断日志：每次真正发生兑换时，逐槽位打印 物品/数量/上限/单价/配额/本帧产出。\n" +

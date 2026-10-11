@@ -90,12 +90,131 @@ namespace DarkFogWorkshop
             internal readonly int[] materialPartialItem = new int[OutputSlotCapacity];
             /// <summary>正在兑换的材料种数。</summary>
             internal int activeKinds;
+            /// <summary>是否启用了元数据自动兑换对应科学矩阵。</summary>
+            internal bool metadataExchangeEnabled;
+            /// <summary>元数据兑换的分数矩阵进度（按每分钟速率累积到整数个）。</summary>
+            internal double metadataPartial;
             /// <summary>上次打诊断日志的帧号，用于限流。</summary>
             internal long lastDiagTick;
         }
 
         private static readonly ConditionalWeakTable<StationComponent, State> states =
             new ConditionalWeakTable<StationComponent, State>();
+        private static readonly HashSet<StationComponent> metadataStations = new HashSet<StationComponent>();
+
+        internal static void SetMetadataExchangeEnabled(StationComponent station, bool enabled)
+        {
+            if (station == null)
+            {
+                return;
+            }
+            State state = GetState(station);
+            state.metadataExchangeEnabled = enabled;
+            state.metadataPartial = 0.0;
+            if (enabled)
+            {
+                metadataStations.Add(station);
+            }
+            else
+            {
+                metadataStations.Remove(station);
+            }
+        }
+
+        internal static bool IsMetadataExchangeEnabled(StationComponent station)
+        {
+            return station != null && states.TryGetValue(station, out State state)
+                && state.metadataExchangeEnabled;
+        }
+
+        internal static bool IsMetadataExchangeEligible(StationComponent station)
+        {
+            if (station == null || station.storage == null || station.storage.Length <= MatrixSlot)
+            {
+                return false;
+            }
+            StationStore matrix = station.storage[MatrixSlot];
+            return matrix.localLogic == ELogisticStorage.None && IsScienceMatrix(matrix.itemId);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameMain), "Update")]
+        public static void GameMain_Update_Postfix()
+        {
+            if (metadataStations.Count == 0 || GameMain.data == null || DSPGame.propertySystem == null)
+            {
+                return;
+            }
+
+            List<StationComponent> remove = null;
+            foreach (StationComponent station in metadataStations)
+            {
+                if (station == null || !states.TryGetValue(station, out State state)
+                    || !state.metadataExchangeEnabled
+                    || !IsMetadataExchangeEligible(station)
+                    || !TryExchangeMetadataMatrix(station))
+                {
+                    if (remove == null)
+                    {
+                        remove = new List<StationComponent>();
+                    }
+                    remove.Add(station);
+                }
+            }
+            if (remove != null)
+            {
+                for (int i = 0; i < remove.Count; i++)
+                {
+                    StationComponent station = remove[i];
+                    metadataStations.Remove(station);
+                    if (station != null && states.TryGetValue(station, out State state))
+                    {
+                        state.metadataExchangeEnabled = false;
+                        state.metadataPartial = 0.0;
+                    }
+                }
+            }
+        }
+
+        private static bool TryExchangeMetadataMatrix(StationComponent station)
+        {
+            State state = GetState(station);
+            StationStore[] storage = station.storage;
+            if (storage == null || storage.Length <= MatrixSlot)
+            {
+                return false;
+            }
+
+            StationStore matrix = storage[MatrixSlot];
+            int room = matrix.max - matrix.count;
+            if (room <= 0)
+            {
+                state.metadataPartial = 0.0;
+                return true;
+            }
+
+            long seedKey = GameMain.data.GetClusterSeedKey();
+            long available = DSPGame.propertySystem.GetItemAvaliableProperty(seedKey, matrix.itemId);
+            if (available <= 0)
+            {
+                state.metadataPartial = 0.0;
+                return true;
+            }
+
+            double perFrame = Math.Max(1, ModConfig.MetadataMatrixPerMinute.Value) / 3600.0;
+            state.metadataPartial += perFrame;
+            int take = (int)Math.Min(Math.Floor(state.metadataPartial), Math.Min((long)room, available));
+            if (take <= 0)
+            {
+                return true;
+            }
+
+            DSPGame.propertySystem.AddItemConsumption(seedKey, matrix.itemId, take);
+            GameMain.data.history.AddPropertyItemConsumption(matrix.itemId, take, banAchievement: true);
+            matrix.count += take;
+            state.metadataPartial -= take;
+            return true;
+        }
 
         internal static State GetState(StationComponent station)
         {
@@ -113,6 +232,9 @@ namespace DarkFogWorkshop
                 state.unusedPoints = 0.0;
                 state.partialPoints = 0.0;
                 state.matrixPartialItem = 0;
+                state.metadataExchangeEnabled = false;
+                state.metadataPartial = 0.0;
+                metadataStations.Remove(station);
                 state.activeKinds = 0;
                 for (int i = 0; i < state.materialPartial.Length; i++)
                 {

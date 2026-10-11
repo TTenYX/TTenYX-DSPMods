@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+using System;
+using System.Text;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -55,6 +57,11 @@ namespace DarkFogWorkshop
 
         private static UIStationWindow _window;
         private static UIButton _helpButton;
+        private static GameObject _metadataGroup;
+        private static UIButton _metadataButton;
+        private static Image _metadataCheck;
+        private static Text _metadataLabel;
+        private static StationComponent _metadataStation;
         private static WorkshopUiHost _host;
         private static StationComponent _lastTipStation;
         private static long _lastTipTick;
@@ -242,6 +249,7 @@ namespace DarkFogWorkshop
             {
                 CreateWidget(window);
             }
+            EnsureMetadataWidget(window);
             if (_helpButton == null)
             {
                 return;
@@ -260,6 +268,105 @@ namespace DarkFogWorkshop
             _host.window = window;
         }
 
+        private static void EnsureMetadataWidget(UIStationWindow window)
+        {
+            if (window == null || window.warperNecessaryGroup == null)
+            {
+                return;
+            }
+            if (_metadataGroup == null)
+            {
+                RectTransform source = window.warperNecessaryGroup;
+                _metadataGroup = UnityEngine.Object.Instantiate(source.gameObject, source.parent);
+                _metadataGroup.name = "dark-fog-workshop-metadata-exchange";
+                RectTransform cloneRect = _metadataGroup.transform as RectTransform;
+                if (cloneRect != null)
+                {
+                    cloneRect.SetSiblingIndex(Math.Max(0, source.GetSiblingIndex()));
+                    cloneRect.anchoredPosition = source.anchoredPosition
+                        + Vector2.up * (source.rect.height + 4f);
+                }
+
+                _metadataButton = _metadataGroup.GetComponentInChildren<UIButton>(true);
+                if (_metadataButton != null)
+                {
+                    _metadataButton.onClick += OnMetadataExchangeClick;
+                }
+
+                string checkPath = RelativePath(source, window.warperNecessaryCheck != null
+                    ? window.warperNecessaryCheck.transform : null);
+                Transform checkTransform = string.IsNullOrEmpty(checkPath)
+                    ? null : _metadataGroup.transform.Find(checkPath);
+                _metadataCheck = checkTransform != null
+                    ? checkTransform.GetComponent<Image>()
+                    : _metadataGroup.GetComponentInChildren<Image>(true);
+
+                Text[] labels = _metadataGroup.GetComponentsInChildren<Text>(true);
+                if (labels != null && labels.Length > 0)
+                {
+                    _metadataLabel = labels[0];
+                    Localizer localizer = _metadataLabel.GetComponent<Localizer>();
+                    if (localizer != null)
+                    {
+                        localizer.stringKey = null;
+                        localizer.translation = null;
+                    }
+                    _metadataLabel.text = "元数据兑换科学矩阵";
+                }
+            }
+        }
+
+        private static string RelativePath(Transform root, Transform target)
+        {
+            if (root == null || target == null || target == root)
+            {
+                return string.Empty;
+            }
+            StringBuilder path = new StringBuilder(target.name);
+            Transform current = target.parent;
+            while (current != null && current != root)
+            {
+                path.Insert(0, current.name + "/");
+                current = current.parent;
+            }
+            return current == root ? path.ToString() : string.Empty;
+        }
+
+        private static void OnMetadataExchangeClick(int obj)
+        {
+            StationComponent station = _metadataStation;
+            if (station == null || !DarkFogWorkshopPatch.IsMetadataExchangeEligible(station))
+            {
+                return;
+            }
+            DarkFogWorkshopPatch.SetMetadataExchangeEnabled(
+                station, !DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station));
+            RefreshMetadataWidget(station, _window != null && _window.active);
+        }
+
+        private static void RefreshMetadataWidget(StationComponent station, bool windowActive)
+        {
+            if (_metadataGroup == null)
+            {
+                return;
+            }
+            bool eligible = station != null && DarkFogWorkshopPatch.IsMetadataExchangeEligible(station);
+            if (!eligible && station != null && DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station))
+            {
+                DarkFogWorkshopPatch.SetMetadataExchangeEnabled(station, false);
+            }
+            bool visible = windowActive && eligible;
+            if (_metadataGroup.activeSelf != visible)
+            {
+                _metadataGroup.SetActive(visible);
+            }
+            if (visible && _metadataCheck != null)
+            {
+                _metadataCheck.enabled = DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station);
+            }
+            _metadataStation = eligible ? station : null;
+        }
+
         private static void CreateWidget(UIStationWindow window)
         {
             Font font = window.titleText != null ? window.titleText.font : Resources.GetBuiltinResource<Font>("Arial.ttf");
@@ -272,7 +379,7 @@ namespace DarkFogWorkshop
             GameObject source = FindNativeTipButton();
             if (source != null)
             {
-                GameObject clone = Object.Instantiate(source);
+                GameObject clone = UnityEngine.Object.Instantiate(source);
                 clone.name = "dark-fog-workshop-help";
                 UIButton btn = clone.GetComponent<UIButton>();
                 if (btn != null)
@@ -290,7 +397,7 @@ namespace DarkFogWorkshop
                     clone.SetActive(true);
                     return btn;
                 }
-                Object.Destroy(clone);
+                UnityEngine.Object.Destroy(clone);
             }
 
             // 兜底：自绘一个只用于显示提示的控件（不挂 Button，不响应点击）。
@@ -446,6 +553,10 @@ namespace DarkFogWorkshop
             {
                 _helpButton.gameObject.SetActive(false);
             }
+            if (_metadataGroup != null && _metadataGroup.activeSelf)
+            {
+                _metadataGroup.SetActive(false);
+            }
         }
 
         /// <summary>每帧刷新（只在窗口打开、且满足黑雾工坊条件时显示）。</summary>
@@ -456,6 +567,7 @@ namespace DarkFogWorkshop
                 return;
             }
             StationComponent station = GetStation(window);
+            RefreshMetadataWidget(station, window.active);
             bool visible = window.active && station != null && DarkFogWorkshopPatch.IsWorkshopShape(station);
             if (_helpButton.gameObject.activeSelf != visible)
             {
