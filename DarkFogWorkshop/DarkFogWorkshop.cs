@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 
@@ -12,11 +12,11 @@ namespace DarkFogWorkshop
     ///   星际物流运输站 = 本地需求那一栏）；
     /// - 第 2/3/4 格中任意一格放了黑雾材料（能量碎片 / 黑雾矩阵 / 硅基神经元 /
     ///   负熵奇点 / 物质重组器 / 核心素）；
-    /// 满足条件后，每帧按"算力"消耗第 1 格的矩阵，并在对应槽位产出黑雾材料。
+    /// 满足条件后，按"算力"消耗第 1 格的矩阵，并在对应槽位产出黑雾材料。
     ///
-    /// 算力公式（每帧单独结算，结余不结转）：
-    ///   每帧算力 = U × Y        （U = MatrixPointPerFrame，Y = 科技研究速度）
-    ///   矩阵点数 = 矩阵算力 × 消耗个数
+    /// 算力公式（**全部为每分钟口径**，单帧结算，结余不结转）：
+    ///   每分钟算力 = U × Y          （U = MatrixPointPerMinute，Y = 矩阵转化算力速度）
+    ///   矩阵点数   = 矩阵算力 × 消耗个数
     ///   黑雾材料算力 = X × 材料算力  （X = ExchangeFactor）
     ///
     /// 全部数值见 config\TTenYX.DSP.DarkFogWorkshop.cfg。
@@ -44,8 +44,9 @@ namespace DarkFogWorkshop
             harmony.PatchAll(typeof(UIStationWindowPatch));
 
             Log.LogInfo($"{PLUGIN_NAME} v{PLUGIN_VERSION} 已加载（作者 TTenYX）");
-            Log.LogInfo($"U={ModConfig.MatrixPointPerFrame.Value}  X={ModConfig.ExchangeFactor.Value}  " +
-                        $"Y={(ModConfig.UseGameTechSpeed.Value ? "存档科技研究速度" : ModConfig.TechSpeedPercent.Value + "%")}");
+            Log.LogInfo($"U={ModConfig.MatrixPointPerMinute.Value}/分钟  X={ModConfig.ExchangeFactor.Value}  " +
+                        $"Y={(ModConfig.UseGameTechSpeed.Value ? "存档矩阵转化算力速度" : ModConfig.TechSpeedPercent.Value + "%")}  " +
+                        $"每分钟算力={DarkFogWorkshopPatch.CreditPerMinute():0.##}");
         }
 
         private void OnDestroy()

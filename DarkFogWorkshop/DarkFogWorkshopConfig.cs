@@ -10,13 +10,13 @@ namespace DarkFogWorkshop
     {
         /// <summary>兑换系数 X：矩阵点数 = X × 黑雾材料算力，允许小数，&gt;0。</summary>
         internal static ConfigEntry<double> ExchangeFactor;
-        /// <summary>物流塔矩阵算力效率 U。</summary>
-        internal static ConfigEntry<int> MatrixPointPerFrame;
-        /// <summary>科技研究速度 Y 的默认值（百分比，100 = 100%）。</summary>
+        /// <summary>矩阵转化算力速度 U（**每分钟**算力口径）。</summary>
+        internal static ConfigEntry<int> MatrixPointPerMinute;
+        /// <summary>矩阵转化算力速度 Y 的默认值（百分比，100 = 100%）。</summary>
         internal static ConfigEntry<int> TechSpeedPercent;
-        /// <summary>true：Y 取存档的科技研究速度；false：用 TechSpeedPercent。</summary>
+        /// <summary>true：Y 取存档的矩阵转化算力速度；false：用 TechSpeedPercent。</summary>
         internal static ConfigEntry<bool> UseGameTechSpeed;
-        /// <summary>调试倍率，默认 1；&gt;1 会成倍放大每帧算力。</summary>
+        /// <summary>调试倍率，默认 1；&gt;1 会成倍放大每分钟算力。</summary>
         internal static ConfigEntry<double> SpeedMultiplier;
         /// <summary>每帧算力买不起 1 个矩阵时，是否攒零头凑够 1 个。</summary>
         internal static ConfigEntry<bool> AccumulatePartialPoints;
@@ -56,31 +56,34 @@ namespace DarkFogWorkshop
                 "X=1 时 1 个宇宙矩阵(3000) 可换 1 个核心素(3000) 或 60 个能量碎片(50)。",
                 new AcceptableValueRange<double>(0.0001, 1000000.0)));
 
-            MatrixPointPerFrame = config.Bind(general, "MatrixPointPerFrame", 100, new ConfigDescription(
-                "物流塔矩阵算力效率 U：物流塔每帧可进行兑换的算力。默认 100。",
+            MatrixPointPerMinute = config.Bind(general, "MatrixPointPerMinute", 7200, new ConfigDescription(
+                "矩阵转化算力速度 U：物流塔**每分钟**可进行兑换的算力（Y=100% 时）。默认 7200。\n" +
+                "最终**每分钟算力 = U × Y**（Y 为「矩阵转化算力速度」百分比，如 1500% 即 15 倍）。\n" +
+                "例：U=7200、Y=1500% ⇒ 7200 × 15 = 108000 点/分钟。",
                 new AcceptableValueRange<int>(1, 100000000)));
 
             TechSpeedPercent = config.Bind(general, "TechSpeedPercent", 100, new ConfigDescription(
-                "科技研究速度 Y 的默认值（百分比）。100 表示 100%，即 1 倍。\n" +
-                "举例：解锁 1 级研究速度升级后填 200（=200%）。\n" +
+                "矩阵转化算力速度 Y 的默认值（百分比）。100 表示 100%，即 1 倍。\n" +
+                "举例：研究速度 14 级（游戏内显示 1500%）就填 1500。\n" +
                 "UseGameTechSpeed = true 时本项被忽略。",
                 new AcceptableValueRange<int>(1, 100000000)));
 
             UseGameTechSpeed = config.Bind(general, "UseGameTechSpeed", true, new ConfigDescription(
-                "true：Y 自动取存档的科技研究速度数值（GameMain.history.techSpeed，100 = 100%）。\n" +
+                "true：Y 自动取存档的研究速度数值（GameMain.history.techSpeed 是**倍率**，\n" +
+                "  14 级为 15，等价于游戏面板显示的 1500%）。\n" +
                 "false：Y 恒定使用上面的 TechSpeedPercent。\n" +
-                "若发现实际速率与预期不符（某些存档的 techSpeed 倍率不同），把它设为 false 并手填数值。", null));
+                "若发现实际速率与预期不符，把它设为 false 并手填数值。", null));
 
             SpeedMultiplier = config.Bind(general, "SpeedMultiplier", 1.0, new ConfigDescription(
-                "调试倍率，默认 1（不放大）。最终每帧算力 = U × Y × 本项。",
+                "调试倍率，默认 1（不放大）。最终每分钟算力 = U × Y × 本项。",
                 new AcceptableValueRange<double>(0.0, 1000000.0)));
 
             AccumulatePartialPoints = config.Bind(general, "AccumulatePartialPoints", true, new ConfigDescription(
-                "每帧算力买不起 1 个矩阵 / 1 个材料时，是否把这笔算力攒着、凑够 1 个再扣。\n" +
+                "单帧算力买不起 1 个矩阵 / 1 个材料时，是否把这笔算力攒着、凑够 1 个再扣。\n" +
                 "true（推荐）：结余仍然不结转，只会攒「没凑满 1 个」的零头。\n" +
-                "  矩阵侧等效吞吐 = 材料种数 × U×Y 点/帧；每种材料各自的等效产出 = perTick × 60 / 单价 个/秒。\n" +
-                "false：严格按本帧算力结算。此时若 U×Y 小于单价，就会永远兑换不出来——\n" +
-                "  例如 U=100、Y=96% 时每帧只有 97 点，而物质重组器 100 点、核心素 300 点，\n" +
+                "  矩阵侧等效吞吐 = 材料种数 × 每分钟算力；每种材料的产出 = 每分钟算力 / 单价 个/分钟。\n" +
+                "false：严格按单帧算力结算。此时若「每分钟算力 / 3600」小于单价，就会永远兑换不出来——\n" +
+                "  例如每分钟算力 3600 点（=1 点/帧）时，物质重组器 100 点、核心素 300 点都买不起，\n" +
                 "  结果是「只有能量碎片(50 点)能产出」，其它材料永远为 0。", null));
 
             VerboseLog = config.Bind(general, "VerboseLog", false, new ConfigDescription(

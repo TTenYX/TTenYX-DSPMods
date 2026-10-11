@@ -76,6 +76,11 @@ namespace DarkFogWorkshop
             /// <summary>不足以买下 1 个矩阵时，攒到"够 1 个矩阵"的临时进度（上限 1 个矩阵）。</summary>
             internal double partialPoints;
             /// <summary>
+            /// 上次见到的第 1 格矩阵物品 id。用来识别"玩家换了矩阵类型"：
+            /// 一旦变化就清空全部算力累积，用新矩阵从头开始结算。
+            /// </summary>
+            internal int matrixPartialItem;
+            /// <summary>
             /// 每个材料槽位各自的"凑够 1 个材料"进度。
             /// 每帧每格只有 `U×Y` 点算力，而材料单价可能高达 300 点：
             /// 若不按槽位累积，`floor(97/300)` 恒为 0，核心素这类材料**永远产出 0 个**。
@@ -107,6 +112,7 @@ namespace DarkFogWorkshop
                 state.producedTotal = 0;
                 state.unusedPoints = 0.0;
                 state.partialPoints = 0.0;
+                state.matrixPartialItem = 0;
                 state.activeKinds = 0;
                 for (int i = 0; i < state.materialPartial.Length; i++)
                 {
@@ -187,6 +193,24 @@ namespace DarkFogWorkshop
                 return;
             }
 
+            // —— 换了矩阵类型（或第 1 格被清空）⇒ 清空全部算力累积，用新矩阵从头开始 ——
+            //
+            // 不清空的话，旧矩阵攒下的 `partialPoints` 与各槽位
+            // `materialPartial` 会带着旧口径参与新矩阵的结算，表现为"换了矩阵就不产出"。
+            if (state.matrixPartialItem != matrixId)
+            {
+                SettleDbg(station, state, "矩阵类型变化，清空算力累积",
+                    $"旧={state.matrixPartialItem} 新={matrixId} " +
+                    $"旧零头={state.partialPoints:0.##}");
+                state.matrixPartialItem = matrixId;
+                state.partialPoints = 0.0;
+                for (int i = 0; i < state.materialPartial.Length; i++)
+                {
+                    state.materialPartial[i] = 0.0;
+                    state.materialPartialItem[i] = 0;
+                }
+            }
+
             int lastOutput = OutputSlotLastIndex(storage);
 
             // 每种材料独立一份每帧算力（互不挤占）。
@@ -202,6 +226,12 @@ namespace DarkFogWorkshop
             int[] slotItem = new int[OutputSlotCapacity];
             double[] unitCost = new double[OutputSlotCapacity];
             double[] materialPoints = new double[OutputSlotCapacity];
+            // 增产倍率：第 1 格矩阵带增产点数时 > 1，产出按此放大（矩阵消耗不变）。
+            double incMulti = IncOutputMultiplier(station);
+            if (incMulti < 1.0)
+            {
+                incMulti = 1.0;
+            }
             int activeCount = 0;
             int roomyCount = 0;
             for (int s = OutputSlotFirst; s <= lastOutput; s++)
@@ -325,34 +355,27 @@ namespace DarkFogWorkshop
                 double usedPoints = 0.0;
                 if (consumed > 0)
                 {
-                    // 先扣矩阵、再花点数，顺序不能反：否则本帧的 pool 是上帧的剩余，会算少。
-                    double pool = consumed * matrixPoints;
-                    double poolBefore = pool;
-
+                    // 先扣矩阵、再花点数，顺序不能反：否则本帧的结算会算少。
                     ref StationStore matrixSlot = ref storage[MatrixSlot];
-                    matrixSlot.count -= consumed;
-                    if (matrixSlot.inc > matrixSlot.count)
-                    {
-                        matrixSlot.inc = matrixSlot.count;
-                    }
+                    ConsumeMatrixWithInc(ref matrixSlot, consumed);
 
-                    // 先把矩阵点数按"各槽位本帧配额"分配成每槽的份额，再各花各的。
-                    // 这样第一个槽位不会把共享池吃光（否则表现为"总是先兑换第 2 格"）。
-                    double totalBudget = 0.0;
-                    for (int s = OutputSlotFirst; s <= lastOutput; s++)
-                    {
-                        int idx = s - OutputSlotFirst;
-                        if (unitCost[idx] > 0.0)
-                        {
-                            totalBudget += creditPerMaterial;
-                        }
-                    }
-
+                    // —— 产出：**只按各槽位自己累积的算力**结算，不再用"共享池 ÷ 种数"封顶 ——
+                    //
+                    // ⚠️ 这里曾经把每槽上限写成 `pool ÷ 材料种数`（pool = consumed × 矩阵算力），
+                    // 于是产出隐含要求 **`矩阵算力 ÷ 材料种数 ≥ 材料单价`**：
+                    //   宇宙矩阵 3000 ÷ 3 = 1000 ≥ 50  ⇒ 正常；
+                    //   电磁矩阵   50 ÷ 3 = 16.7 < 50  ⇒ `byShare = 0`，**一颗都产不出，永久卡死**。
+                    // 玩家"换成电磁矩阵后兑换就停了"就是这个原因，而且已经付出去的
+                    // `materialPartial` 累积永远花不掉。
+                    //
+                    // 正确做法：`materialPartial[idx]` 就是该槽位的预算（由每帧 grant 累积而来），
+                    // 直接用它算能产几个；矩阵侧消耗由 `requiredPoints` 驱动，本来就已经
+                    // 按 `材料种数 × 每帧算力` 扣过矩阵了，两边天然平衡，不需要额外的池子。
                     for (int s = OutputSlotFirst; s <= lastOutput; s++)
                     {
                         int idx = s - OutputSlotFirst;
                         double costPerUnit = unitCost[idx];
-                        if (costPerUnit <= 0.0 || pool <= 0.0)
+                        if (costPerUnit <= 0.0)
                         {
                             continue;
                         }
@@ -362,16 +385,12 @@ namespace DarkFogWorkshop
                         {
                             continue;
                         }
-                        // 本槽位这份矩阵点数：按配额占比分，且不超过池里剩下的
-                        double share = totalBudget > 0.0 ? poolBefore * (creditPerMaterial / totalBudget) : 0.0;
-                        double allowed = Math.Min(share, pool);
 
-                        double want = Math.Floor(materialPoints[idx] / costPerUnit);
-                        double byShare = Math.Floor(allowed / costPerUnit);
-                        if (want > byShare)
-                        {
-                            want = byShare;
-                        }
+                        // 增产：同一份算力多产出材料（矩阵消耗不变）。
+                        // 等价于「每个材料的实际计费成本 = 成本 / 增产倍率」。
+                        double effectiveCost = costPerUnit / incMulti;
+
+                        double want = Math.Floor(state.materialPartial[idx] / effectiveCost);
                         if (want > room)
                         {
                             want = room;
@@ -382,16 +401,16 @@ namespace DarkFogWorkshop
                         }
                         int add = (int)want;
                         slot.count += add;
-                        double spent = add * costPerUnit;
-                        pool -= spent;
+                        double spent = add * effectiveCost;
                         state.materialPartial[idx] = Math.Max(0.0, state.materialPartial[idx] - spent);
                         produced += add;
                         producedByItem = AddCount(producedByItem, slot.itemId, add);
+                        usedPoints += spent;
                     }
-                    usedPoints = poolBefore - pool;
                 }
 
-                state.unusedPoints = Math.Max(0.0, points - usedPoints);
+                // 买整颗矩阵花出去、但本帧没花在材料上的点数（找零），仅用于诊断。
+                state.unusedPoints = Math.Max(0.0, consumed * matrixPoints - usedPoints);
                 state.consumedMatrices = consumed;
                 state.producedTotal = produced;
                 usedTotal = usedPoints;
@@ -459,7 +478,7 @@ namespace DarkFogWorkshop
             }
             state.lastDiagTick = GameMain.gameTick;
             DarkFogWorkshop.Log.LogInfo(
-                $"[诊断] 塔{station.id} 阶段={stage} {extra} 本帧算力={BudgetPerTick():0.##} " +
+                $"[诊断] 塔{station.id} 阶段={stage} {extra} 每分钟算力={CreditPerMinute():0.##} " +
                 $"消耗矩阵={state.consumedMatrices} 产出={state.producedTotal} 材料种数={state.activeKinds}");
         }
 
@@ -508,16 +527,53 @@ namespace DarkFogWorkshop
             }
         }
 
-        /// <summary>每帧算力 = U × Y × SpeedMultiplier。</summary>
-        internal static double BudgetPerTick()
+        /// <summary>
+        /// 每分钟算力 = `U × Y × SpeedMultiplier`。
+        ///
+        /// `U`（配置项 `MatrixPointPerMinute`）本身就是**每分钟**口径，
+        /// 所以这里不再乘任何帧率系数。
+        /// </summary>
+        internal static double CreditPerMinute()
         {
-            double perTick = ModConfig.MatrixPointPerFrame.Value
-                             * TechSpeedScale()
-                             * ModConfig.SpeedMultiplier.Value;
-            return perTick > 0.0 ? perTick : 0.0;
+            double perMinute = ModConfig.MatrixPointPerMinute.Value
+                               * TechSpeedScale()
+                               * ModConfig.SpeedMultiplier.Value;
+            return perMinute > 0.0 ? perMinute : 0.0;
         }
 
-        /// <summary>科技研究速度 Y（倍率，100% → 1.0）。</summary>
+        /// <summary>
+        /// 内部**单帧**算力 = 每分钟算力 ÷ <see cref="TicksPerMinute"/>。
+        ///
+        /// 只给逐帧结算用；对外的说明/日志一律用 <see cref="CreditPerMinute"/>。
+        /// </summary>
+        internal static double BudgetPerTick()
+        {
+            return CreditPerMinute() / TicksPerMinute;
+        }
+
+        /// <summary>游戏仿真帧率（帧/秒）。DSP 目标 60 帧。</summary>
+        internal const double TicksPerSecond = 60.0;
+        /// <summary>
+        /// 每分钟的帧数（= 60 × 60 = 3600）。
+        ///
+        /// ⚠️ **换算务必用这个常量**：`每帧算力 × 60` 得到的是**每秒**算力，不是每分钟。
+        /// </summary>
+        internal const double TicksPerMinute = TicksPerSecond * 60.0;
+
+        /// <summary>
+        /// 矩阵转化算力速度 `Y`，返回**倍率**（`1.0` = 100%，`15.0` = 1500%）。
+        ///
+        /// ⚠️ **`GameMain.history.techSpeed` 本身就是倍率**，不是百分数：
+        /// `ModeConfig.techSpeed` 默认 `1`（=100%），研究速度 14 级时是 `15`。
+        /// 游戏面板显示 `1500%` 是因为 `UITechTree` 用
+        /// `history.techSpeed.ToString("0%")` 输出 —— `ToString("0%")` 会**乘以 100**。
+        ///
+        /// 所以这里**直接返回 `speed`**，绝不能写成 `speed / 100`
+        /// （写成 /100 会让研究速度的贡献小 100 倍）。
+        ///
+        /// 配置项 `TechSpeedPercent` 的口径则是百分数（`100` = 100%），
+        /// 因此只在回退分支里做 `/100`。
+        /// </summary>
         internal static double TechSpeedScale()
         {
             if (ModConfig.UseGameTechSpeed.Value)
@@ -527,7 +583,7 @@ namespace DarkFogWorkshop
                     int speed = GameMain.history != null ? GameMain.history.techSpeed : 0;
                     if (speed > 0)
                     {
-                        return speed / 100.0;
+                        return speed;
                     }
                 }
                 catch (Exception)
@@ -536,6 +592,130 @@ namespace DarkFogWorkshop
                 }
             }
             return Math.Max(1, ModConfig.TechSpeedPercent.Value) / 100.0;
+        }
+
+        // ————————————————————————————————————————————————————————————
+        // 增产（Proliferator）效果
+        //
+        // 游戏机制（IL / 反编译实证）：
+        //   · `Cargo.incTableMilli[等级]` 是**增产加成比例**表，等级 0–10：
+        //       0 → 0     1 → 0.125  2 → 0.20  3 → 0.225  4 → 0.25   5 → 0.275
+        //       6 → 0.30  7 → 0.325  8 → 0.35  9 → 0.375 10 → 0.40
+        //     （`Cargo.kIncLevelMax = 10`；`Cargo.incTable[i] * 0.1` 就是百分数）
+        //   · 等级怎么来：引擎自己用 `AssemblerComponent.split_inc_level` 算
+        //       `等级 = 累计增产点数 m / 物品数 n`（`num = m / n`）。
+        //     所以这里同样用 **`storage.inc / storage.count`** 求平均等级。
+        //   · `StationStore.inc` 是**增产点数总量**（引擎多处 `storage[i].inc += inc` 累加），
+        //     不是位掩码；`Cargo.inc` 才是位掩码（kIncLevel1/2/3 = 1/2/4），两者不同。
+        //
+        // 加成作用于**产出侧**：同一份矩阵点数产出 `1 + 加成` 倍的材料，
+        // 矩阵消耗量不变 —— 这正是"增产"的语义（同样的输入，多出产品）。
+        // ————————————————————————————————————————————————————————————
+
+        /// <summary>增产等级上限（与 `Cargo.kIncLevelMax` 一致）。</summary>
+        private const int IncLevelMax = 10;
+
+        /// <summary>
+        /// 第 1 格矩阵的**平均增产等级**（0–10）。
+        /// 引擎的算法是 `累计增产点数 / 物品数`（见 `split_inc_level`）。
+        /// </summary>
+        internal static int IncLevelOf(in StationStore matrixSlot)
+        {
+            int count = matrixSlot.count;
+            if (count <= 0 || matrixSlot.inc <= 0)
+            {
+                return 0;
+            }
+            int level = matrixSlot.inc / count;
+            if (level < 0)
+            {
+                return 0;
+            }
+            return level > IncLevelMax ? IncLevelMax : level;
+        }
+
+        /// <summary>
+        /// 从矩阵槽位扣掉 <paramref name="consume"/> 个矩阵，并**按引擎同样的方式等比扣减增产点数**。
+        ///
+        /// ⚠️ **`StationStore.inc` 是"增产点数总量"，不是等级，也不是个数。**
+        /// 100 个各带 4 点增产的矩阵，`count = 100` 而 `inc = 400`。
+        ///
+        /// 早先这里写的是：
+        /// <code>
+        /// matrixSlot.count -= consumed;
+        /// if (matrixSlot.inc &gt; matrixSlot.count) matrixSlot.inc = matrixSlot.count;   // ❌
+        /// </code>
+        /// 这把 `inc` 当成了"和 count 同量纲的东西"，于是**只要矩阵等级 ≥ 2 就必然触发**：
+        /// `inc(400) &gt; count(99)` 成立 ⇒ `inc` 被砍成 99 ⇒ 等级从 4 掉到 1，
+        /// **一次消耗就销毁掉 3/4 的增产点数**，而且每帧持续销毁。
+        /// 玩家"输入 4 增产点数的物品后，塔里缓存矩阵掉增产点数"就是这个原因。
+        ///
+        /// 正确做法与引擎 `AssemblerComponent.split_inc_level` / `LabComponent.split_inc_level`
+        /// 完全一致：先求出**每个物品的点数** `inc ÷ count`，再按消耗个数等比扣，
+        /// 并用余数做一次整数除法补偿。这样 `inc ÷ count`（也就是等级）保持不变。
+        ///
+        /// 注意这里**必须用整数运算**（引擎同样如此）：`inc`、`count` 都是 `int`，
+        /// 用浮点再取整会在余数补偿上偏离引擎行为。
+        /// </summary>
+        internal static void ConsumeMatrixWithInc(ref StationStore matrixSlot, int consume)
+        {
+            if (consume <= 0)
+            {
+                return;
+            }
+            int count = matrixSlot.count;
+            int inc = matrixSlot.inc;
+
+            // 空槽位或没喷增产剂：直接扣个数即可。
+            if (count <= 0 || inc <= 0)
+            {
+                matrixSlot.count = Math.Max(0, count - consume);
+                matrixSlot.inc = 0;
+                return;
+            }
+
+            // 与引擎 split_inc_level 完全相同的算法。
+            int level = inc / count;                 // 每个矩阵的增产点数
+            int remainder = inc - level * count;     // 除不尽的余数
+            int newCount = Math.Max(0, count - consume);
+            remainder -= newCount;
+            int consumedInc = remainder > 0 ? (level * consume + remainder) : (level * consume);
+
+            matrixSlot.count = newCount;
+            matrixSlot.inc = Math.Max(0, inc - consumedInc);
+        }
+
+        /// <summary>增产加成比例（0.0 = 无加成，0.25 = +25%）。按等级查 `Cargo.incTableMilli`。</summary>
+        internal static double IncBonusRatio(int level)
+        {
+            if (level <= 0)
+            {
+                return 0.0;
+            }
+            try
+            {
+                if (level >= Cargo.incTableMilli.Length)
+                {
+                    level = Cargo.incTableMilli.Length - 1;
+                }
+                double ratio = Cargo.incTableMilli[level];
+                return ratio > 0.0 ? ratio : 0.0;
+            }
+            catch (Exception)
+            {
+                return 0.0;
+            }
+        }
+
+        /// <summary>增产产出倍率（1.0 = 无加成，1.25 = +25% 产出）。</summary>
+        internal static double IncOutputMultiplier(StationComponent station)
+        {
+            StationStore[] storage = station?.storage;
+            if (storage == null || storage.Length <= MatrixSlot)
+            {
+                return 1.0;
+            }
+            return 1.0 + IncBonusRatio(IncLevelOf(in storage[MatrixSlot]));
         }
 
         /// <summary>科学矩阵 → 每个的算力；不是矩阵返回 0。</summary>
@@ -622,7 +802,13 @@ namespace DarkFogWorkshop
             return false;
         }
 
-        /// <summary>统计某个槽位上的材料种数（用于界面显示）。</summary>
+        /// <summary>
+        /// 统计材料槽位上的材料种数（用于界面显示）。
+        ///
+        /// ⚠️ 必须用 <see cref="OutputSlotLastIndex"/>（跟随配置项 `OutputSlotLimit`），
+        /// 不能写死 `OutputSlotLast` —— 否则浮窗里的「消耗速度 合计（N 种合计）」
+        /// 会只算到第 4 格，而实际参与兑换的槽位更多，与「转化速度」列表对不上。
+        /// </summary>
         internal static int CountMaterials(StationComponent station)
         {
             StationStore[] storage = station?.storage;
@@ -630,7 +816,7 @@ namespace DarkFogWorkshop
             {
                 return 0;
             }
-            int lastOutput = Math.Min(OutputSlotLast, storage.Length - 1);
+            int lastOutput = OutputSlotLastIndex(storage);
             int count = 0;
             for (int s = OutputSlotFirst; s <= lastOutput; s++)
             {
@@ -645,10 +831,20 @@ namespace DarkFogWorkshop
         /// <summary>
         /// 悬停提示的内容（标题由 UI 层设置为「黑雾工坊 DarkFogWorkshop」）。
         ///
-        /// 排版（1.3.3 起）：
-        ///   第 N 槽位（消耗/产出）：物品名
-        ///   缩进一行写 消耗/生成速度（同一行）
-        ///   空行 → 科学矩阵算力表 → 空行 → 黑雾材料算力表 → 空行 → Tips
+        /// 排版：
+        ///   第 1 槽位 ( 消耗 ) : 物品名
+        ///   消耗速度 N/分钟 ( 单种 )  合计 N/分钟 ( N种合计 )
+        ///   科学矩阵若喷涂增产剂可获得【额外产出】黑雾材料
+        ///   当前矩阵转化算力速度 Y NNN%  ( 升级「研究速度」可提升 )
+        ///   单种材料每分钟算力 = U N × Y NNN% = NNN
+        ///   U为黑雾工坊初始算力可在配置文件中修改
+        ///   （空行）
+        ///   第 N 槽位 ( 产出 ) : 物品名
+        ///   转化速度 N/分钟
+        ///   （空行）
+        ///   科学矩阵算力表 → 空行 → 黑雾材料算力表 → 空行 → Tips
+        ///
+        /// 全部速率与算力一律为**每分钟**口径。
         ///
         /// 行距：本作文本只支持 `<color>` / `<size>` 两种富文本标签（无 line-height），
         /// 所以靠"每行外层套一个放大 1.5 倍的 &lt;size&gt;，行尾用 thin space 撑住行高"来实现 1.5 倍行距。
@@ -663,31 +859,79 @@ namespace DarkFogWorkshop
         {
             StationStore[] storage = station?.storage;
             var sb = new StringBuilder();
-            double perTick = BudgetPerTick();
-            double perMinute = perTick * 60.0;
+            // —— 算力：全部按**每分钟**口径 ——
+            // `CreditPerMinute()` 本身就是每分钟；不要再乘 60（那会变成每秒，少 60 倍）。
+            double perMinute = CreditPerMinute();
 
             int kinds = CountMaterials(station);
             double matrixUnit = storage != null && storage.Length > 0 ? MatrixPointsOf(storage[MatrixSlot].itemId) : 0.0;
+
+            // 增产（吃增产剂）与研究速度：在说明里展示当前加成。
+            double incMulti = IncOutputMultiplier(station);
+            int incLevel = storage != null && storage.Length > MatrixSlot
+                ? IncLevelOf(in storage[MatrixSlot])
+                : 0;
+            double techScale = TechSpeedScale();
+            // Y 以百分数显示（与游戏内「研究速度」一致）：1.10 → 110%。
+            double techPercent = techScale * 100.0;
 
             // —— 第 1 槽位（消耗）——
             if (storage != null && storage.Length > 0)
             {
                 int matrixId = storage[MatrixSlot].itemId;
-                // 只给括号里的"消耗"着色，其余文字保持原色（整行着色看不清）。
+
+                // —— 算力说明：放在**第 1 槽位信息之前**（按需求）——
+                sb.AppendLine(Line(DarkFogWorkshop.Tr("当前矩阵转化算力速度 Y ",
+                                                     "current matrix conversion speed Y ")
+                    + $"{techPercent:0.#}%"
+                    + "  ( " + DarkFogWorkshop.Tr("升级「研究速度」可提升",
+                                                  "upgrade Research Speed") + " )"));
+                sb.AppendLine(Line(DarkFogWorkshop.Tr("单种材料每分钟算力 ",
+                                                     "per-material per-minute credit ")
+                    + $"= U {ModConfig.MatrixPointPerMinute.Value} × Y {techPercent:0.#}%"
+                    + $" = {perMinute:0.##}"));
+                sb.AppendLine(Line(DarkFogWorkshop.Tr("黑雾工坊初始算力 U 可在配置文件中修改",
+                                                     "U is the base credit, configurable in the config file")));
+                // 与下面的槽位信息之间空一行。
+                sb.AppendLine();
+
+                // 括号/冒号用**半角加空格**（按需求示例），只给"消耗"着色。
                 sb.AppendLine(Line(DarkFogWorkshop.Tr("第 1 槽位", "Slot 1")
-                                  + "（" + Consume(DarkFogWorkshop.Tr("消耗", "input")) + "）："
+                                  + " ( " + Consume(DarkFogWorkshop.Tr("消耗", "input")) + " ) : "
                                   + ItemLabel(matrixId)));
                 if (matrixUnit > 0.0 && kinds > 0)
                 {
                     double perKind = perMinute / matrixUnit;
                     sb.AppendLine(Line(
-                        DarkFogWorkshop.Tr(" 消耗速度 ", " consume ") + $"{perKind:0.##}" + DarkFogWorkshop.Tr("/分钟（单种）", "/min (single)")
-                        + DarkFogWorkshop.Tr(" 合计 ", " total ") + $"{perKind * kinds:0.##}"
-                        + DarkFogWorkshop.Tr($"/分钟（{kinds} 种合计）", $"/min ({kinds} kinds)")));
+                        DarkFogWorkshop.Tr("消耗速度 ", "consume ") + $"{perKind:0.##}" + DarkFogWorkshop.Tr("/分钟", "/min")
+                        + " ( " + DarkFogWorkshop.Tr("单种", "single") + " )  "
+                        + DarkFogWorkshop.Tr("合计 ", "total ") + $"{perKind * kinds:0.##}" + DarkFogWorkshop.Tr("/分钟", "/min")
+                        + " ( " + kinds + DarkFogWorkshop.Tr("种合计", " kinds") + " )"));
                 }
                 else
                 {
-                    sb.AppendLine(Line(DarkFogWorkshop.Tr(" 消耗速度 0/分钟（材料未在兑换）", " consume 0/min (idle)")));
+                    sb.AppendLine(Line(DarkFogWorkshop.Tr("消耗速度 0/分钟 ( 材料未在兑换 )",
+                                                          "consume 0/min ( idle )")));
+                }
+
+                // —— 增产：第 1 格矩阵喷了增产剂时，同一份矩阵多产出材料 ——
+                // "额外产出"用游戏自身的增产蓝（`#61D8FF`，与装配机的增产表示一致）。
+                if (incMulti > 1.0)
+                {
+                    sb.AppendLine(Line(DarkFogWorkshop.Tr("科学矩阵已喷涂增产剂：", "Matrix proliferated: ")
+                        + Produce(DarkFogWorkshop.Tr("额外产出", "extra output"))
+                        + $" +{(incMulti - 1.0) * 100.0:0.#}%"
+                        + DarkFogWorkshop.Tr($" ( 等级 {incLevel} )", $" ( lv {incLevel} )")
+                        + DarkFogWorkshop.Tr($" → 转化 ×{incMulti:0.###} 黑雾材料",
+                                             $" -> x{incMulti:0.###} dark fog material")));
+                }
+                else
+                {
+                    // 未喷增产剂时也说明这个机制存在，"额外产出"同样用增产蓝。
+                    sb.AppendLine(Line(DarkFogWorkshop.Tr("科学矩阵若喷涂增产剂可获得",
+                                                          "Spraying the slot-1 matrix grants ")
+                        + Produce(DarkFogWorkshop.Tr("额外产出", "extra output"))
+                        + DarkFogWorkshop.Tr("黑雾材料", " dark fog material")));
                 }
             }
 
@@ -706,16 +950,18 @@ namespace DarkFogWorkshop
                     any = true;
                     sb.AppendLine();
                     sb.AppendLine(Line(DarkFogWorkshop.Tr($"第 {s + 1} 槽位", $"Slot {s + 1}")
-                                      + "（" + Produce(DarkFogWorkshop.Tr("产出", "output")) + "）："
+                                      + " ( " + Produce(DarkFogWorkshop.Tr("产出", "output")) + " ) : "
                                       + ItemLabel(storage[s].itemId)));
+                    // 转化速度已含增产加成。
                     sb.AppendLine(Line(
-                        DarkFogWorkshop.Tr(" 生成速度 ", " produce ")
-                        + $"{perMinute / cost:0.##}" + DarkFogWorkshop.Tr("/分钟", "/min")));
+                        DarkFogWorkshop.Tr("转化速度 ", "convert ")
+                        + $"{perMinute * incMulti / cost:0.##}" + DarkFogWorkshop.Tr("/分钟", "/min")));
                 }
                 if (!any)
                 {
                     sb.AppendLine();
-                    sb.AppendLine(Line(DarkFogWorkshop.Tr("（第 2 格起还没有放黑雾材料）", "(no dark fog material in slot 2+)")));
+                    sb.AppendLine(Line(DarkFogWorkshop.Tr("( 第 2 格起还没有放黑雾材料 )",
+                                                          "( no dark fog material in slot 2+ )")));
                 }
             }
 
@@ -737,7 +983,8 @@ namespace DarkFogWorkshop
             sb.AppendLine(Line(TableRow2(6006, MatrixPointsOf(6006))));
             // 两段之间空一行（表格内空行，见 `TableBlankRow`）。
             sb.AppendLine(Line(TableBlankRow()));
-            sb.AppendLine(Line(TableSectionHeader(DarkFogWorkshop.Tr("黑雾材料算力", "Dark fog materials"))));
+            sb.AppendLine(Line(TableSectionHeader(DarkFogWorkshop.Tr("黑雾材料", "Dark fog"),
+                                                   DarkFogWorkshop.Tr("算力", "Pts"))));
             sb.AppendLine(Line(TableRow2(EnergyFragmentId, MaterialPointsOf(EnergyFragmentId))));
             sb.AppendLine(Line(TableRow2(DarkFogMatrixId, MaterialPointsOf(DarkFogMatrixId))));
             sb.AppendLine(Line(TableRow2(SiliconNeuronId, MaterialPointsOf(SiliconNeuronId))));
@@ -780,10 +1027,15 @@ namespace DarkFogWorkshop
             return Cell2(ItemLabel(itemId), ValueText(value), true);
         }
 
-        /// <summary>分段小标题行（黑雾材料算力）：占第一列，第二列留空。</summary>
-        private static string TableSectionHeader(string title)
+        /// <summary>
+        /// 分段小标题行（黑雾材料算力）。**必须也走两列**：
+        /// 之前把「黑雾材料算力」当成一个整串塞进第一列，结果六个字占满名称字段、
+        /// 与「算力」之间没有任何空隙，看起来和上面的「科学矩阵　算力」表头不一致。
+        /// 现在拆成 `黑雾材料` + 制表符 + `算力`，与表头、数据行列位完全相同。
+        /// </summary>
+        private static string TableSectionHeader(string name, string value)
         {
-            return Cell2(title, "", false);
+            return Cell2(name, value, false);
         }
 
         /// <summary>
@@ -875,10 +1127,10 @@ namespace DarkFogWorkshop
         /// <summary>消耗（加速）配色——取自游戏 `UIReferenceSpeedTipEntry.Refresh` / `UIMechaWindow`。</summary>
         private const string ConsumeColor = "#ff965e";
 
-        /// <summary>生成速度（增产色）。</summary>
+        /// <summary>产出侧（增产色）：用于「产出」「额外产出」等字样。</summary>
         private static string Produce(string text) => $"<color={ProduceColor}>{text}</color>";
 
-        /// <summary>消耗速度（加速色）。</summary>
+        /// <summary>消耗侧（加速色）：用于「消耗」字样。</summary>
         private static string Consume(string text) => $"<color={ConsumeColor}>{text}</color>";
 
         /// <summary>

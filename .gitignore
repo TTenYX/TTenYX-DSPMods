@@ -1,0 +1,11 @@
+# 构建产物
+**/bin/
+**/obj/
+*.zip
+
+# 本地离线包源（由 tools/export-offline-feed.ps1 生成，含游戏派生包，不提交）
+offline-feed/
+
+# 杂项备份
+icon.png.bak-old-*
+*.bak

@@ -74,27 +74,35 @@
 
 ## 算力规则
 
-整个 MOD 只有三个公式：
+算力以**每分钟**计。整个 MOD 只有三个公式：
 
 ```text
-每帧算力（每种材料各拿一份） = U × Y × SpeedMultiplier
-需要消耗的矩阵点数           = 材料种数 × 每帧算力
-产出 1 个材料                = 需要 X × 该材料算力 点
+每分钟算力（每种材料各拿一份） = U × Y × SpeedMultiplier
+需要消耗的矩阵点数             = 材料种数 × 每分钟算力
+产出 1 个材料                  = 需要 X × 该材料算力 点
 ```
 
 | 符号 | 含义 | 配置项 | 默认值 |
 |---|---|---|---|
-| `U` | 物流塔矩阵算力效率 | `MatrixPointPerFrame` | 100 |
-| `Y` | 科技研究速度 | `UseGameTechSpeed` / `TechSpeedPercent` | 自动取存档值 |
+| `U` | 矩阵转化算力速度（**每分钟**算力） | `MatrixPointPerMinute` | **7200** |
+| `Y` | 矩阵转化算力速度倍率，**百分数**（`1500%` = 15 倍） | `UseGameTechSpeed` / `TechSpeedPercent` | 自动取存档值 |
 | `X` | 兑换系数 | `ExchangeFactor` | 1 |
 | — | 调试倍率 | `SpeedMultiplier` | 1 |
 
-**矩阵消耗速度**：每帧要花掉 `材料种数 × 每帧算力` 点矩阵点数，
+> **`U` 是每分钟口径**，所以公式里**不再乘任何帧率系数**。
+> 例如 `U=7200`、`Y=1500%` ⇒ 每分钟算力 `= 7200 × 1500% = 108000`。
+> （`Y=1500%` 即 15 倍，与游戏面板「科技研究速度 1500%」一致。）
+
+**矩阵消耗速度**：每分钟要花掉 `材料种数 × 每分钟算力` 点矩阵点数，
 再按第 1 格矩阵的算力折算成矩阵个数。
+
+> **升级「研究速度」科技可以提高算力。** `Y` 默认自动读取存档里的研究速度，
+> 每升一级研究速度，本塔每分钟算力就按比例提高。悬停塔窗口的 `?` 可以看到
+> **当前 `Y`（百分数）与对应的每分钟算力**。
 
 ### 每种材料的速度相互独立
 
-第 2 格起的每一种材料都**单独拿一份**每帧算力，互不挤占：
+第 2 格起的每一种材料都**单独拿一份**每分钟算力，互不挤占：
 
 | 塔里的材料种数 | 每种材料的速率 | 矩阵消耗 |
 |---|---|---|
@@ -109,8 +117,8 @@
 一帧花不完的算力直接作废（`unusedPoints`），不会留到下一帧。
 
 唯一的例外是"本帧配额**买不起 1 个材料**"的情况：这时会把零头**按槽位**攒起来，
-凑够 1 个再产出。这是必须的——否则默认 `U=100`、`Y=96%` 时每帧只有 96 点，
-而物质重组器（100 点）与核心素（300 点）**永远产出 0 个**。
+凑够 1 个再产出。这是必须的——否则单帧算力太小（如 `U=120`、`Y=100%` ⇒ 每分钟只有 120 点、
+单帧仅 0.033 点）时，核心素（300 点）这类材料**永远产出 0 个**。
 
 槽位空着时每个槽位最多攒 64 个材料的点数；槽位满了只留 1 个的点数，
 避免长期堵塞把累积量堆到天文数字。
@@ -122,22 +130,45 @@
 如果第 2 格起的所有材料槽位都满了（没有空间放产出），
 本帧**不会扣除矩阵**，避免矩阵白白消失。
 
+### 增产剂加成
+
+第 1 格的**科学矩阵喷过增产剂**（带增产点数）时，**同一份矩阵会多产出材料**，
+矩阵消耗量不变 —— 这就是游戏里「增产」的语义：同样的输入，多出产品。
+
+加成比例取自游戏自身的增产表（`Cargo.incTableMilli`，等级 0–10）：
+
+| 增产等级 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 产出加成 | +12.5% | +20% | +22.5% | +25% | +27.5% | +30% | +32.5% | +35% | +37.5% | +40% |
+
+等级的判定方式与游戏引擎一致：**累计增产点数 ÷ 物品数**（向下取整）。
+
+因此它是**整栈的平均等级**：整栈喷同一等级时等级最准确；混着放会按点数平均后取整。
+例如 100 个里 50 个喷到等级 6，`inc = 300`、`count = 100`，等级就是 3（而不是 6）。
+
+从黑雾工坊取走矩阵时，**增产点数按引擎同样的算法等比扣减，等级保持不变**，
+不会被清零或降级。
+
+> 例：核心素（300 点）在 `U=7200`、`Y=100%`（每分钟 7200 点）时是 24 个/分钟；
+> 矩阵喷了 Mk.II（等级 2，+20%）后变成 **28.8 个/分钟**，而矩阵消耗不变。
+
 ### 举例
 
-默认 `U=100`、`Y=100%`、`X=1` 时，每种材料每帧 100 点，折合**每秒 6000 点**：
+默认 `U=7200`、`Y=100%`、`X=1` 时，每种材料每分钟 7200 点：
 
 | 材料 | 单价 | 速率 |
 |---|---|---|
-| 能量碎片 | 50 | 120 个/秒 |
-| 黑雾矩阵 | 150 | 40 个/秒 |
-| 硅基神经元 | 100 | 60 个/秒 |
-| 负熵奇点 | 100 | 60 个/秒 |
-| 物质重组器 | 100 | 60 个/秒 |
-| 核心素 | 300 | 20 个/秒 |
+| 能量碎片 | 50 | 144 个/分钟 |
+| 黑雾矩阵 | 150 | 48 个/分钟 |
+| 硅基神经元 | 100 | 72 个/分钟 |
+| 负熵奇点 | 100 | 72 个/分钟 |
+| 物质重组器 | 100 | 72 个/分钟 |
+| 核心素 | 300 | 24 个/分钟 |
 
 - 塔里同时放 3 种材料 ⇒ **每种都是上表的速率**，但矩阵消耗也是 3 倍。
 - `X=10`：1 个电磁矩阵（50 点）只能换 `50/10 = 5` 点，即 0.1 个能量碎片（50 点）。
-- `Y=1100%`（研究速度 10 级）：每帧 1100 点，折合每秒 66000 点。
+- 研究速度越高越快：`Y=1500%` 时每分钟算力 `= 7200 × 1500% = 108000`，
+  上表速率整体变成 **15 倍**（核心素 360 个/分钟、能量碎片 2160 个/分钟）。
 
 ## 配置文件
 
@@ -152,11 +183,11 @@ BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg
 | 配置项 | 默认 | 说明 |
 |---|---|---|
 | `ExchangeFactor` | `1` | 兑换系数 `X`。可小数（如 0.5、2.5），必须 > 0 |
-| `MatrixPointPerFrame` | `100` | 物流塔每帧算力 `U`，正整数 |
-| `TechSpeedPercent` | `100` | 科技研究速度 `Y` 的默认百分比（100 = 100%） |
-| `UseGameTechSpeed` | `true` | `true` 时 `Y` 自动取存档的科技研究速度；`false` 时用 `TechSpeedPercent` |
-| `SpeedMultiplier` | `1` | 调试倍率，最终每帧算力 = `U × Y × 本项` |
-| `AccumulatePartialPoints` | `true` | 每帧配额买不起 1 个材料时，是否攒零头凑够 1 个 |
+| `MatrixPointPerMinute` | `7200` | 矩阵转化算力速度 `U`（**每分钟**算力，正整数）。最终 **每分钟算力 = `U × Y`**，公式里不再乘帧率系数 |
+| `TechSpeedPercent` | `100` | 矩阵转化算力速度 `Y` 的默认百分比（100 = 100%） |
+| `UseGameTechSpeed` | `true` | `true` 时 `Y` 自动取存档的研究速度；`false` 时用 `TechSpeedPercent` |
+| `SpeedMultiplier` | `1` | 调试倍率，最终每分钟算力 = `U × Y × 本项` |
+| `AccumulatePartialPoints` | `true` | 单帧算力买不起 1 个材料时，是否攒零头凑够 1 个 |
 | `VerboseLog` | `false` | 详细诊断日志：每次兑换逐槽位打印物品/数量/上限/单价/配额/产出 |
 | `OutputSlotLimit` | `6` | 参与兑换的材料槽位上限（第几格），范围 2–20 |
 
@@ -196,7 +227,7 @@ BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg
 
 | 想要的效果 | 怎么改 |
 |---|---|
-| 整体加快/变慢 | 调 `MatrixPointPerFrame`（`U`） |
+| 整体加快/变慢 | 调 `MatrixPointPerMinute`（`U`，每分钟算力） |
 | 只要某一种材料更快 | 调低那一种材料的算力值 |
 | 让矩阵更"耐用" | 调大矩阵算力值，或把 `X` 调小 |
 | 只让前几格参与 | 把 `OutputSlotLimit` 调小（最小 2） |
@@ -210,9 +241,14 @@ BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg
 鼠标悬停（**不需要点击**）会弹出提示，标题为 **`黑雾工坊 DarkFogWorkshop`**，内容包括：
 
 1. **第 1 槽位（消耗）**：矩阵名 + 消耗速度（个/分钟）+ 合计
-2. **各产出槽位**：材料名 + 生成速度（个/分钟）
-3. **算力表**：科学矩阵与黑雾材料各自的算力一览
-4. 一行提示：各物品算力可在配置文件中修改
+2. **矩阵转化算力速度 `Y`（百分数，如 `1500%`）与对应的每分钟算力**
+   （显示为 `U 7200 × Y 1500% = 108000`），并注明升级「研究速度」科技可以提高算力
+3. **增产状态**：矩阵喷了增产剂时显示「增产<sup>额外产出</sup>：+20%（等级 2）→ ×1.2」
+   （"额外产出"用游戏自身的增产蓝 `#61D8FF`）；
+   没喷时提示"科学矩阵喷涂增产剂可获得额外产出"
+4. **各产出槽位**：材料名 + 生成速度（个/分钟，**已含增产加成**）
+5. **算力表**：科学矩阵与黑雾材料各自的算力一览
+6. 一行提示：各物品算力可在配置文件中修改
 
 它是纯提示，**点击没有任何反应**，也不会在启停时弹窗。
 
@@ -265,17 +301,26 @@ put one or more Dark Fog materials in **slots 2+**. The station then consumes th
 matrix and produces every listed material **independently** (not split between them).
 
 ```text
-per-tick credit per material = U × Y × SpeedMultiplier
-matrix points consumed       = material kinds × per-tick credit
-cost of 1 material           = X × that material's point value
+per-minute credit per material = U × Y × SpeedMultiplier
+matrix points consumed         = material kinds × per-minute credit
+cost of 1 material             = X × that material's point value
 ```
 
-Defaults: `U = 100` (`MatrixPointPerFrame`), `Y` = game research speed,
-`X = 1` (`ExchangeFactor`). All values are configurable in
-`BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg`.
+Defaults: `U = 7200` (`MatrixPointPerMinute`, **already a per-minute value** — no frame-rate
+factor is applied), `Y` = game research speed **as a percentage** (`1500%` = 15x; upgrade the
+**Research Speed** tech to raise it), `X = 1` (`ExchangeFactor`).
+Example: `U=7200`, `Y=1500%` ⇒ `7200 × 1500% = 108000` points/min.
+All values are configurable in `BepInEx\config\TTenYX.DSP.DarkFogWorkshop.cfg`.
+
+If the **slot-1 matrices carry proliferator points**, the same matrix input
+yields **more output** (up to +40% at proliferator level 10); the matrix
+consumption stays the same. The bonus table is the game's own
+`Cargo.incTableMilli`, and the level is `total proliferator points ÷ item count`,
+exactly as the game's assemblers compute it.
 
 The mod does **not** rename stations, does **not** change power consumption,
 and only acts on stations whose slot 1 holds a science matrix set to Local Demand.
 
 Hover the **`?`** button below the close button of a station window to see the
-current per-minute consumption and production rates.
+current research-speed multiplier, the proliferator status, and the per-minute
+consumption and production rates.
