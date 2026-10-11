@@ -1,4 +1,4 @@
-<#
+﻿<#
   关闭游戏后把编译好的 DarkFogWorkshop.dll 部署到 r2modman profile「0.10.35 new」。
 
   用法（游戏关闭后）：

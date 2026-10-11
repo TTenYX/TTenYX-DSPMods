@@ -3,3 +3,4 @@ obj/
 *.zip
 offline-feed/
 icon.png.bak-old-*
+.thunderstore-token
