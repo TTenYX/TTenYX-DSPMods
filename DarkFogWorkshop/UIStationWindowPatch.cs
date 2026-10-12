@@ -283,8 +283,7 @@ namespace DarkFogWorkshop
                 if (cloneRect != null)
                 {
                     cloneRect.SetSiblingIndex(Math.Max(0, source.GetSiblingIndex()));
-                    cloneRect.anchoredPosition = source.anchoredPosition
-                        + Vector2.up * (source.rect.height + 4f);
+                    PositionMetadataGroupAboveFirstSlot(window, cloneRect, source);
                 }
 
                 _metadataButton = _metadataGroup.GetComponentInChildren<UIButton>(true);
@@ -314,6 +313,40 @@ namespace DarkFogWorkshop
                     _metadataLabel.text = "元数据兑换科学矩阵";
                 }
             }
+        }
+
+        private static void PositionMetadataGroupAboveFirstSlot(
+            UIStationWindow window, RectTransform cloneRect, RectTransform fallback)
+        {
+            RectTransform target = null;
+            try
+            {
+                object value = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window);
+                Array storageUIs = value as Array;
+                if (storageUIs != null && storageUIs.Length > 0)
+                {
+                    Component first = storageUIs.GetValue(0) as Component;
+                    target = first != null ? first.transform as RectTransform : null;
+                }
+            }
+            catch
+            {
+                target = null;
+            }
+
+            if (target == null || cloneRect == null || cloneRect.parent == null)
+            {
+                if (fallback != null)
+                {
+                    cloneRect.anchoredPosition = fallback.anchoredPosition
+                        + Vector2.up * (fallback.rect.height + 4f);
+                }
+                return;
+            }
+
+            Vector3 worldAbove = target.TransformPoint(
+                new Vector3(0f, target.rect.height * 0.5f + cloneRect.rect.height * 0.5f + 4f, 0f));
+            cloneRect.anchoredPosition3D = cloneRect.parent.InverseTransformPoint(worldAbove);
         }
 
         private static string RelativePath(Transform root, Transform target)

@@ -212,6 +212,7 @@ namespace DarkFogWorkshop
             DSPGame.propertySystem.AddItemConsumption(seedKey, matrix.itemId, take);
             GameMain.data.history.AddPropertyItemConsumption(matrix.itemId, take, banAchievement: true);
             matrix.count += take;
+            storage[MatrixSlot] = matrix;
             state.metadataPartial -= take;
             return true;
         }
@@ -300,8 +301,9 @@ namespace DarkFogWorkshop
                 return;
             }
 
-            // 条件 2：第 1 格必须是【本地需求】。
-            if (storage[MatrixSlot].localLogic != ELogisticStorage.Demand)
+            bool metadataMode = state.metadataExchangeEnabled
+                && storage[MatrixSlot].localLogic == ELogisticStorage.None;
+            if (storage[MatrixSlot].localLogic != ELogisticStorage.Demand && !metadataMode)
             {
                 SettleDbg(station, state, "未勾本地需求", $"第1格物品={storage[MatrixSlot].itemId} localLogic={storage[MatrixSlot].localLogic}");
                 return;
