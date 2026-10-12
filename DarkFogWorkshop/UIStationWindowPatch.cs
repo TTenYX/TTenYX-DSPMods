@@ -277,16 +277,28 @@ namespace DarkFogWorkshop
             if (_metadataGroup == null)
             {
                 RectTransform source = window.warperNecessaryGroup;
-                _metadataGroup = UnityEngine.Object.Instantiate(source.gameObject, source.parent);
+                _metadataGroup = UnityEngine.Object.Instantiate(source.gameObject, window.windowTrans);
                 _metadataGroup.name = "dark-fog-workshop-metadata-exchange";
                 RectTransform cloneRect = _metadataGroup.transform as RectTransform;
                 if (cloneRect != null)
                 {
                     cloneRect.SetSiblingIndex(Math.Max(0, source.GetSiblingIndex()));
-                    PositionMetadataGroupAboveFirstSlot(window, cloneRect, source);
+                    PositionMetadataGroupBelowHelp(cloneRect, source);
                 }
 
                 _metadataButton = _metadataGroup.GetComponentInChildren<UIButton>(true);
+                foreach (UIButton button in _metadataGroup.GetComponentsInChildren<UIButton>(true))
+                {
+                    button.tipTitleFormatString = string.Empty;
+                    button.tipTextFormatString = string.Empty;
+                    button.tips.tipTitle = DarkFogWorkshop.HELP_TITLE;
+                    button.tips.tipText = DarkFogWorkshop.Tr(
+                        "勾选后，第 1 槽位将开始自动兑换元数据，将对应的科学矩阵直接放入该槽位。取消勾选即可停止兑换。",
+                        "When checked, slot 1 automatically exchanges metadata for its selected science matrix and deposits it directly into the slot. Uncheck to stop.");
+                    button.tips.itemId = 0;
+                    button.tips.type = UIButton.ItemTipType.Other;
+                    button.UpdateTip();
+                }
                 if (_metadataButton != null)
                 {
                     _metadataButton.onClick += OnMetadataExchangeClick;
@@ -313,40 +325,30 @@ namespace DarkFogWorkshop
                     _metadataLabel.text = "元数据兑换科学矩阵";
                 }
             }
+            if (_metadataGroup != null)
+            {
+                if (_metadataGroup.transform.parent != window.windowTrans)
+                {
+                    _metadataGroup.transform.SetParent(window.windowTrans, false);
+                }
+                PositionMetadataGroupBelowHelp(_metadataGroup.transform as RectTransform, window.warperNecessaryGroup);
+            }
         }
 
-        private static void PositionMetadataGroupAboveFirstSlot(
-            UIStationWindow window, RectTransform cloneRect, RectTransform fallback)
+        private static void PositionMetadataGroupBelowHelp(RectTransform cloneRect, RectTransform source)
         {
-            RectTransform target = null;
-            try
+            if (cloneRect == null)
             {
-                object value = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window);
-                Array storageUIs = value as Array;
-                if (storageUIs != null && storageUIs.Length > 0)
-                {
-                    Component first = storageUIs.GetValue(0) as Component;
-                    target = first != null ? first.transform as RectTransform : null;
-                }
-            }
-            catch
-            {
-                target = null;
-            }
-
-            if (target == null || cloneRect == null || cloneRect.parent == null)
-            {
-                if (fallback != null)
-                {
-                    cloneRect.anchoredPosition = fallback.anchoredPosition
-                        + Vector2.up * (fallback.rect.height + 4f);
-                }
                 return;
             }
-
-            Vector3 worldAbove = target.TransformPoint(
-                new Vector3(0f, target.rect.height * 0.5f + cloneRect.rect.height * 0.5f + 4f, 0f));
-            cloneRect.anchoredPosition3D = cloneRect.parent.InverseTransformPoint(worldAbove);
+            // Same top-right coordinate system as '?', independent of slot count.
+            cloneRect.anchorMin = new Vector2(1f, 1f);
+            cloneRect.anchorMax = new Vector2(1f, 1f);
+            cloneRect.pivot = new Vector2(1f, 1f);
+            cloneRect.localScale = Vector3.one;
+            float height = source != null ? source.rect.height : 22f;
+            cloneRect.sizeDelta = new Vector2(Mathf.Max(280f, cloneRect.rect.width), Mathf.Max(22f, height));
+            cloneRect.anchoredPosition3D = new Vector3(-HelpRight, -(HelpTop + HelpSize + 6f), 0f);
         }
 
         private static string RelativePath(Transform root, Transform target)
@@ -374,7 +376,10 @@ namespace DarkFogWorkshop
             }
             DarkFogWorkshopPatch.SetMetadataExchangeEnabled(
                 station, !DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station));
-            RefreshMetadataWidget(station, _window != null && _window.active);
+            if (_window != null)
+            {
+                Refresh(_window);
+            }
         }
 
         private static void RefreshMetadataWidget(StationComponent station, bool windowActive)
@@ -601,7 +606,10 @@ namespace DarkFogWorkshop
             }
             StationComponent station = GetStation(window);
             RefreshMetadataWidget(station, window.active);
-            bool visible = window.active && station != null && DarkFogWorkshopPatch.IsWorkshopShape(station);
+            bool visible = window.active && station != null
+                && (DarkFogWorkshopPatch.IsWorkshopShape(station)
+                    || (DarkFogWorkshopPatch.IsMetadataExchangeEligible(station)
+                        && DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station)));
             if (_helpButton.gameObject.activeSelf != visible)
             {
                 _helpButton.gameObject.SetActive(visible);
