@@ -295,6 +295,8 @@ dotnet build 'DSP-DarkFogWorkshop\DarkFogWorkshop.csproj' -c Release
 
 - 当物流塔第 1 格为科学矩阵且设为**本地仓储**时，显示「元数据兑换科学矩阵」勾选框。
 - 勾选后按 `MetadataMatrixPerMinute` 自动兑换对应科学矩阵并补入第 1 格，默认 600 个/分钟。
+- 元数据兑换与黑雾生产可在同一座塔中连续工作。
+- 兼容 OrbitalRing：拦截其共享仓储 UI 的数组越界，避免物流塔窗口报错。
 
 ### 1.0.1
 

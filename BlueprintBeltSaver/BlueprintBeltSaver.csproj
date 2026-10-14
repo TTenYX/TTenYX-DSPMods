@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>BlueprintBeltSaver</RootNamespace>
+    <AssemblyName>BlueprintBeltSaver</AssemblyName>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <DebugType>none</DebugType>
+    <PackageId>BlueprintBeltSaver</PackageId>
+    <BepInExPluginGuid>com.dsp.blueprintbeltsaver</BepInExPluginGuid>
+    <Description>蓝图长带优化（省传送带）+ 徒手拉带长带 | Blueprint belt merging + hand-drawn long belts</Description>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <!-- Keep the build reproducible: never bake git revision or absolute paths into the DLL. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Deterministic>true</Deterministic>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)..\..\.work\offline-feed;https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
+  </ItemGroup>
+</Project>
