@@ -26,7 +26,7 @@
 		<PackageId>DarkFogWorkshop</PackageId>
 		<BepInExPluginGuid>TTenYX.DSP.DarkFogWorkshop</BepInExPluginGuid>
 		<Description>Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵产出黑雾材料</Description>
-		<Version>1.0.2</Version>
+		<Version>1.1.0</Version>
 		<Authors>TTenYX</Authors>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
@@ -43,6 +43,12 @@
 		<PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
 		<PackageReference Include="UnityEngine.Modules" Version="2022.3.53" IncludeAssets="compile" />
 		<PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+		<!--
+		  GameLibs 故意停在 0.10.35.29088-r.0（离线源可还原）：
+		  它只是编译期引用，本 MOD 使用的 API（LDB/UIItemPicker/StationStore 等）在
+		  0.10.35.29131 游戏上运行完全兼容（1.0.x 即是 29088 编译、29131 运行）。
+		  若确需升级到 29145，先把对应的 nupkg 放进 .work\offline-feed。
+		-->
 	</ItemGroup>
 	<PropertyGroup>
 		<ProfileDir Condition=" '$(ProfileDir)' == '' ">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\0.10.35 new</ProfileDir>

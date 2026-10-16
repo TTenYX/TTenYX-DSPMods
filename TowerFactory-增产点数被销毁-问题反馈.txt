@@ -1,0 +1,118 @@
+========================================================================
+问题反馈：TowerFactory（塔厂）会销毁物流塔内的增产点数
+反馈对象：cat-yummi
+涉及版本：TowerFactory 1.2.0（源码 StationProductionPatch.cs）
+========================================================================
+
+一、现象
+------------------------------------------------------------------------
+把喷过增产剂（等级 >= 2）的物品放进塔厂的物流塔后，随着塔厂开始生产，
+这些物品的增产等级会直接掉回 1，增产点数被大量销毁；之后每消耗一批，
+点数还会继续被销毁。
+
+复现步骤：
+1. 造 100 个科学矩阵，全部用增产剂喷到等级 4（每件 4 点增产）。
+2. 按塔厂的「矩阵研究站」玩法，把这批矩阵放进物流塔的矩阵槽位。
+3. 塔厂开始生产后，悬停查看矩阵的增产等级：
+   等级从 4 直接掉到 1，并且之后持续保持 1。
+   （同样的问题也出现在第 2 格产品、第 3 格起原料的普通配方玩法上。）
+
+期望行为：消耗多少件物品，就等比例扣减多少点增产，剩余物品的增产等级
+保持不变（与游戏原生装配机/研究站的行为一致）。
+
+
+二、根因
+------------------------------------------------------------------------
+StationStore.inc 的语义是「这一格的增产点数总量」，不是等级，
+也不与 count 同量纲：
+
+    100 件各带 4 点增产的矩阵
+        count = 100
+        inc   = 400          （= 4 × 100）
+
+等级由 inc / count（向下取整）得出，与游戏引擎
+AssemblerComponent.split_inc_level / LabComponent.split_inc_level 一致。
+
+而 StationProductionPatch.cs 里 4 处在扣减 count 后写了：
+
+    slot.count -= take;
+    if (slot.inc > slot.count)
+    {
+        slot.inc = slot.count;          // ← 把 inc 当成与 count 同量纲
+    }
+
+只要物品增产等级 >= 2，inc(400) > count(99) 恒成立，
+inc 被直接砍到 99 —— 等级从 4 掉到 1，一次消耗就销毁掉 3/4 的增产点数，
+且之后每消耗一批都会继续销毁。
+
+具体位置（TowerFactory 1.2.0 源码 StationProductionPatch.cs）：
+    第 421-423 行：矩阵研究站扣研究矩阵（路径一）
+    第 469-471 行：矩阵研究站扣研究矩阵（路径二）
+    第 750-752 行：制造台生产扣第 2 格产品
+    第 795-797 行：通用配方扣第 3 格起的原料
+
+
+三、修复建议
+------------------------------------------------------------------------
+扣减时按引擎同样的算法等比扣减（含余数补偿），
+保证扣减后 inc / count（即等级）不变：
+
+    private static void ConsumeWithInc(ref StationStore slot, int consume)
+    {
+        if (consume <= 0) return;
+        int count = slot.count;
+        int inc   = slot.inc;
+
+        if (count <= 0 || inc <= 0)
+        {
+            slot.count = System.Math.Max(0, count - consume);
+            slot.inc   = 0;
+            return;
+        }
+
+        int level     = inc / count;              // 每件物品的增产点数
+        int remainder = inc - level * count;      // 除不尽的余数
+        int newCount  = System.Math.Max(0, count - consume);
+        remainder -= newCount;
+        int consumedInc = (remainder > 0) ? (level * consume + remainder)
+                                          : (level * consume);
+
+        slot.count = newCount;
+        slot.inc   = System.Math.Max(0, inc - consumedInc);
+    }
+
+然后把 4 处「count -= …; if (inc > count) inc = count;」
+统一替换为：ConsumeWithInc(ref slot, take); 即可。
+
+
+四、验证方法
+------------------------------------------------------------------------
+与引擎 split_inc_level 对比（该引擎方法与
+AssemblerComponent / LabComponent 中的实现完全一致）：
+
+    在 count = 1..200、等级 0..10、余数 0/1/5/17、
+    consume = 1..count 的全部 884,400 种合法组合下，
+    上述算法与引擎逐位一致（0 差异）。
+
+游戏内验证：
+    1. 造 100 个 4 点增产的矩阵放入塔厂；
+    2. 让塔厂生产一段时间；
+    3. 悬停查看矩阵等级 —— 应稳定保持 4，不再掉到 1。
+
+
+五、补充说明
+------------------------------------------------------------------------
+· 参考实现（游戏引擎，反编译）：
+      AssemblerComponent.split_inc_level(ref n, ref m, p)
+      // n = count, m = inc, p = 消耗个数
+      int num  = m / n;
+      int num2 = m - num * n;
+      n -= p;
+      num2 -= n;
+      m -= ((num2 > 0) ? (num * p + num2) : (num * p));
+      return num;
+
+· 注意区分：Cargo.inc 是位掩码（kIncLevel1/2/3 = 1/2/4），
+  StationStore.inc 是点数总量，两者语义不同，不要混用。
+
+========================================================================
