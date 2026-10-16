@@ -7,40 +7,54 @@ namespace DarkFogWorkshop
 {
     /// <summary>
     /// 让黑雾 6 种掉落物出现在「选择物品」界面（UIItemPicker）里，
-    /// 且位置与正常获取时的物品目录格位一致。
+    /// 位置与游戏本体数据中的原版格位完全一致。
     ///
-    /// <para><b>原版为什么看不到</b>：<c>UIItemPicker.RefreshIcons</c> 有三道门槛 ——
-    /// GridIndex ≥ 1101、<c>history.ItemUnlocked</c>、且物品所在网格页必须等于当前页签
-    /// （选择窗只有第 1/2 两个页签）。六种黑雾材料的 GridIndex 是
-    /// <b>5801–5806</b>（第 5 页·最后一行的前 6 格），第 5 页没有页签，
-    /// 且在击杀黑雾前它们也不算已解锁，所以原版永远选不到。</para>
+    /// <para><b>原版为什么看不到</b>：游戏源码 <c>UIItemPicker.RefreshIcons</c>
+    /// 要求 <c>GridIndex ≥ 1101</c>、<c>history.ItemUnlocked(ID)</c>、
+    /// 且 <c>GridIndex/1000 == currentType</c>（只有第 1/2 两个页签）。
+    /// 黑雾材料 UnlockKey = -2，只有「正常获取」（拾取黑雾掉落触发
+    /// UnlockSpecialItem）后才算解锁 —— 用 MOD 产出的材料永远不触发解锁，
+    /// 所以选择窗里看不到。</para>
     ///
-    /// <para><b>本补丁</b>：在 RefreshIcons 之后，从六种材料的<b>自然格位起点</b>
-    /// （能量碎片 5801 → 网格槽位 98，即最后一行第 1 列；六种占 98–103）
-    /// 开始、跳过已占用格顺次补写。这样：</para>
+    /// <para><b>原版格位</b>（直接解码游戏本体
+    /// <c>DSPGAME_Data\resources.assets</c> 里 ItemProtoSet 的序列化数据，
+    /// 经 UnlockKey/掉落等级/掉落率浮点逐位校验，不引用任何 MOD 的数据；
+    /// 注意不能用运行时 LDB 值 —— OrbitalRing 等 MOD 会在运行时改写它）：</para>
     /// <list type="bullet">
-    /// <item>不与其它 MOD 冲突：若该排格位被占（例如 OrbitalRing 把矩阵移到了这一排），
-    /// 就顺着往右找空格，与已有物品并排；</item>
-    /// <item>只补「物品」页签（currentType == 1），不混进「建筑」页签；</item>
-    /// <item>悬停提示与点击选择都读取 protoArray，无需其它改动。</item>
+    /// <item>5201 黑雾矩阵 = 1807（物品页 · 第8行 · 列6）</item>
+    /// <item>5206 能量碎片 = 1808（列7）</item>
+    /// <item>5202 硅基神经元 = 1809（列8）</item>
+    /// <item>5204 负熵奇点 = 1810（列9）</item>
+    /// <item>5203 物质重组器 = 1811（列10）</item>
+    /// <item>5205 虚粒子 = 1112（第1行 · 列11）</item>
     /// </list>
     ///
-    /// <para>采用 <see cref="Install"/> 手动注册并全程 try/catch：
-    /// 这只是辅助性界面功能，游戏更新若导致目标缺失，只记警告跳过，
-    /// 绝不能让整个插件加载失败。</para>
+    /// <para><b>本补丁</b>：RefreshIcons 之后，把六种材料补写到各自的
+    /// <b>原版格位</b>（已自然显示的跳过；格位被占则顺延到之后最近的空格）。
+    /// 只处理「物品」页签（currentType == 1），不混进「建筑」页签。
+    /// 悬停提示与点击选择都读取 protoArray，无需其它改动。</para>
+    ///
+    /// <para>手动注册并全程 try/catch：游戏更新导致目标缺失时只记警告，
+    /// 不影响插件其它功能。</para>
     /// </summary>
     internal static class DarkFogItemPickerPatch
     {
-        /// <summary>黑雾 6 种掉落物（与 DarkFogWorkshopPatch 中的常量保持一致）。</summary>
+        /// <summary>黑雾 6 种掉落物 ID（与 DarkFogWorkshopPatch 保持一致）。</summary>
         private static readonly int[] DarkFogItemIds =
         {
             5201, // 黑雾矩阵
             5202, // 硅基神经元
             5203, // 物质重组器
             5204, // 负熵奇点
-            5205, // 核心素
+            5205, // 虚粒子
             5206, // 能量碎片
         };
+
+        /// <summary>
+        /// 各自的原版网格槽位（14 列网格的行*14+列，来自游戏本体数据解码）：
+        /// 1807→104, 1809→106, 1811→108, 1810→107, 1112→11, 1808→105。
+        /// </summary>
+        private static readonly int[] VanillaSlots = { 104, 106, 108, 107, 11, 105 };
 
         /// <summary>选择窗网格：14 列 × 8 行 = 112 个可见格位。</summary>
         private const int GridCols = 14;
@@ -66,19 +80,6 @@ namespace DarkFogWorkshop
             {
                 DarkFogWorkshop.Log?.LogWarning($"[选物品] 补丁注册失败（不影响其它功能）：{e.Message}");
             }
-        }
-
-        /// <summary>按游戏规则把 GridIndex 换算成网格槽位；越界返回 -1。</summary>
-        private static int SlotOfGridIndex(int gridIndex)
-        {
-            int page = gridIndex / 1000;
-            int row = (gridIndex - page * 1000) / 100 - 1;
-            int col = gridIndex % 100 - 1;
-            if (row < 0 || col < 0 || row >= GridRows || col >= GridCols)
-            {
-                return -1;
-            }
-            return row * GridCols + col;
         }
 
         internal static void RefreshIcons_Postfix(UIItemPicker __instance)
@@ -116,36 +117,14 @@ namespace DarkFogWorkshop
                 return;
             }
 
-            // 只写可见的 112 个格位（数组实际分配了 120，尾部不显示）。
             int slots = Math.Min(Math.Min(protoArray.Length, indexArray.Length), GridSlots);
 
-            // 自然格位起点：六种材料的 GridIndex 是 5801–5806，
-            // 在原版物品目录里占「最后一行前 6 格」（槽位 98–103）。
-            // 取其中最小的自然槽位作为摆放起点，之后跳过已占用格顺次摆放。
-            int start = int.MaxValue;
-            foreach (int id in DarkFogItemIds)
-            {
-                ItemProto p = LDB.items.Select(id);
-                if (p == null)
-                {
-                    continue;
-                }
-                int slot = SlotOfGridIndex(p.GridIndex);
-                if (slot >= 0 && slot < start)
-                {
-                    start = slot;
-                }
-            }
-            if (start == int.MaxValue || start >= slots)
-            {
-                start = 0;
-            }
-
             var placed = new List<string>();
-            int cursor = start;
-            foreach (int id in DarkFogItemIds)
+            for (int n = 0; n < DarkFogItemIds.Length; n++)
             {
-                // 已经出现在当前页（自然位置）的不再重复补。
+                int id = DarkFogItemIds[n];
+
+                // 已自然显示（正常获取过、已解锁）的不再重复补。
                 bool exists = false;
                 for (int i = 0; i < slots; i++)
                 {
@@ -166,28 +145,28 @@ namespace DarkFogWorkshop
                     continue;
                 }
 
-                while (cursor < slots && protoArray[cursor] != null)
+                // 原版格位；被占则从该处向后找最近空格。
+                int slot = VanillaSlots[n];
+                while (slot < slots && protoArray[slot] != null)
                 {
-                    cursor++;
+                    slot++;
                 }
-                if (cursor >= slots)
+                if (slot >= slots)
                 {
-                    DarkFogWorkshop.Log?.LogWarning("[选物品] 「物品」页签网格已满，部分黑雾材料未能加入。");
-                    break;
+                    continue;
                 }
 
-                protoArray[cursor] = proto;
-                indexArray[cursor] = GameMain.iconSet.itemIconIndex[id];
-                placed.Add($"{id}@{cursor}");
-                cursor++;
+                protoArray[slot] = proto;
+                indexArray[slot] = GameMain.iconSet.itemIconIndex[id];
+                placed.Add($"{id}@{slot}");
             }
 
             if (!_diagLogged)
             {
                 _diagLogged = true;
                 DarkFogWorkshop.Log?.LogInfo(
-                    $"[选物品] currentType={currentType} 可见格位={slots} " +
-                    $"起始槽位={start} 本次摆放=[{string.Join(", ", placed)}]");
+                    $"[选物品] currentType={currentType} 本次摆放=[{string.Join(", ", placed)}] " +
+                    $"（原版格位 1807-1811→末行列6-10，1112→首行列11）");
             }
         }
     }
