@@ -18,10 +18,10 @@ namespace DarkFogWorkshop
     /// 落在第 5 页 —— 没有页签可切，且在击杀黑雾之前它们也不算「已解锁」。
     /// 所以原版永远选不到它们，玩家也就无法把黑雾材料设为物流塔的供应物品。
     ///
-    /// 做法：<c>RefreshIcons</c> 执行完之后，把这 6 种物品补写进当前页签
-    /// 网格里最后一个已占用位置之后（protoArray / indexArray）。
-    /// 悬停提示与点击选择都读取 protoArray，因此无需改动其它逻辑；
-    /// 由于 RefreshIcons 在打开和切换页签时都会执行，两个页签里都能看到。
+    /// 做法：<c>RefreshIcons</c> 执行完之后，把这 6 种物品补写进「物品」页签
+    /// 网格里最后一个已占用位置之后（protoArray / indexArray）；
+    /// 「建筑」页签不补，避免材料混进建筑清单。
+    /// 悬停提示与点击选择都读取 protoArray，因此无需改动其它逻辑。
     ///
     /// 该选择窗为全局共用（物流塔、分拣器、储物仓、过滤器等），
     /// 修正后这些界面同样可以直接选中黑雾材料。
@@ -80,6 +80,14 @@ namespace DarkFogWorkshop
         private static void AppendDarkFogItems(UIItemPicker picker)
         {
             if (picker == null || GameMain.history == null || GameMain.iconSet == null)
+            {
+                return;
+            }
+
+            // 只补进「物品」页签（currentType == 1）。
+            // 「建筑」页签（currentType == 2）是建筑清单，黑雾材料混进去是错的。
+            object currentType = AccessTools.Field(typeof(UIItemPicker), "currentType")?.GetValue(picker);
+            if (currentType is int page && page != 1)
             {
                 return;
             }
