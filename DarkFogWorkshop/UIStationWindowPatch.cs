@@ -356,7 +356,8 @@ namespace DarkFogWorkshop
             rect.localScale = Vector3.one;
 
             RectTransform wt = window.windowTrans;
-            float centerY = -55f;
+            // 垂直：与右上角「?」提示按钮平齐（HelpTop=49、尺寸 24 → 中心在 -61）
+            float centerY = -(HelpTop + HelpSize * 0.5f);
             float cloneH = rect.rect.height > 1f ? rect.rect.height : 26f;
             RectTransform nameRect = window.nameInput != null
                 ? window.nameInput.transform as RectTransform
@@ -364,14 +365,13 @@ namespace DarkFogWorkshop
             float targetLocalX = 320f;
             if (nameRect != null)
             {
-                // 命名盒右边缘 × 垂直中点 → windowTrans 本地坐标
+                // 命名盒右边缘 → windowTrans 本地坐标
                 Vector3 corner = nameRect.TransformPoint(new Vector3(
                     nameRect.rect.width * (1f - nameRect.pivot.x),
                     nameRect.rect.height * (0.5f - nameRect.pivot.y),
                     0f));
                 Vector3 local = wt.InverseTransformPoint(corner);
                 targetLocalX = local.x + 24f;
-                centerY = local.y;
             }
 
             // 锚点 (0,1)、pivot (0,1)：anchoredPosition = 目标点(本地) - 锚点(本地)。
