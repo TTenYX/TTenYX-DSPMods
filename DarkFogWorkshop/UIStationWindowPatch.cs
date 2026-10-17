@@ -62,8 +62,6 @@ namespace DarkFogWorkshop
         private static Image _metadataCheck;
         private static Text _metadataLabel;
         private static StationComponent _metadataStation;
-        /// <summary>状态条当前是否已把槽位区整体下移（+44px 布局位移）。</summary>
-        private static bool _barShifted;
         private static WorkshopUiHost _host;
         private static StationComponent _lastTipStation;
         private static long _lastTipTick;
@@ -210,21 +208,6 @@ namespace DarkFogWorkshop
         {
             _window = __instance;
             EnsureWidget(__instance);
-            NormalizeSlotRows(__instance);
-            Refresh(__instance);
-        }
-
-        /// <summary>
-        /// 游戏在 RefreshTrans 里按槽位数重算窗口高度与底部面板位置，
-        /// 结束后槽位行回到基准位（-90-76*i），这里归一化标记，
-        /// 让状态条的位移在随后 Refresh 里按需重新应用。
-        /// </summary>
-        [HarmonyPostfix]
-        [HarmonyPatch("RefreshTrans")]
-        public static void RefreshTrans_Postfix(UIStationWindow __instance, StationComponent station)
-        {
-            _window = __instance;
-            NormalizeSlotRows(__instance);
             Refresh(__instance);
         }
 
@@ -286,8 +269,9 @@ namespace DarkFogWorkshop
         }
 
         /// <summary>
-        /// 元数据兑换开关：完全克隆原版「翘曲必备」控件（外观与原版一致），
-        /// 放在第 1 槽位上方（槽位行整体下移 44px 后腾出的位置，左对齐 x=40）。
+        /// 元数据兑换开关：完全克隆原版「翘曲必备」控件（外观与原版一致）。
+        /// 位置：与物流站命名盒（nameInput，"本地站点 #N"）垂直居中平齐、位于其右侧，
+        /// **不改变窗口原有布局**（不动槽位行、窗口高度与底部面板）。
         /// </summary>
         private static void EnsureMetadataBar(UIStationWindow window)
         {
@@ -300,14 +284,14 @@ namespace DarkFogWorkshop
                 if (_metadataBar.transform.parent != window.windowTrans)
                 {
                     _metadataBar.transform.SetParent(window.windowTrans, false);
-                    LayoutMetadataBar();
+                    LayoutMetadataBar(window);
                 }
                 return;
             }
 
             _metadataBar = UnityEngine.Object.Instantiate(window.warperNecessaryGroup.gameObject, window.windowTrans);
             _metadataBar.name = "dark-fog-workshop-metadata-exchange";
-            LayoutMetadataBar();
+            LayoutMetadataBar(window);
 
             // 清掉克隆来的原版提示与点击，换成黑雾工坊的说明与切换逻辑
             _metadataButton = _metadataBar.GetComponentInChildren<UIButton>(true);
@@ -351,9 +335,13 @@ namespace DarkFogWorkshop
             }
         }
 
-        private static void LayoutMetadataBar()
+        /// <summary>
+        /// 与物流站命名盒（nameInput）垂直居中平齐、放在其右侧（间隔 24px）。
+        /// 每次刷新都按命名盒实际位置计算，窗口尺寸变化也能跟随。
+        /// </summary>
+        private static void LayoutMetadataBar(UIStationWindow window)
         {
-            if (_metadataBar == null)
+            if (_metadataBar == null || window == null || window.windowTrans == null)
             {
                 return;
             }
@@ -362,12 +350,34 @@ namespace DarkFogWorkshop
             {
                 return;
             }
-            // 第 1 槽位上方：左对齐槽位行（x=40），顶部在 y=-90（槽位区下移 44px 腾出的位置）
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.localScale = Vector3.one;
-            rect.anchoredPosition3D = new Vector3(40f, -90f, 0f);
+
+            RectTransform wt = window.windowTrans;
+            float x = 320f;
+            float centerY = -55f;
+            float cloneH = rect.rect.height > 1f ? rect.rect.height : 26f;
+            RectTransform nameRect = window.nameInput != null
+                ? window.nameInput.transform as RectTransform
+                : null;
+            if (nameRect != null)
+            {
+                // 命名盒右边缘 × 垂直中点 → windowTrans 本地坐标
+                Vector3 corner = nameRect.TransformPoint(new Vector3(
+                    nameRect.rect.width * (1f - nameRect.pivot.x),
+                    nameRect.rect.height * (0.5f - nameRect.pivot.y),
+                    0f));
+                Vector3 local = wt.InverseTransformPoint(corner);
+                x = local.x + 24f;
+                centerY = local.y;
+            }
+
+            // 锚点 (0,1)、pivot (0,1)：anchoredPosition 以窗口左上角为基准
+            float topLeftX = -wt.rect.width * wt.pivot.x;
+            float topLeftY = wt.rect.height * (1f - wt.pivot.y);
+            rect.anchoredPosition3D = new Vector3(topLeftX + x, topLeftY + centerY - cloneH, 0f);
         }
 
         private static string RelativePath(Transform root, Transform target)
@@ -384,63 +394,6 @@ namespace DarkFogWorkshop
                 current = current.parent;
             }
             return current == root ? path.ToString() : string.Empty;
-        }
-
-        /// <summary>槽位行回到基准位（40, -90-76*i），并清除位移标记。</summary>
-        private static void NormalizeSlotRows(UIStationWindow window)
-        {
-            _barShifted = false;
-            if (window == null)
-            {
-                return;
-            }
-            Array storageUIs = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window) as Array;
-            if (storageUIs == null)
-            {
-                return;
-            }
-            for (int i = 0; i < storageUIs.Length; i++)
-            {
-                if (storageUIs.GetValue(i) is Component ui && ui.transform is RectTransform rect)
-                {
-                    rect.anchoredPosition = new Vector2(40f, -90f - 76f * i);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 应用/撤销状态条占位：槽位行整体 ±44px、窗口高度 ±44px、底部面板同步 ±44px。
-        /// 只在状态变化时执行一次（游戏重排后由 NormalizeSlotRows 归一，再按需重放）。
-        /// </summary>
-        private static void ApplyBarShift(UIStationWindow window, bool shift)
-        {
-            if (shift == _barShifted || window == null || window.windowTrans == null)
-            {
-                return;
-            }
-            Array storageUIs = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window) as Array;
-            if (storageUIs != null)
-            {
-                float dy = shift ? -44f : 44f;
-                for (int i = 0; i < storageUIs.Length; i++)
-                {
-                    if (storageUIs.GetValue(i) is Component ui && ui.transform is RectTransform rect)
-                    {
-                        rect.anchoredPosition += new Vector2(0f, dy);
-                    }
-                }
-            }
-            RectTransform windowRect = window.windowTrans;
-            windowRect.sizeDelta = new Vector2(
-                windowRect.sizeDelta.x,
-                windowRect.sizeDelta.y + (shift ? 44f : -44f));
-            Transform panelDown = AccessTools.Field(typeof(UIStationWindow), "panelDownTrans")
-                ?.GetValue(window) as Transform;
-            if (panelDown != null && panelDown is RectTransform panelRect)
-            {
-                panelRect.anchoredPosition -= new Vector2(0f, shift ? 44f : -44f);
-            }
-            _barShifted = shift;
         }
 
         private static void OnMetadataExchangeClick(int obj)
@@ -478,15 +431,11 @@ namespace DarkFogWorkshop
 
             if (visible)
             {
-                ApplyBarShift(window, true);
+                LayoutMetadataBar(window);
                 if (_metadataCheck != null)
                 {
                     _metadataCheck.enabled = DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station);
                 }
-            }
-            else
-            {
-                ApplyBarShift(window, false);
             }
             _metadataStation = eligible ? station : null;
         }
@@ -681,7 +630,6 @@ namespace DarkFogWorkshop
             {
                 _metadataBar.SetActive(false);
             }
-            _barShifted = false;
         }
 
         /// <summary>每帧刷新（只在窗口打开、且满足黑雾工坊条件时显示）。</summary>
