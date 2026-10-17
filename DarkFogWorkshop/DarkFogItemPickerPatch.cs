@@ -34,6 +34,12 @@ namespace DarkFogWorkshop
     /// 只处理「物品」页签（currentType == 1），不混进「建筑」页签。
     /// 悬停提示与点击选择都读取 protoArray，无需其它改动。</para>
     ///
+    /// <para><b>作用范围</b>：只对「物流塔槽位」触发的选择窗生效——
+    /// UIItemPicker 是全局共用控件（分拣器/储物仓/监控/总控面板等都会弹），
+    /// 这里按 <c>onReturn</c> 回调的宿主对象判断来源，
+    /// 仅当宿主是 <c>UIStationStorage</c>（物流塔槽位选择）时才补写，
+    /// 其它窗口一律不动。</para>
+    ///
     /// <para>手动注册并全程 try/catch：游戏更新导致目标缺失时只记警告，
     /// 不影响插件其它功能。</para>
     /// </summary>
@@ -97,6 +103,16 @@ namespace DarkFogWorkshop
         private static void AppendDarkFogItems(UIItemPicker picker)
         {
             if (picker == null || GameMain.history == null || GameMain.iconSet == null)
+            {
+                return;
+            }
+
+            // 只处理「物流塔槽位」触发的选择窗：UIItemPicker 是全局共用控件
+            // （分拣器/储物仓/监控/总控面板等 17 处都会弹），
+            // 这里通过 onReturn 回调的宿主对象判断来源——
+            // 只有 UIStationStorage.OnItemPickerReturn（物流塔槽位选择）才补写，
+            // 其它窗口一律不动。
+            if (!(picker.onReturn != null && picker.onReturn.Target is UIStationStorage))
             {
                 return;
             }

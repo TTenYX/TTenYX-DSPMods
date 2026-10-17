@@ -58,8 +58,9 @@ namespace DarkFogWorkshop
         private static UIStationWindow _window;
         private static UIButton _helpButton;
         private static GameObject _metadataBar;
-        private static Text _metadataCheckText;
-        private static Text _metadataRateText;
+        private static UIButton _metadataButton;
+        private static Image _metadataCheck;
+        private static Text _metadataLabel;
         private static StationComponent _metadataStation;
         /// <summary>状态条当前是否已把槽位区整体下移（+44px 布局位移）。</summary>
         private static bool _barShifted;
@@ -285,16 +286,12 @@ namespace DarkFogWorkshop
         }
 
         /// <summary>
-        /// 方案C：标题下整宽状态条（自绘控件，非克隆）。
-        ///
-        /// 结构：[☑] 元数据兑换科学矩阵 ················ 600/分钟
-        /// 位置：窗口标题下方、原第 1 槽行的位置（y = -90），整宽留 20px 边距；
-        /// 显示状态条时，全部槽位行整体下移 44px，窗口加高 44px、底部面板同步下移，
-        /// 不与任何原生元素重叠，也不受槽位数量影响。
+        /// 元数据兑换开关：完全克隆原版「翘曲必备」控件（外观与原版一致），
+        /// 放在第 1 槽位上方（槽位行整体下移 44px 后腾出的位置，左对齐 x=40）。
         /// </summary>
         private static void EnsureMetadataBar(UIStationWindow window)
         {
-            if (window == null || window.windowTrans == null)
+            if (window == null || window.windowTrans == null || window.warperNecessaryGroup == null)
             {
                 return;
             }
@@ -308,95 +305,50 @@ namespace DarkFogWorkshop
                 return;
             }
 
-            Font font = window.titleText != null
-                ? window.titleText.font
-                : Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _metadataBar = UnityEngine.Object.Instantiate(window.warperNecessaryGroup.gameObject, window.windowTrans);
+            _metadataBar.name = "dark-fog-workshop-metadata-exchange";
+            LayoutMetadataBar();
 
-            GameObject bar = new GameObject("dark-fog-workshop-metadata-bar",
-                typeof(RectTransform), typeof(Image), typeof(Button));
-            _metadataBar = bar;
-            bar.transform.SetParent(window.windowTrans, false);
+            // 清掉克隆来的原版提示与点击，换成黑雾工坊的说明与切换逻辑
+            _metadataButton = _metadataBar.GetComponentInChildren<UIButton>(true);
+            foreach (UIButton button in _metadataBar.GetComponentsInChildren<UIButton>(true))
+            {
+                button.tipTitleFormatString = string.Empty;
+                button.tipTextFormatString = string.Empty;
+                button.tips.tipTitle = DarkFogWorkshop.HELP_TITLE;
+                button.tips.tipText = DarkFogWorkshop.Tr(
+                    "勾选后，第 1 槽位将开始自动兑换元数据，将对应的科学矩阵直接放入该槽位。取消勾选即可停止兑换。",
+                    "When checked, slot 1 automatically exchanges metadata for its selected science matrix and deposits it directly into the slot. Uncheck to stop.");
+                button.tips.itemId = 0;
+                button.tips.type = UIButton.ItemTipType.Other;
+                button.UpdateTip();
+            }
+            if (_metadataButton != null)
+            {
+                _metadataButton.onClick -= OnMetadataExchangeClick;
+                _metadataButton.onClick += OnMetadataExchangeClick;
+            }
 
-            RectTransform barRect = bar.transform as RectTransform;
-            barRect.anchorMin = new Vector2(0f, 1f);
-            barRect.anchorMax = new Vector2(1f, 1f);
-            barRect.pivot = new Vector2(0.5f, 1f);
-            barRect.sizeDelta = new Vector2(-40f, 40f);           // 整宽，左右各留 20
-            barRect.anchoredPosition3D = new Vector3(0f, -90f, 0f);
-            Image bg = bar.GetComponent<Image>();
-            bg.color = new Color(0.141f, 0.188f, 0.227f, 0.92f);  // #24303A
-            Outline outline = bar.AddComponent<Outline>();
-            outline.effectColor = new Color(0.431f, 0.784f, 0.922f, 0.95f); // #6EC8EB
-            outline.effectDistance = new Vector2(1.5f, 1.5f);
+            string checkPath = RelativePath(window.warperNecessaryGroup, window.warperNecessaryCheck != null
+                ? window.warperNecessaryCheck.transform : null);
+            Transform checkTransform = string.IsNullOrEmpty(checkPath)
+                ? null : _metadataBar.transform.Find(checkPath);
+            _metadataCheck = checkTransform != null
+                ? checkTransform.GetComponent<Image>()
+                : _metadataBar.GetComponentInChildren<Image>(true);
 
-            // 勾选框小方块
-            GameObject box = new GameObject("check-box", typeof(RectTransform), typeof(Image));
-            box.transform.SetParent(bar.transform, false);
-            RectTransform boxRect = box.transform as RectTransform;
-            boxRect.anchorMin = new Vector2(0f, 0.5f);
-            boxRect.anchorMax = new Vector2(0f, 0.5f);
-            boxRect.pivot = new Vector2(0.5f, 0.5f);
-            boxRect.sizeDelta = new Vector2(22f, 22f);
-            boxRect.anchoredPosition = new Vector2(22f, 0f);
-            Image boxImg = box.GetComponent<Image>();
-            boxImg.color = new Color(0.10f, 0.14f, 0.18f, 1f);
-            Outline boxOutline = box.AddComponent<Outline>();
-            boxOutline.effectColor = new Color(0.431f, 0.784f, 0.922f, 1f);
-            boxOutline.effectDistance = new Vector2(1f, 1f);
-
-            // 对勾（勾选时显示）
-            GameObject mark = new GameObject("check-mark", typeof(RectTransform), typeof(Text));
-            mark.transform.SetParent(box.transform, false);
-            RectTransform markRect = mark.transform as RectTransform;
-            markRect.sizeDelta = new Vector2(22f, 22f);
-            markRect.anchoredPosition = Vector2.zero;
-            Text markText = mark.GetComponent<Text>();
-            markText.font = font;
-            markText.fontSize = 20;
-            markText.alignment = TextAnchor.MiddleCenter;
-            markText.color = new Color(0.431f, 0.784f, 0.922f, 1f);
-            markText.text = "√";
-            markText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            markText.verticalOverflow = VerticalWrapMode.Overflow;
-            markText.raycastTarget = false;
-            _metadataCheckText = markText;
-
-            // 标签
-            GameObject label = new GameObject("label", typeof(RectTransform), typeof(Text));
-            label.transform.SetParent(bar.transform, false);
-            RectTransform labelRect = label.transform as RectTransform;
-            labelRect.anchorMin = new Vector2(0f, 0.5f);
-            labelRect.anchorMax = new Vector2(0f, 0.5f);
-            labelRect.pivot = new Vector2(0f, 0.5f);
-            labelRect.sizeDelta = new Vector2(340f, 30f);
-            labelRect.anchoredPosition = new Vector2(46f, 0f);
-            Text labelText = label.GetComponent<Text>();
-            labelText.font = font;
-            labelText.fontSize = 21;
-            labelText.alignment = TextAnchor.MiddleLeft;
-            labelText.color = new Color(0.88f, 0.91f, 0.94f, 1f);
-            labelText.text = "元数据兑换科学矩阵";
-            labelText.raycastTarget = false;
-
-            // 右侧速率
-            GameObject rate = new GameObject("rate", typeof(RectTransform), typeof(Text));
-            rate.transform.SetParent(bar.transform, false);
-            RectTransform rateRect = rate.transform as RectTransform;
-            rateRect.anchorMin = new Vector2(1f, 0.5f);
-            rateRect.anchorMax = new Vector2(1f, 0.5f);
-            rateRect.pivot = new Vector2(1f, 0.5f);
-            rateRect.sizeDelta = new Vector2(220f, 30f);
-            rateRect.anchoredPosition = new Vector2(-20f, 0f);
-            Text rateText = rate.GetComponent<Text>();
-            rateText.font = font;
-            rateText.fontSize = 20;
-            rateText.alignment = TextAnchor.MiddleRight;
-            rateText.color = new Color(0.431f, 0.784f, 0.922f, 1f);
-            rateText.raycastTarget = false;
-            _metadataRateText = rateText;
-
-            bar.GetComponent<Button>().onClick.AddListener(OnMetadataBarClicked);
-            bar.SetActive(false);
+            Text[] labels = _metadataBar.GetComponentsInChildren<Text>(true);
+            if (labels != null && labels.Length > 0)
+            {
+                _metadataLabel = labels[0];
+                Localizer localizer = _metadataLabel.GetComponent<Localizer>();
+                if (localizer != null)
+                {
+                    localizer.stringKey = null;
+                    localizer.translation = null;
+                }
+                _metadataLabel.text = "元数据兑换科学矩阵";
+            }
         }
 
         private static void LayoutMetadataBar()
@@ -410,12 +362,28 @@ namespace DarkFogWorkshop
             {
                 return;
             }
+            // 第 1 槽位上方：左对齐槽位行（x=40），顶部在 y=-90（槽位区下移 44px 腾出的位置）
             rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.sizeDelta = new Vector2(-40f, 40f);
-            rect.anchoredPosition3D = new Vector3(0f, -90f, 0f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
             rect.localScale = Vector3.one;
+            rect.anchoredPosition3D = new Vector3(40f, -90f, 0f);
+        }
+
+        private static string RelativePath(Transform root, Transform target)
+        {
+            if (root == null || target == null || target == root)
+            {
+                return string.Empty;
+            }
+            StringBuilder path = new StringBuilder(target.name);
+            Transform current = target.parent;
+            while (current != null && current != root)
+            {
+                path.Insert(0, current.name + "/");
+                current = current.parent;
+            }
+            return current == root ? path.ToString() : string.Empty;
         }
 
         /// <summary>槽位行回到基准位（40, -90-76*i），并清除位移标记。</summary>
@@ -475,7 +443,7 @@ namespace DarkFogWorkshop
             _barShifted = shift;
         }
 
-        private static void OnMetadataBarClicked()
+        private static void OnMetadataExchangeClick(int obj)
         {
             StationComponent station = _metadataStation;
             if (station == null || !DarkFogWorkshopPatch.IsMetadataExchangeEligible(station))
@@ -511,15 +479,9 @@ namespace DarkFogWorkshop
             if (visible)
             {
                 ApplyBarShift(window, true);
-                if (_metadataCheckText != null)
+                if (_metadataCheck != null)
                 {
-                    _metadataCheckText.gameObject.SetActive(
-                        DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station));
-                }
-                if (_metadataRateText != null)
-                {
-                    _metadataRateText.text =
-                        $"{ModConfig.MetadataMatrixPerMinute.Value}/分钟";
+                    _metadataCheck.enabled = DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station);
                 }
             }
             else
