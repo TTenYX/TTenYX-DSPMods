@@ -56,7 +56,7 @@ namespace DarkFogWorkshop
         private const int TipWidth = 465;
 
         /// <summary>元数据勾选框与命名盒右缘的间距（px）。</summary>
-        private const float MetadataGapX = 24f;
+        private const float MetadataGapX = 35f;
         /// <summary>
         /// 元数据勾选框纵向微调（px）：相对「?」按钮中心，+往下 / -往上。
         /// 自动对齐后如仍有偏差，改这个数字重新编译即可。
@@ -308,8 +308,8 @@ namespace DarkFogWorkshop
                 button.tipTextFormatString = string.Empty;
                 button.tips.tipTitle = DarkFogWorkshop.HELP_TITLE;
                 button.tips.tipText = DarkFogWorkshop.Tr(
-                    "勾选后，第 1 槽位将开始自动兑换元数据，将对应的科学矩阵直接放入该槽位。取消勾选即可停止兑换。",
-                    "When checked, slot 1 automatically exchanges metadata for its selected science matrix and deposits it directly into the slot. Uncheck to stop.");
+                    "勾选后，第 1 槽位将开始自动兑换元数据，将对应的科学矩阵直接放入该槽位。取消勾选即可停止兑换。补充说明：元数据兑换速度可在配置文件中修改。",
+                    "When checked, slot 1 automatically exchanges metadata for its selected science matrix and deposits it directly into the slot. Uncheck to stop. Note: the exchange rate can be changed in the config file.");
                 button.tips.itemId = 0;
                 button.tips.type = UIButton.ItemTipType.Other;
                 button.UpdateTip();
