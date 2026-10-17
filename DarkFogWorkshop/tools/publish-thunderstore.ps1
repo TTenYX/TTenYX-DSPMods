@@ -89,7 +89,8 @@ if ($DryRun) {
 $token = $env:THUNDERSTORE_TOKEN
 $tokenSource = 'THUNDERSTORE_TOKEN 环境变量'
 if (-not $token -and (Test-Path $TokenFile)) {
-    $token = ([System.IO.File]::ReadAllText($TokenFile)).Trim()
+    # 记事本保存的文件可能带 UTF-8 BOM（U+FEFF），Trim() 不会去掉它，需显式剔除
+    $token = ([System.IO.File]::ReadAllText($TokenFile)).Trim([char]0xFEFF).Trim()
     $tokenSource = $TokenFile
 }
 if (-not $token) {
@@ -114,12 +115,20 @@ if (-not (Test-Path $tcli)) {
 
 Write-Host ""
 Write-Host "=== 上传中 ===" -ForegroundColor Cyan
-& $tcli publish `
-    --file $zipPath `
-    --token $token `
-    --package-namespace $Namespace `
-    --package-name $pkgName `
-    --package-version $pkgVer
+# tcli 0.2.4：--file（整包直传）与 --package-* 互斥——
+# 包名/版本取自 zip 内 manifest.json，团队（namespace）取自 token 所属团队。
+$tcliArgs = @(
+    'publish',
+    '--file', $zipPath,
+    '--token', $token,
+    '--config-path', (Join-Path $projectRoot 'thunderstore.toml')
+)
+& $tcli @tcliArgs 2>&1 | ForEach-Object {
+    # 万一输出里带 token，先屏蔽再打印
+    $line = "$_"
+    if ($token -and $line.Contains($token)) { $line = $line.Replace($token, '***') }
+    Write-Host $line
+}
 
 $code = $LASTEXITCODE
 Write-Host ""

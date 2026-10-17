@@ -1,0 +1,27 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "TTenYX"
+name = "DarkFogWorkshop"
+versionNumber = "1.1.0"
+description = "Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵（糖）产出黑雾材料"
+websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods"
+containsNsfwContent = false
+[package.dependencies]
+xiaoye97-BepInEx = "5.4.17"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./dist"
+target = ""
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "dyson-sphere-program", ]
+[publish.categories]
+dyson-sphere-program = [ "logistics", "quality-of-life", "resources" ]
