@@ -43,7 +43,7 @@ namespace DarkFogWorkshop
         /// <summary>提示控件相对窗口右上角的水平位置（向左为正）。</summary>
         private const float HelpRight = 48f;
         /// <summary>提示控件相对窗口顶部的纵向位置（向下为正），落在关闭按钮下方。</summary>
-        private const float HelpTop = 49f;
+        private const float HelpTop = 57f;
         /// <summary>提示控件尺寸（与 UXAssist 的提示按钮一致：24×24）。</summary>
         private const float HelpSize = 24f;
         /// <summary>提示正文的刷新间隔（帧）。60 帧 ≈ 1 秒。</summary>
