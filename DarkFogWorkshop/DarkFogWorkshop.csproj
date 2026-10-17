@@ -63,5 +63,7 @@
 		<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(DeployDir)" Retries="0" ContinueOnError="WarnAndContinue" />
 		<Message Importance="high" Text="已部署到 $(DeployDir)" Condition=" '$(MSBuildLastTaskResult)' == 'true' " />
 		<Message Importance="high" Text="部署失败：游戏可能正在运行，关闭游戏后重新编译即可" Condition=" '$(MSBuildLastTaskResult)' != 'true' " />
+		<!-- 部署被占用时：后台拉起等待器，游戏关闭后自动完成部署（最长等 4 小时） -->
+		<Exec Condition=" '$(MSBuildLastTaskResult)' != 'true' " Command='start "dfw-autodeploy" /MIN powershell -NoProfile -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\tools\auto-deploy-wait.ps1" -TimeoutMinutes 240' />
 	</Target>
 </Project>
