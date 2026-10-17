@@ -356,12 +356,12 @@ namespace DarkFogWorkshop
             rect.localScale = Vector3.one;
 
             RectTransform wt = window.windowTrans;
-            float x = 320f;
             float centerY = -55f;
             float cloneH = rect.rect.height > 1f ? rect.rect.height : 26f;
             RectTransform nameRect = window.nameInput != null
                 ? window.nameInput.transform as RectTransform
                 : null;
+            float targetLocalX = 320f;
             if (nameRect != null)
             {
                 // 命名盒右边缘 × 垂直中点 → windowTrans 本地坐标
@@ -370,14 +370,24 @@ namespace DarkFogWorkshop
                     nameRect.rect.height * (0.5f - nameRect.pivot.y),
                     0f));
                 Vector3 local = wt.InverseTransformPoint(corner);
-                x = local.x + 24f;
+                targetLocalX = local.x + 24f;
                 centerY = local.y;
             }
 
-            // 锚点 (0,1)、pivot (0,1)：anchoredPosition 以窗口左上角为基准
-            float topLeftX = -wt.rect.width * wt.pivot.x;
-            float topLeftY = wt.rect.height * (1f - wt.pivot.y);
-            rect.anchoredPosition3D = new Vector3(topLeftX + x, topLeftY + centerY - cloneH, 0f);
+            // 锚点 (0,1)、pivot (0,1)：anchoredPosition = 目标点(本地) - 锚点(本地)。
+            // 锚点在窗口左上角，本地坐标为 (-w*px, h*(1-py))。
+            float anchorX = -wt.rect.width * wt.pivot.x;
+            float anchorY = wt.rect.height * (1f - wt.pivot.y);
+            // 不越出窗口右缘（留 20px 边距）
+            float maxLocalX = wt.rect.width * (1f - wt.pivot.x) - 20f - rect.rect.width;
+            if (targetLocalX > maxLocalX)
+            {
+                targetLocalX = maxLocalX;
+            }
+            rect.anchoredPosition3D = new Vector3(
+                targetLocalX - anchorX,
+                centerY - cloneH * 0.5f - anchorY,
+                0f);
         }
 
         private static string RelativePath(Transform root, Transform target)
