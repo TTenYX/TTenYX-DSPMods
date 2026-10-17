@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
@@ -26,7 +26,7 @@
 		<PackageId>DarkFogWorkshop</PackageId>
 		<BepInExPluginGuid>TTenYX.DSP.DarkFogWorkshop</BepInExPluginGuid>
 		<Description>Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵产出黑雾材料</Description>
-		<Version>1.1.0</Version>
+		<Version>1.1.1</Version>
 		<Authors>TTenYX</Authors>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
