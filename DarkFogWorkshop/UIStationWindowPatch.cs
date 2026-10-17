@@ -57,11 +57,12 @@ namespace DarkFogWorkshop
 
         private static UIStationWindow _window;
         private static UIButton _helpButton;
-        private static GameObject _metadataGroup;
-        private static UIButton _metadataButton;
-        private static Image _metadataCheck;
-        private static Text _metadataLabel;
+        private static GameObject _metadataBar;
+        private static Text _metadataCheckText;
+        private static Text _metadataRateText;
         private static StationComponent _metadataStation;
+        /// <summary>状态条当前是否已把槽位区整体下移（+44px 布局位移）。</summary>
+        private static bool _barShifted;
         private static WorkshopUiHost _host;
         private static StationComponent _lastTipStation;
         private static long _lastTipTick;
@@ -208,6 +209,21 @@ namespace DarkFogWorkshop
         {
             _window = __instance;
             EnsureWidget(__instance);
+            NormalizeSlotRows(__instance);
+            Refresh(__instance);
+        }
+
+        /// <summary>
+        /// 游戏在 RefreshTrans 里按槽位数重算窗口高度与底部面板位置，
+        /// 结束后槽位行回到基准位（-90-76*i），这里归一化标记，
+        /// 让状态条的位移在随后 Refresh 里按需重新应用。
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch("RefreshTrans")]
+        public static void RefreshTrans_Postfix(UIStationWindow __instance, StationComponent station)
+        {
+            _window = __instance;
+            NormalizeSlotRows(__instance);
             Refresh(__instance);
         }
 
@@ -249,7 +265,7 @@ namespace DarkFogWorkshop
             {
                 CreateWidget(window);
             }
-            EnsureMetadataWidget(window);
+            EnsureMetadataBar(window);
             if (_helpButton == null)
             {
                 return;
@@ -268,106 +284,198 @@ namespace DarkFogWorkshop
             _host.window = window;
         }
 
-        private static void EnsureMetadataWidget(UIStationWindow window)
+        /// <summary>
+        /// 方案C：标题下整宽状态条（自绘控件，非克隆）。
+        ///
+        /// 结构：[☑] 元数据兑换科学矩阵 ················ 600/分钟
+        /// 位置：窗口标题下方、原第 1 槽行的位置（y = -90），整宽留 20px 边距；
+        /// 显示状态条时，全部槽位行整体下移 44px，窗口加高 44px、底部面板同步下移，
+        /// 不与任何原生元素重叠，也不受槽位数量影响。
+        /// </summary>
+        private static void EnsureMetadataBar(UIStationWindow window)
         {
-            if (window == null || window.warperNecessaryGroup == null)
+            if (window == null || window.windowTrans == null)
             {
                 return;
             }
-            if (_metadataGroup == null)
+            if (_metadataBar != null)
             {
-                RectTransform source = window.warperNecessaryGroup;
-                _metadataGroup = UnityEngine.Object.Instantiate(source.gameObject, window.windowTrans);
-                _metadataGroup.name = "dark-fog-workshop-metadata-exchange";
-                RectTransform cloneRect = _metadataGroup.transform as RectTransform;
-                if (cloneRect != null)
+                if (_metadataBar.transform.parent != window.windowTrans)
                 {
-                    cloneRect.SetSiblingIndex(Math.Max(0, source.GetSiblingIndex()));
-                    PositionMetadataGroupBelowHelp(cloneRect, source);
+                    _metadataBar.transform.SetParent(window.windowTrans, false);
+                    LayoutMetadataBar();
                 }
+                return;
+            }
 
-                _metadataButton = _metadataGroup.GetComponentInChildren<UIButton>(true);
-                foreach (UIButton button in _metadataGroup.GetComponentsInChildren<UIButton>(true))
+            Font font = window.titleText != null
+                ? window.titleText.font
+                : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+            GameObject bar = new GameObject("dark-fog-workshop-metadata-bar",
+                typeof(RectTransform), typeof(Image), typeof(Button));
+            _metadataBar = bar;
+            bar.transform.SetParent(window.windowTrans, false);
+
+            RectTransform barRect = bar.transform as RectTransform;
+            barRect.anchorMin = new Vector2(0f, 1f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(0.5f, 1f);
+            barRect.sizeDelta = new Vector2(-40f, 40f);           // 整宽，左右各留 20
+            barRect.anchoredPosition3D = new Vector3(0f, -90f, 0f);
+            Image bg = bar.GetComponent<Image>();
+            bg.color = new Color(0.141f, 0.188f, 0.227f, 0.92f);  // #24303A
+            Outline outline = bar.AddComponent<Outline>();
+            outline.effectColor = new Color(0.431f, 0.784f, 0.922f, 0.95f); // #6EC8EB
+            outline.effectDistance = new Vector2(1.5f, 1.5f);
+
+            // 勾选框小方块
+            GameObject box = new GameObject("check-box", typeof(RectTransform), typeof(Image));
+            box.transform.SetParent(bar.transform, false);
+            RectTransform boxRect = box.transform as RectTransform;
+            boxRect.anchorMin = new Vector2(0f, 0.5f);
+            boxRect.anchorMax = new Vector2(0f, 0.5f);
+            boxRect.pivot = new Vector2(0.5f, 0.5f);
+            boxRect.sizeDelta = new Vector2(22f, 22f);
+            boxRect.anchoredPosition = new Vector2(22f, 0f);
+            Image boxImg = box.GetComponent<Image>();
+            boxImg.color = new Color(0.10f, 0.14f, 0.18f, 1f);
+            Outline boxOutline = box.AddComponent<Outline>();
+            boxOutline.effectColor = new Color(0.431f, 0.784f, 0.922f, 1f);
+            boxOutline.effectDistance = new Vector2(1f, 1f);
+
+            // 对勾（勾选时显示）
+            GameObject mark = new GameObject("check-mark", typeof(RectTransform), typeof(Text));
+            mark.transform.SetParent(box.transform, false);
+            RectTransform markRect = mark.transform as RectTransform;
+            markRect.sizeDelta = new Vector2(22f, 22f);
+            markRect.anchoredPosition = Vector2.zero;
+            Text markText = mark.GetComponent<Text>();
+            markText.font = font;
+            markText.fontSize = 20;
+            markText.alignment = TextAnchor.MiddleCenter;
+            markText.color = new Color(0.431f, 0.784f, 0.922f, 1f);
+            markText.text = "√";
+            markText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            markText.verticalOverflow = VerticalWrapMode.Overflow;
+            markText.raycastTarget = false;
+            _metadataCheckText = markText;
+
+            // 标签
+            GameObject label = new GameObject("label", typeof(RectTransform), typeof(Text));
+            label.transform.SetParent(bar.transform, false);
+            RectTransform labelRect = label.transform as RectTransform;
+            labelRect.anchorMin = new Vector2(0f, 0.5f);
+            labelRect.anchorMax = new Vector2(0f, 0.5f);
+            labelRect.pivot = new Vector2(0f, 0.5f);
+            labelRect.sizeDelta = new Vector2(340f, 30f);
+            labelRect.anchoredPosition = new Vector2(46f, 0f);
+            Text labelText = label.GetComponent<Text>();
+            labelText.font = font;
+            labelText.fontSize = 21;
+            labelText.alignment = TextAnchor.MiddleLeft;
+            labelText.color = new Color(0.88f, 0.91f, 0.94f, 1f);
+            labelText.text = "元数据兑换科学矩阵";
+            labelText.raycastTarget = false;
+
+            // 右侧速率
+            GameObject rate = new GameObject("rate", typeof(RectTransform), typeof(Text));
+            rate.transform.SetParent(bar.transform, false);
+            RectTransform rateRect = rate.transform as RectTransform;
+            rateRect.anchorMin = new Vector2(1f, 0.5f);
+            rateRect.anchorMax = new Vector2(1f, 0.5f);
+            rateRect.pivot = new Vector2(1f, 0.5f);
+            rateRect.sizeDelta = new Vector2(220f, 30f);
+            rateRect.anchoredPosition = new Vector2(-20f, 0f);
+            Text rateText = rate.GetComponent<Text>();
+            rateText.font = font;
+            rateText.fontSize = 20;
+            rateText.alignment = TextAnchor.MiddleRight;
+            rateText.color = new Color(0.431f, 0.784f, 0.922f, 1f);
+            rateText.raycastTarget = false;
+            _metadataRateText = rateText;
+
+            bar.GetComponent<Button>().onClick.AddListener(OnMetadataBarClicked);
+            bar.SetActive(false);
+        }
+
+        private static void LayoutMetadataBar()
+        {
+            if (_metadataBar == null)
+            {
+                return;
+            }
+            RectTransform rect = _metadataBar.transform as RectTransform;
+            if (rect == null)
+            {
+                return;
+            }
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(-40f, 40f);
+            rect.anchoredPosition3D = new Vector3(0f, -90f, 0f);
+            rect.localScale = Vector3.one;
+        }
+
+        /// <summary>槽位行回到基准位（40, -90-76*i），并清除位移标记。</summary>
+        private static void NormalizeSlotRows(UIStationWindow window)
+        {
+            _barShifted = false;
+            if (window == null)
+            {
+                return;
+            }
+            Array storageUIs = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window) as Array;
+            if (storageUIs == null)
+            {
+                return;
+            }
+            for (int i = 0; i < storageUIs.Length; i++)
+            {
+                if (storageUIs.GetValue(i) is Component ui && ui.transform is RectTransform rect)
                 {
-                    button.tipTitleFormatString = string.Empty;
-                    button.tipTextFormatString = string.Empty;
-                    button.tips.tipTitle = DarkFogWorkshop.HELP_TITLE;
-                    button.tips.tipText = DarkFogWorkshop.Tr(
-                        "勾选后，第 1 槽位将开始自动兑换元数据，将对应的科学矩阵直接放入该槽位。取消勾选即可停止兑换。",
-                        "When checked, slot 1 automatically exchanges metadata for its selected science matrix and deposits it directly into the slot. Uncheck to stop.");
-                    button.tips.itemId = 0;
-                    button.tips.type = UIButton.ItemTipType.Other;
-                    button.UpdateTip();
+                    rect.anchoredPosition = new Vector2(40f, -90f - 76f * i);
                 }
-                if (_metadataButton != null)
-                {
-                    _metadataButton.onClick += OnMetadataExchangeClick;
-                }
+            }
+        }
 
-                string checkPath = RelativePath(source, window.warperNecessaryCheck != null
-                    ? window.warperNecessaryCheck.transform : null);
-                Transform checkTransform = string.IsNullOrEmpty(checkPath)
-                    ? null : _metadataGroup.transform.Find(checkPath);
-                _metadataCheck = checkTransform != null
-                    ? checkTransform.GetComponent<Image>()
-                    : _metadataGroup.GetComponentInChildren<Image>(true);
-
-                Text[] labels = _metadataGroup.GetComponentsInChildren<Text>(true);
-                if (labels != null && labels.Length > 0)
+        /// <summary>
+        /// 应用/撤销状态条占位：槽位行整体 ±44px、窗口高度 ±44px、底部面板同步 ±44px。
+        /// 只在状态变化时执行一次（游戏重排后由 NormalizeSlotRows 归一，再按需重放）。
+        /// </summary>
+        private static void ApplyBarShift(UIStationWindow window, bool shift)
+        {
+            if (shift == _barShifted || window == null || window.windowTrans == null)
+            {
+                return;
+            }
+            Array storageUIs = AccessTools.Field(typeof(UIStationWindow), "storageUIs")?.GetValue(window) as Array;
+            if (storageUIs != null)
+            {
+                float dy = shift ? -44f : 44f;
+                for (int i = 0; i < storageUIs.Length; i++)
                 {
-                    _metadataLabel = labels[0];
-                    Localizer localizer = _metadataLabel.GetComponent<Localizer>();
-                    if (localizer != null)
+                    if (storageUIs.GetValue(i) is Component ui && ui.transform is RectTransform rect)
                     {
-                        localizer.stringKey = null;
-                        localizer.translation = null;
+                        rect.anchoredPosition += new Vector2(0f, dy);
                     }
-                    _metadataLabel.text = "元数据兑换科学矩阵";
                 }
             }
-            if (_metadataGroup != null)
+            RectTransform windowRect = window.windowTrans;
+            windowRect.sizeDelta = new Vector2(
+                windowRect.sizeDelta.x,
+                windowRect.sizeDelta.y + (shift ? 44f : -44f));
+            Transform panelDown = AccessTools.Field(typeof(UIStationWindow), "panelDownTrans")
+                ?.GetValue(window) as Transform;
+            if (panelDown != null && panelDown is RectTransform panelRect)
             {
-                if (_metadataGroup.transform.parent != window.windowTrans)
-                {
-                    _metadataGroup.transform.SetParent(window.windowTrans, false);
-                }
-                PositionMetadataGroupBelowHelp(_metadataGroup.transform as RectTransform, window.warperNecessaryGroup);
+                panelRect.anchoredPosition -= new Vector2(0f, shift ? 44f : -44f);
             }
+            _barShifted = shift;
         }
 
-        private static void PositionMetadataGroupBelowHelp(RectTransform cloneRect, RectTransform source)
-        {
-            if (cloneRect == null)
-            {
-                return;
-            }
-            // Same top-right coordinate system as '?', independent of slot count.
-            cloneRect.anchorMin = new Vector2(1f, 1f);
-            cloneRect.anchorMax = new Vector2(1f, 1f);
-            cloneRect.pivot = new Vector2(1f, 1f);
-            cloneRect.localScale = Vector3.one;
-            float height = source != null ? source.rect.height : 22f;
-            cloneRect.sizeDelta = new Vector2(Mathf.Max(280f, cloneRect.rect.width), Mathf.Max(22f, height));
-            cloneRect.anchoredPosition3D = new Vector3(-HelpRight, -(HelpTop + HelpSize + 6f), 0f);
-        }
-
-        private static string RelativePath(Transform root, Transform target)
-        {
-            if (root == null || target == null || target == root)
-            {
-                return string.Empty;
-            }
-            StringBuilder path = new StringBuilder(target.name);
-            Transform current = target.parent;
-            while (current != null && current != root)
-            {
-                path.Insert(0, current.name + "/");
-                current = current.parent;
-            }
-            return current == root ? path.ToString() : string.Empty;
-        }
-
-        private static void OnMetadataExchangeClick(int obj)
+        private static void OnMetadataBarClicked()
         {
             StationComponent station = _metadataStation;
             if (station == null || !DarkFogWorkshopPatch.IsMetadataExchangeEligible(station))
@@ -382,9 +490,9 @@ namespace DarkFogWorkshop
             }
         }
 
-        private static void RefreshMetadataWidget(StationComponent station, bool windowActive)
+        private static void RefreshMetadataWidget(UIStationWindow window, StationComponent station, bool windowActive)
         {
-            if (_metadataGroup == null)
+            if (_metadataBar == null)
             {
                 return;
             }
@@ -394,13 +502,29 @@ namespace DarkFogWorkshop
                 DarkFogWorkshopPatch.SetMetadataExchangeEnabled(station, false);
             }
             bool visible = windowActive && eligible;
-            if (_metadataGroup.activeSelf != visible)
+
+            if (_metadataBar.activeSelf != visible)
             {
-                _metadataGroup.SetActive(visible);
+                _metadataBar.SetActive(visible);
             }
-            if (visible && _metadataCheck != null)
+
+            if (visible)
             {
-                _metadataCheck.enabled = DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station);
+                ApplyBarShift(window, true);
+                if (_metadataCheckText != null)
+                {
+                    _metadataCheckText.gameObject.SetActive(
+                        DarkFogWorkshopPatch.IsMetadataExchangeEnabled(station));
+                }
+                if (_metadataRateText != null)
+                {
+                    _metadataRateText.text =
+                        $"{ModConfig.MetadataMatrixPerMinute.Value}/分钟";
+                }
+            }
+            else
+            {
+                ApplyBarShift(window, false);
             }
             _metadataStation = eligible ? station : null;
         }
@@ -591,10 +715,11 @@ namespace DarkFogWorkshop
             {
                 _helpButton.gameObject.SetActive(false);
             }
-            if (_metadataGroup != null && _metadataGroup.activeSelf)
+            if (_metadataBar != null && _metadataBar.activeSelf)
             {
-                _metadataGroup.SetActive(false);
+                _metadataBar.SetActive(false);
             }
+            _barShifted = false;
         }
 
         /// <summary>每帧刷新（只在窗口打开、且满足黑雾工坊条件时显示）。</summary>
@@ -605,7 +730,7 @@ namespace DarkFogWorkshop
                 return;
             }
             StationComponent station = GetStation(window);
-            RefreshMetadataWidget(station, window.active);
+            RefreshMetadataWidget(window, station, window.active);
             bool visible = window.active && station != null
                 && (DarkFogWorkshopPatch.IsWorkshopShape(station)
                     || (DarkFogWorkshopPatch.IsMetadataExchangeEligible(station)
