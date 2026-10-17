@@ -55,6 +55,14 @@ namespace DarkFogWorkshop
         /// </summary>
         private const int TipWidth = 465;
 
+        /// <summary>元数据勾选框与命名盒右缘的间距（px）。</summary>
+        private const float MetadataGapX = 24f;
+        /// <summary>
+        /// 元数据勾选框纵向微调（px）：相对「?」按钮中心，+往下 / -往上。
+        /// 自动对齐后如仍有偏差，改这个数字重新编译即可。
+        /// </summary>
+        private const float MetadataNudgeY = 0f;
+
         private static UIStationWindow _window;
         private static UIButton _helpButton;
         private static GameObject _metadataBar;
@@ -291,7 +299,6 @@ namespace DarkFogWorkshop
 
             _metadataBar = UnityEngine.Object.Instantiate(window.warperNecessaryGroup.gameObject, window.windowTrans);
             _metadataBar.name = "dark-fog-workshop-metadata-exchange";
-            LayoutMetadataBar(window);
 
             // 清掉克隆来的原版提示与点击，换成黑雾工坊的说明与切换逻辑
             _metadataButton = _metadataBar.GetComponentInChildren<UIButton>(true);
@@ -333,6 +340,8 @@ namespace DarkFogWorkshop
                 }
                 _metadataLabel.text = "元数据兑换科学矩阵";
             }
+
+            LayoutMetadataBar(window);
         }
 
         /// <summary>
@@ -356,38 +365,49 @@ namespace DarkFogWorkshop
             rect.localScale = Vector3.one;
 
             RectTransform wt = window.windowTrans;
-            // 垂直：与右上角「?」提示按钮平齐（HelpTop=49、尺寸 24 → 中心在 -61）
-            float centerY = -(HelpTop + HelpSize * 0.5f);
-            float cloneH = rect.rect.height > 1f ? rect.rect.height : 26f;
+            // 垂直基准：「?」提示按钮的中心（HelpTop=49、尺寸 24 → -61）+ 手动微调
+            float wantCenterY = -(HelpTop + HelpSize * 0.5f) + MetadataNudgeY;
             RectTransform nameRect = window.nameInput != null
                 ? window.nameInput.transform as RectTransform
                 : null;
             float targetLocalX = 320f;
             if (nameRect != null)
             {
-                // 命名盒右边缘 → windowTrans 本地坐标
                 Vector3 corner = nameRect.TransformPoint(new Vector3(
                     nameRect.rect.width * (1f - nameRect.pivot.x),
                     nameRect.rect.height * (0.5f - nameRect.pivot.y),
                     0f));
-                Vector3 local = wt.InverseTransformPoint(corner);
-                targetLocalX = local.x + 24f;
+                targetLocalX = wt.InverseTransformPoint(corner).x + MetadataGapX;
             }
 
-            // 锚点 (0,1)、pivot (0,1)：anchoredPosition = 目标点(本地) - 锚点(本地)。
-            // 锚点在窗口左上角，本地坐标为 (-w*px, h*(1-py))。
             float anchorX = -wt.rect.width * wt.pivot.x;
             float anchorY = wt.rect.height * (1f - wt.pivot.y);
-            // 不越出窗口右缘（留 20px 边距）
             float maxLocalX = wt.rect.width * (1f - wt.pivot.x) - 20f - rect.rect.width;
             if (targetLocalX > maxLocalX)
             {
                 targetLocalX = maxLocalX;
             }
+
+            // 先按「克隆件矩形中心 = ? 中心」放置，再把克隆件内「勾选标记」的
+            // 实际中心对齐到同一高度 —— 自动补偿控件内部的偏移。
+            float cloneH = rect.rect.height > 1f ? rect.rect.height : 26f;
             rect.anchoredPosition3D = new Vector3(
                 targetLocalX - anchorX,
-                centerY - cloneH * 0.5f - anchorY,
+                wantCenterY - cloneH * 0.5f - anchorY,
                 0f);
+
+            RectTransform checkRect = _metadataCheck != null
+                ? _metadataCheck.transform as RectTransform
+                : null;
+            if (checkRect != null)
+            {
+                Vector3 checkWorld = checkRect.TransformPoint(new Vector3(
+                    checkRect.rect.width * (0.5f - checkRect.pivot.x),
+                    checkRect.rect.height * (0.5f - checkRect.pivot.y),
+                    0f));
+                float checkLocalY = wt.InverseTransformPoint(checkWorld).y;
+                rect.anchoredPosition3D += new Vector3(0f, wantCenterY - checkLocalY, 0f);
+            }
         }
 
         private static string RelativePath(Transform root, Transform target)
