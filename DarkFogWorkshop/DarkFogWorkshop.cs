@@ -29,7 +29,7 @@ namespace DarkFogWorkshop
         public const string PLUGIN_NAME = "DarkFogWorkshop";
         /// <summary>问号提示的标题。</summary>
         public const string HELP_TITLE = "黑雾工坊 DarkFogWorkshop";
-        public const string PLUGIN_VERSION = "1.1.2";
+        public const string PLUGIN_VERSION = "1.1.3";
 
         private static readonly Harmony harmony = new Harmony(PLUGIN_GUID);
         internal static ManualLogSource Log;

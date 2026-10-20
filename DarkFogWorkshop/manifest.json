@@ -1,8 +1,8 @@
 {
   "name": "DarkFogWorkshop",
-  "version_number": "1.1.2",
+  "version_number": "1.1.3",
   "website_url": "https://github.com/TTenYX/TTenYX-DSPMods",
-  "description": "Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵（糖）产出黑雾材料",
+  "description": "物流塔自动把科学矩阵（糖）转化为黑雾材料，支持元数据自动补料与增产加成 | Logistics stations convert science matrices into Dark Fog materials automatically",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17"
   ]

@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "TTenYX"
 name = "DarkFogWorkshop"
-versionNumber = "1.1.2"
+versionNumber = "1.1.3"
 description = "Logistics stations turn science matrices into Dark Fog materials | 物流塔用科学矩阵（糖）产出黑雾材料"
 websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods"
 containsNsfwContent = false
