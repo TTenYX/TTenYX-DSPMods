@@ -55,7 +55,13 @@ dotnet build SmartDustbin\SmartDustbin.csproj -c Release
 ```
 
 产物：`SmartDustbin\bin\Release\netstandard2.1\SmartDustbin.dll`。
-编译成功后会自动部署到 r2modman profile「TEST」（可用 `ProfileDir` 属性覆盖）；也可手动运行 `tools\deploy.ps1`。
+默认编译**只产出 DLL、不部署**（发布版仅保留在仓库）。需要在测试 profile 里使用时显式开启部署：
+
+```powershell
+dotnet build SmartDustbin\SmartDustbin.csproj -c Release -p:DeployEnabled=true
+```
+
+（部署目标默认 r2modman profile「TEST」，可用 `ProfileDir` 属性覆盖；也可手动运行 `tools\deploy.ps1`。）
 
 无外网时先执行一次 `tools\export-offline-feed.ps1` 导出离线包源。
 

@@ -42,8 +42,12 @@
 		<ProfileDir Condition=" '$(ProfileDir)' == '' ">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\TEST</ProfileDir>
 		<DeployDir Condition=" '$(DeployDir)' == '' ">$(ProfileDir)\BepInEx\plugins\TTenYX-SmartDustbin</DeployDir>
 	</PropertyGroup>
-	<!-- 游戏运行时 dll 被占用会复制失败，只报警告不让编译失败 -->
-	<Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
+	<!--
+	  默认只在仓库内编译，不自动部署（0.2.0 起发布版只保留在仓库）。
+	  需要部署到测试 profile 时显式开启：
+	      dotnet build -c Release -p:DeployEnabled=true
+	-->
+	<Target Name="DeployToProfile" AfterTargets="Build" Condition=" '$(DeployEnabled)' == 'true' and Exists('$(ProfileDir)')">
 		<ItemGroup>
 			<DeployFiles Include="$(TargetPath);manifest.json;README.md" />
 			<DeployFiles Include="icon.png" Condition="Exists('icon.png')" />
