@@ -10,3 +10,4 @@ offline-feed/
 icon.png.bak-old-*
 *.bak
 DarkFogWorkshop/tools/auto-deploy.log
+SmartDustbin/tools/auto-deploy.log

@@ -1,0 +1,9 @@
+{
+  "name": "SmartDustbin",
+  "version_number": "0.2.0",
+  "website_url": "https://github.com/TTenYX/TTenYX-DSPMods",
+  "description": "储物仓输入限制为0、储液罐输入关闭时变为垃圾桶消耗输入物品；传送带标签SIGNAL-404按速率消耗经过物品 | Storage boxes with 0 input limit, tanks with input off, and SIGNAL-404 tagged belts consume incoming items",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<OutputType>Library</OutputType>
+		<RootNamespace>SmartDustbin</RootNamespace>
+		<AssemblyName>SmartDustbin</AssemblyName>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<FileAlignment>512</FileAlignment>
+		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<!--
+		  不把 git 修订号编进 AssemblyInformationalVersion：保证任意检出、任意路径
+		  都产出同一个 DLL（SHA256 稳定，便于部署校验）。版本溯源用 git 标签。
+		-->
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+		<PackageId>SmartDustbin</PackageId>
+		<BepInExPluginGuid>TTenYX.DSP.SmartDustbin</BepInExPluginGuid>
+		<Description>Storage boxes/tanks and SIGNAL-404 belt tags become item-consuming dustbins | 储物仓/储液罐/传送带标签垃圾桶</Description>
+		<Version>0.2.0</Version>
+		<Authors>TTenYX</Authors>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+		<DebugType>full</DebugType>
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<DebugType>none</DebugType>
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="BepInEx.Core" Version="5.4.17" />
+		<PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
+		<PackageReference Include="UnityEngine.Modules" Version="2022.3.53" IncludeAssets="compile" />
+		<PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+	</ItemGroup>
+	<PropertyGroup>
+		<ProfileDir Condition=" '$(ProfileDir)' == '' ">$(APPDATA)\r2modmanPlus-local\DysonSphereProgram\profiles\TEST</ProfileDir>
+		<DeployDir Condition=" '$(DeployDir)' == '' ">$(ProfileDir)\BepInEx\plugins\TTenYX-SmartDustbin</DeployDir>
+	</PropertyGroup>
+	<!-- 游戏运行时 dll 被占用会复制失败，只报警告不让编译失败 -->
+	<Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
+		<ItemGroup>
+			<DeployFiles Include="$(TargetPath);manifest.json;README.md" />
+			<DeployFiles Include="icon.png" Condition="Exists('icon.png')" />
+		</ItemGroup>
+		<Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(DeployDir)" Retries="0" ContinueOnError="WarnAndContinue" />
+		<!-- 把 Copy 的结果立刻存进属性：后面的 Message/Exec 条件都基于它，避免被 Message 重置 -->
+		<PropertyGroup>
+			<DeploySucceeded>$(MSBuildLastTaskResult)</DeploySucceeded>
+		</PropertyGroup>
+		<Message Importance="high" Text="已部署到 $(DeployDir)" Condition=" '$(DeploySucceeded)' == 'true' " />
+		<Message Importance="high" Text="部署失败：游戏可能正在运行，关闭游戏后重新编译即可" Condition=" '$(DeploySucceeded)' != 'true' " />
+		<!-- 部署被占用时：后台拉起等待器，游戏关闭后自动完成部署（最长等 4 小时） -->
+		<Exec Condition=" '$(DeploySucceeded)' != 'true' " Command='start "sdb-autodeploy" /MIN powershell -NoProfile -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\tools\auto-deploy-wait.ps1" -TimeoutMinutes 240' />
+	</Target>
+</Project>
