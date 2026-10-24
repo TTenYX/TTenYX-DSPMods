@@ -6,6 +6,7 @@
 |---|---|---|
 | [DarkFogWorkshop](DarkFogWorkshop/) | 黑雾工坊 —— 物流塔用科学矩阵自动产出黑雾材料 | v1.0.0 |
 | [SmartDustbin](SmartDustbin/) | 垃圾桶 —— 储物仓/储液罐/传送带标签按条件消耗物品 | v0.1.0 |
+| [ControlPanelPlus](ControlPanelPlus/) | 物流总控面板优化 —— 展开/折叠、星图定位、物流塔设置复制粘贴、筛选交集、排序热键、非本地取放、存储模式快捷键 | v0.1.4 |
 
 ---
 
