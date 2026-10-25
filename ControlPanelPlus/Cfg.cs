@@ -15,8 +15,6 @@ namespace ControlPanelPlus
         public static ConfigEntry<bool> ExpandDefaultSingle;
 
         public static ConfigEntry<bool> EnableStarmapButton;
-        public static ConfigEntry<bool> ClosePanelOnLocate;
-        public static ConfigEntry<bool> LinkNavigation;
         public static ConfigEntry<bool> AllowRemoteItemTransfer;
 
         public static ConfigEntry<bool> EnableSlots;
@@ -66,11 +64,7 @@ namespace ControlPanelPlus
                 "单星球结果（筛选为某星球，或某星系只有 1 个星球有物流设施）时，该星球条目默认展开。");
 
             EnableStarmapButton = config.Bind("Locate", "EnableStarmapButton", true, Ordered(
-                "在每个星球条目的导航按钮左侧显示“星图定位”按钮（点击直接进入星图并把相机对准该星球）。", 30));
-            ClosePanelOnLocate = config.Bind("Locate", "ClosePanelOnLocate", false, Ordered(
-                "点击「定位」后关闭总控面板。默认关闭：面板保持打开，看完星图返回时仍是原来的筛选与展开状态。", 20));
-            LinkNavigation = config.Bind("Locate", "LinkNavigation", false, Ordered(
-                "点击「定位」时同时把导航线指向该星球。默认关闭：定位与导航按钮相互独立。", 10));
+                "在每个星球条目的导航按钮左侧显示“星图定位”按钮（左键：保留面板；右键：关闭面板；Shift+右键：关闭面板并点亮导航线）。", 30));
             AllowRemoteItemTransfer = config.Bind("Station", "AllowRemoteItemTransfer", false,
                 "允许在总控面板上从非本地星球取放物品（右键拿取 / 手持物品左键放入 / 清空按钮取回）。若安装了 CheatEnabler，则由其 Architect 模式决定，本项不生效。");
 

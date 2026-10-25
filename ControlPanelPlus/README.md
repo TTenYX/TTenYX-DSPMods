@@ -18,7 +18,11 @@
 
 每个星球条目的导航按钮**左侧**新增一个小按钮「定位」：点击后关闭冲突窗口（背包、科技树、仪表盘、戴森球编辑器等），打开星图、把相机对准该星球并选中它。
 
-默认行为：**打开星图但保留总控面板**（看完星图返回时仍是原来的筛选/展开状态），且定位**不联动导航线**。两个旧行为由配置恢复：`Locate/ClosePanelOnLocate`（点击后关闭面板）、`Locate/LinkNavigation`（同时点亮导航线）。
+点击方式决定行为：
+
+- **左键**：打开星图并保留总控面板（看完返回时仍是原来的筛选/展开状态）；
+- **右键**：打开星图并关闭总控面板；
+- **Shift+右键**：打开星图、关闭总控面板，并把导航线指向该星球。
 
 ### F3 物流塔设置复制粘贴
 
@@ -94,8 +98,6 @@
 | `Expand/CollapseAllDefaultMulti` | true | 多星球结果默认折叠 |
 | `Expand/ExpandDefaultSingle` | true | 单星球结果默认展开 |
 | `Locate/EnableStarmapButton` | true | 星球条目「定位」按钮 |
-| `Locate/ClosePanelOnLocate` | false | 点击「定位」后关闭总控面板（默认保留面板） |
-| `Locate/LinkNavigation` | false | 点击「定位」时同时点亮导航线（默认与导航独立） |
 | `Station/AllowRemoteItemTransfer` | false | 允许从非本地星球取放物品（CheatEnabler 优先） |
 | `StationCopy/CopyKey` | Comma | 复制键（`<`） |
 | `StationCopy/PasteKey` | Period | 粘贴键（`>`） |
@@ -130,7 +132,7 @@ Requirements: BepInEx 5.4.17+. Drop `ControlPanelPlus.dll` into `BepInEx/plugins
 ### Features
 
 - **F1 Expand / collapse** — Multi-planet results collapse by default, single-planet results expand by default; a title-bar toggle button switches all rows; reopening the panel keeps the previous state (stored in the game's `astroExpands`).
-- **F2 Locate button** — A small button left of each planet row's navigation button opens the star map, aims the camera at the planet and selects it. By default the control panel stays open and the navigation line is untouched; `Locate/ClosePanelOnLocate` and `Locate/LinkNavigation` restore the old behaviours.
+- **F2 Locate button** — A small button left of each planet row's navigation button opens the star map, aims the camera at the planet and selects it. Left click keeps the control panel open; right click closes it; Shift+right click also points the navigation line at the planet.
 - **F3 Copy / paste station settings** — `<` copies the selected station, `>` pastes. `Ctrl`+click multi-selects, `Shift`+click selects a range (across planets), `Shift`+`>` batch-pastes onto all stations on the current planet with identical slot layout. Data is split into three independently switchable blocks (slots, station settings, priority), and the first two blocks have per-item switches (`Slot1`–`Slot5`, nine `Set*` toggles). It never moves items or clears inventories; incompatible occupied slots are skipped.
 - **F4 Item filter intersection** — Turns the vanilla union filter into an intersection; a title-bar button toggles it instantly.
 - **F5 Astro list sorting / hotkeys** — Sorts the location dropdown by star name (first two entries pinned), stars yellow and planets indented; `PageUp`/`PageDown` step the list (Ctrl = stars only), `←`/`→` jump to the previous/next planet, `↑`/`↓` step through the result list.
@@ -146,8 +148,6 @@ Requirements: BepInEx 5.4.17+. Drop `ControlPanelPlus.dll` into `BepInEx/plugins
 | `Expand/CollapseAllDefaultMulti` | true | Collapse by default for multi-planet results |
 | `Expand/ExpandDefaultSingle` | true | Expand by default for a single planet |
 | `Locate/EnableStarmapButton` | true | Show the locate button on planet rows |
-| `Locate/ClosePanelOnLocate` | false | Close the panel after locating |
-| `Locate/LinkNavigation` | false | Also set the navigation line when locating |
 | `Station/AllowRemoteItemTransfer` | false | Allow remote item transfer (CheatEnabler wins) |
 | `StationCopy/CopyKey` / `PasteKey` | Comma / Period | Copy / paste keys |
 | `StationCopy/EnableSlots` | true | Block 1: slot settings |

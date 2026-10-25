@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.1.5
+
+- 定位按钮改为按点击方式区分：左键保留总控面板、右键关闭面板、Shift+右键关闭面板并把导航线指向该星球。
+- 删除 `Locate/ClosePanelOnLocate` 与 `Locate/LinkNavigation` 两个配置项（行为已由点击方式固定），`Locate` 段只剩 `EnableStarmapButton`。
+
 ## 0.1.4
 
 - 删除 `AstroList` 的四个前后缀配置与相关代码（`PlanetPrefix`、`PlanetPostfix`、`StarPrefix`、`StarPostfix`）。

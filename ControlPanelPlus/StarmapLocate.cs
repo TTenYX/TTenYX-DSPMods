@@ -37,6 +37,7 @@ namespace ControlPanelPlus
             LocateButtonHandler handler = button.gameObject.AddComponent<LocateButtonHandler>();
             handler.entry = entry;
             button.onClick += handler.OnButtonClick;
+            button.onRightClick += handler.OnButtonRightClick;
 
             CppLog.Debug("locate button injected into planet entry banner");
         }
@@ -55,7 +56,7 @@ namespace ControlPanelPlus
             }
         }
 
-        public static void Locate(UIControlPanelPlanetEntry entry)
+        public static void Locate(UIControlPanelPlanetEntry entry, bool closePanel, bool linkNavigation)
         {
             if (entry == null || !entry.isTargetDataValid) return;
             if (!Cfg.Enabled.Value || !Cfg.EnableStarmapButton.Value) return;
@@ -70,13 +71,14 @@ namespace ControlPanelPlus
                 Player mainPlayer = GameMain.mainPlayer;
                 mainPlayer.combatState = false;
                 uiGame.ShutPlayerInventory();
-                if (Cfg.ClosePanelOnLocate.Value)
+                if (closePanel)
                 {
+                    // right click: close the control panel like the vanilla flow
                     uiGame.ShutAllFunctionWindow();
                 }
                 else
                 {
-                    // keep the control panel open (default): only close the full screen editors
+                    // left click: keep the control panel open, only close the full screen editors
                     uiGame.ShutTechTree();
                     uiGame.ShutDashboard();
                     uiGame.ShutDysonEditorImmediately();
@@ -99,10 +101,8 @@ namespace ControlPanelPlus
                 starmap.screenCameraController.SetViewTarget(planet, null, null, null, VectorLF3.zero, radius, radius,
                     lockRot: true, immediate: false);
 
-                // By default the locate button is independent from the navigation button; the
-                // LinkNavigation switch restores the old behaviour of also pointing the nav line at
-                // the planet.
-                if (Cfg.LinkNavigation.Value && mainPlayer.navigation != null)
+                // Left click never touches the nav line; Shift+right click points it at the planet.
+                if (linkNavigation && mainPlayer.navigation != null)
                 {
                     mainPlayer.navigation.indicatorAstroId = planet.astroId;
                 }
@@ -146,7 +146,14 @@ namespace ControlPanelPlus
 
         public void OnButtonClick(int obj)
         {
-            StarmapLocate.Locate(entry);
+            StarmapLocate.Locate(entry, false, false);
+        }
+
+        public void OnButtonRightClick(int obj)
+        {
+            // Shift+right click closes the panel and points the navigation line at the planet.
+            bool shift = VFInput.shift || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            StarmapLocate.Locate(entry, true, shift);
         }
     }
 
