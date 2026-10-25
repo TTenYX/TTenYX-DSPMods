@@ -116,7 +116,10 @@ namespace ControlPanelPlus
         }
 
         /// <summary>Recolours an icon button (background image + transitions), leaving the icon sprite untouched.</summary>
-        /// <summary>Drops the plate behind the icon; the glyph stays fully visible and hover gives a faint white wash.</summary>
+        /// <summary>
+        /// Drops the plate behind the icon and removes every hover / press effect, so the glyph
+        /// neither highlights nor glows when the pointer enters the button.
+        /// </summary>
         public static void MakeIconButtonTransparent(UIButton button)
         {
             if (button == null) return;
@@ -136,11 +139,17 @@ namespace ControlPanelPlus
                 UIButton.Transition t = button.transitions[i];
                 Graphic target = t.target;
                 if (target == null) continue;
-                if (icon != null && target.transform == icon) continue;
                 t.normalColor = Color.clear;
-                t.mouseoverColor = new Color(1f, 1f, 1f, 0.10f);
-                t.pressedColor = new Color(1f, 1f, 1f, 0.18f);
+                t.mouseoverColor = Color.clear;
+                t.pressedColor = Color.clear;
                 t.disabledColor = Color.clear;
+                t.alphaOnly = false;
+                t.mouseoverSize = 0f;
+                t.pressedSize = 0f;
+                t.highlightColorMultiplier = 1f;
+                t.highlightAlphaMultiplier = 1f;
+                t.highlightSizeMultiplier = 1f;
+                t.highlightColorOverride = Color.clear;
                 button.transitions[i] = t;
             }
         }
