@@ -4,6 +4,8 @@
 
 需要 BepInEx 5.4.17+。把 `ControlPanelPlus.dll` 放到 `BepInEx/plugins/ControlPanelPlus/` 即可；配置写入 `BepInEx/config/com.dsp.controlpanelplus.cfg`，也可以装 BepInEx.ConfigurationManager 在游戏实时内调整。
 
+界面文字跟随游戏语言：中文游戏显示中文，其他语言显示英文；配置文件说明为中英并列，本 README 提供中英文两版。
+
 ## 功能
 
 ### F1 星球条目默认展开 / 折叠 + 顶部按钮
@@ -132,6 +134,8 @@
 ControlPanelPlus is a BepInEx 5 plugin for Dyson Sphere Program 0.10.35 that upgrades the built-in **logistics control panel** (opened with `I`).
 
 Requirements: BepInEx 5.4.17+. Drop `ControlPanelPlus.dll` into `BepInEx/plugins/ControlPanelPlus/`; configuration lives in `BepInEx/config/com.dsp.controlpanelplus.cfg` (or use BepInEx.ConfigurationManager in game).
+
+In-game text follows the game language (Chinese, otherwise English); configuration descriptions are bilingual and this README has both Chinese and English sections.
 
 ### Features
 

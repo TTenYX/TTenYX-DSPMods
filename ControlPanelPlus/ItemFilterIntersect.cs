@@ -169,7 +169,7 @@ namespace ControlPanelPlus
 
         private static string Label()
         {
-            return Cfg.ItemFilterIntersect.Value ? "筛选：交集" : "筛选：并集";
+            return Cfg.ItemFilterIntersect.Value ? Lang.T("筛选：交集", "Filter: Intersect") : Lang.T("筛选：并集", "Filter: Union");
         }
 
         private static void UpdateToggleLabel()

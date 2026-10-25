@@ -56,63 +56,63 @@ namespace ControlPanelPlus
         public static void Bind(ConfigFile config)
         {
             Enabled = config.Bind("General", "Enabled", true,
-                "本 MOD 总开关。关闭后所有功能停止工作（补丁保持加载但不做任何事）。");
+                "本 MOD 总开关。关闭后所有功能停止工作（补丁保持加载但不做任何事）。 / Master switch; when off every feature stops (patches stay loaded but do nothing).");
 
             CollapseAllDefaultMulti = config.Bind("Expand", "CollapseAllDefaultMulti", true,
-                "多星球结果（全星区 / 某星系含多个有物流设施的星球）时，星球条目默认全部折叠。");
+                "多星球结果（全星区 / 某星系含多个有物流设施的星球）时，星球条目默认全部折叠。 / Collapse all planet rows by default when the result spans multiple planets.");
             ExpandDefaultSingle = config.Bind("Expand", "ExpandDefaultSingle", true,
-                "单星球结果（筛选为某星球，或某星系只有 1 个星球有物流设施）时，该星球条目默认展开。");
+                "单星球结果（筛选为某星球，或某星系只有 1 个星球有物流设施）时，该星球条目默认展开。 / Expand the planet row by default when the result is a single planet.");
 
             EnableStarmapButton = config.Bind("Locate", "EnableStarmapButton", true, Ordered(
-                "在每个星球条目的导航按钮左侧显示“星图定位”按钮（左键：保留面板；右键：关闭面板；Shift+右键：关闭面板并点亮导航线）。", 30));
+                "在每个星球条目的导航按钮左侧显示“星图定位”按钮（左键：保留面板；右键：关闭面板；Shift+右键：关闭面板并点亮导航线）。 / Show the locate button left of the navigation button (left click keeps the panel, right click closes it, Shift+right click also points the navigation line).", 30));
             AllowRemoteItemTransfer = config.Bind("Station", "AllowRemoteItemTransfer", false,
-                "允许在总控面板上从非本地星球取放物品（右键拿取 / 手持物品左键放入 / 清空按钮取回）。若安装了 CheatEnabler，则由其 Architect 模式决定，本项不生效。");
+                "允许在总控面板上从非本地星球取放物品（右键拿取 / 手持物品左键放入 / 清空按钮取回）。若安装了 CheatEnabler，则由其 Architect 模式决定，本项不生效。 / Allow taking/placing items on stations of non-local planets (right click takes, left click places, the clear button retrieves). Inactive when CheatEnabler is installed (its Architect mode wins).");
 
             CopyKey = config.Bind("StationCopy", "CopyKey", KeyCode.Comma, Ordered(
-                "复制物流塔设置的按键（默认 < ，即逗号键）。仅当总控面板选中物流塔时生效。", 180));
+                "复制物流塔设置的按键（默认 < ，即逗号键）。仅当总控面板选中物流塔时生效。 / Key that copies the selected station settings (default <, comma). Only works while a station is selected in the control panel.", 180));
             PasteKey = config.Bind("StationCopy", "PasteKey", KeyCode.Period, Ordered(
-                "粘贴物流塔设置的按键（默认 > ，即句号键）。按住 Shift 时批量粘贴到当前星球槽位设置相同的塔。", 170));
+                "粘贴物流塔设置的按键（默认 > ，即句号键）。按住 Shift 时批量粘贴到当前星球槽位设置相同的塔。 / Key that pastes onto the selected station(s) (default >, period). Hold Shift to batch paste onto every station on the current planet with the same slot layout.", 170));
             EnableSlots = config.Bind("StationCopy", "EnableSlots", true, Ordered(
-                "复制/粘贴第一块：槽位设置（物品种类、数量上限、本地/远程供需、运输机/运输船自动填充）。", 160));
+                "复制/粘贴第一块：槽位设置（物品种类、数量上限、本地/远程供需、运输机/运输船自动填充）。 / Block 1: slot settings (item type, max count, local/remote supply-demand, auto-replenish flags).", 160));
             for (int i = 0; i < SlotSwitches.Length; i++)
             {
                 int slot = i + 1;
                 SlotSwitches[i] = config.Bind("StationCopy", "Slot" + slot, true, Ordered(
-                    "粘贴时是否写入第 " + slot + " 槽位（关闭后该槽位保持不变）。", 150 - i * 10));
+                    "粘贴时是否写入第 " + slot + " 槽位（关闭后该槽位保持不变）。 / Paste gate for slot " + slot + " (when off the slot is left untouched).", 150 - i * 10));
             }
             EnableSettings = config.Bind("StationCopy", "EnableSettings", true, Ordered(
-                "复制/粘贴第二块：塔设置（充电功率、运输机/运输船路程、曲速路程、起送量、集装数量、轨道采集器开关、翘曲器必备）。", 100));
+                "复制/粘贴第二块：塔设置（充电功率、运输机/运输船路程、曲速路程、起送量、集装数量、轨道采集器开关、翘曲器必备）。 / Block 2: station settings (charging power, trip ranges, warp distance, delivery counts, piler count, orbital collector flag, warper requirement).", 100));
             SetChargePower = config.Bind("StationCopy", "SetChargePower", true, Ordered(
-                "粘贴时是否写入充电功率。", 90));
+                "粘贴时是否写入充电功率。 / Paste the charging power.", 90));
             SetTripDrones = config.Bind("StationCopy", "SetTripDrones", true, Ordered(
-                "粘贴时是否写入物流运输机航程。", 80));
+                "粘贴时是否写入物流运输机航程。 / Paste the logistics drone trip range.", 80));
             SetTripShips = config.Bind("StationCopy", "SetTripShips", true, Ordered(
-                "粘贴时是否写入物流运输船航程（仅星际物流站）。", 70));
+                "粘贴时是否写入物流运输船航程（仅星际物流站）。 / Paste the logistics ship trip range (interstellar stations).", 70));
             SetWarpDistance = config.Bind("StationCopy", "SetWarpDistance", true, Ordered(
-                "粘贴时是否写入曲速启用距离（仅星际物流站）。", 60));
+                "粘贴时是否写入曲速启用距离（仅星际物流站）。 / Paste the warp enable distance (interstellar stations).", 60));
             SetWarperNecessary = config.Bind("StationCopy", "SetWarperNecessary", true, Ordered(
-                "粘贴时是否写入“翘曲器必备”开关（仅星际物流站）。", 50));
+                "粘贴时是否写入“翘曲器必备”开关（仅星际物流站）。 / Paste the warper-required flag (interstellar stations).", 50));
             SetOrbitCollector = config.Bind("StationCopy", "SetOrbitCollector", true, Ordered(
-                "粘贴时是否写入“包含轨道采集器”开关（仅星际物流站）。", 40));
+                "粘贴时是否写入“包含轨道采集器”开关（仅星际物流站）。 / Paste the include-orbital-collectors flag (interstellar stations).", 40));
             SetDeliveryDrones = config.Bind("StationCopy", "SetDeliveryDrones", true, Ordered(
-                "粘贴时是否写入配送运输机数量。", 30));
+                "粘贴时是否写入配送运输机数量。 / Paste the delivery drone count.", 30));
             SetDeliveryShips = config.Bind("StationCopy", "SetDeliveryShips", true, Ordered(
-                "粘贴时是否写入配送运输船数量（仅星际物流站）。", 20));
+                "粘贴时是否写入配送运输船数量（仅星际物流站）。 / Paste the delivery ship count (interstellar stations).", 20));
             SetPilerCount = config.Bind("StationCopy", "SetPilerCount", true, Ordered(
-                "粘贴时是否写入集装数量。", 10));
+                "粘贴时是否写入集装数量。 / Paste the piler count.", 10));
             EnablePriority = config.Bind("StationCopy", "EnablePriority", true, Ordered(
-                "复制/粘贴第三块：优先级设置（塔名/点对点、星际航路优先级、分组、槽位优先级锁）。", 0));
+                "复制/粘贴第三块：优先级设置（塔名/点对点、星际航路优先级、分组、槽位优先级锁）。 / Block 3: priority settings (station name/P2P, route priority, group, slot priority locks).", 0));
 
             ItemFilterIntersect = config.Bind("Filter", "ItemFilterIntersect", false,
-                "物品筛选由“并集”改为“交集”：选 A+B 时只显示同时含有 A 和 B 的条目（默认关闭，保持原版并集）。");
+                "物品筛选由“并集”改为“交集”：选 A+B 时只显示同时含有 A 和 B 的条目（默认关闭，保持原版并集）。 / Item filter works as intersection instead of the vanilla union (A and B instead of A or B).");
 
             SortByName = config.Bind("AstroList", "SortByName", true,
-                "位置下拉框按星系名称排序（前两项“查看全星系 / 查看当前星球”保持不动）。内置星系/星球区分：星系名黄色、星球名缩进两格。");
+                "位置下拉框按星系名称排序（前两项“查看全星系 / 查看当前星球”保持不动）。内置星系/星球区分：星系名黄色、星球名缩进两格。 / Sort the location dropdown by star name (first two entries stay pinned). Built-in star/planet distinction: stars yellow, planets indented.");
 
             ListUp = config.Bind("Hotkeys", "ListUp", KeyCode.PageUp,
-                "位置下拉框向上切换一项（按住 Ctrl 只切换星系）。");
+                "位置下拉框向上切换一项（按住 Ctrl 只切换星系）。 / Step the location dropdown up (hold Ctrl to switch stars only).");
             ListDown = config.Bind("Hotkeys", "ListDown", KeyCode.PageDown,
-                "位置下拉框向下切换一项（按住 Ctrl 只切换星系）。");
+                "位置下拉框向下切换一项（按住 Ctrl 只切换星系）。 / Step the location dropdown down (hold Ctrl to switch stars only).");
         }
     }
 }

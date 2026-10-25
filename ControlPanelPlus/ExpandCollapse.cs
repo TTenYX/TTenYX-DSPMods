@@ -208,7 +208,7 @@ namespace ControlPanelPlus
                 return;
             }
 
-            UIButton button = NativeUi.MakeSmallTextButton("全部展开", new Vector2(72f, 22f), 13, ToggleButtonName);
+            UIButton button = NativeUi.MakeSmallTextButton(Lang.T("全部展开", "Expand All"), new Vector2(72f, 22f), 13, ToggleButtonName);
             if (button == null) return;
             button.transform.SetParent(w.transform, worldPositionStays: false);
             NativeUi.AnchorTopRight((RectTransform)button.transform, -43f, -25f, new Vector2(72f, 22f));
@@ -239,7 +239,7 @@ namespace ControlPanelPlus
             Text text = NativeUi.TextOf(_toggleButton);
             if (text == null) return;
             bool allExpanded = AllRowsExpanded(w, PlanetRows(w));
-            text.text = allExpanded ? "全部折叠" : "全部展开";
+            text.text = allExpanded ? Lang.T("全部折叠", "Collapse All") : Lang.T("全部展开", "Expand All");
         }
 
         private static void OnToggleClick(int obj)

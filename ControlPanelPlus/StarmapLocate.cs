@@ -17,6 +17,15 @@ namespace ControlPanelPlus
 
         private static Sprite _viewPlanetIcon;
 
+        /// <summary>Localized tooltip of the locate button (also exercised by the self test).</summary>
+        public static void GetTooltip(out string title, out string text)
+        {
+            title = Lang.T("定位", "Locate");
+            text = Lang.Chinese
+                ? "左键：打开星图并保留总控面板\n右键：打开星图并关闭总控面板\nShift+右键：关闭总控面板并点亮导航线"
+                : "Left click: open the star map and keep the panel\nRight click: open the star map and close the panel\nShift+right click: close the panel and point the navigation line";
+        }
+
         /// <summary>Same star map "view planet" sprite PlanetFinder uses for its button.</summary>
         private static Sprite ViewPlanetIcon
         {
@@ -43,7 +52,7 @@ namespace ControlPanelPlus
             Sprite icon = ViewPlanetIcon;
             UIButton button = icon != null ? NativeUi.MakeIconButton(ButtonName, icon, 22f) : null;
             bool iconStyle = button != null;
-            if (button == null) button = NativeUi.MakeSmallTextButton("定位", new Vector2(36f, 22f), 12, ButtonName);
+            if (button == null) button = NativeUi.MakeSmallTextButton(Lang.T("定位", "Locate"), new Vector2(36f, 22f), 12, ButtonName);
             if (button == null) return;
 
             RectTransform naviRect = (RectTransform)entry.navigationButton.transform;
@@ -55,8 +64,11 @@ namespace ControlPanelPlus
             rect.anchoredPosition = new Vector2(naviRect.anchoredPosition.x - 6f, 0f);
             if (iconStyle)
             {
-                button.tips.tipTitle = "定位 / Locate";
-                button.tips.tipText = "左键：打开星图并保留总控面板\n右键：打开星图并关闭总控面板\nShift+右键：关闭总控面板并点亮导航线";
+                string tipTitle;
+                string tipText;
+                GetTooltip(out tipTitle, out tipText);
+                button.tips.tipTitle = tipTitle;
+                button.tips.tipText = tipText;
                 button.tips.corner = 3;
                 button.tips.offset = new Vector2(18f, -20f);
                 button.tips.delay = 0.7f;

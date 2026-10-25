@@ -60,14 +60,18 @@ namespace ControlPanelPlus
                 }
             }
             StringBuilder sb = new StringBuilder();
-            sb.Append(isCollector ? "轨道采集器" : (isVeinCollector ? "大型采矿机" : (isStellar ? "星际物流站" : "行星内物流站")));
-            sb.Append(" 槽位=").Append(filled)
-              .Append(" 名称=\"").Append(name).Append('"')
-              .Append(" 航路优先级=").Append(routePriority)
-              .Append(" 分组=").Append(remoteGroupMask);
+            sb.Append(isCollector
+                ? Lang.T("轨道采集器", "Orbital Collector")
+                : (isVeinCollector
+                    ? Lang.T("大型采矿机", "Vein Collector")
+                    : (isStellar ? Lang.T("星际物流站", "Interstellar Station") : Lang.T("行星内物流站", "Planetary Station"))));
+            sb.Append(Lang.T(" 槽位=", " slots=")).Append(filled)
+              .Append(Lang.T(" 名称=\"", " name=\"")).Append(name).Append('"')
+              .Append(Lang.T(" 航路优先级=", " routePriority=")).Append(routePriority)
+              .Append(Lang.T(" 分组=", " group=")).Append(remoteGroupMask);
             if (p2pPartners != null && p2pPartners.Length > 0)
             {
-                sb.Append(" P2P伙伴=").Append(p2pPartners.Length);
+                sb.Append(Lang.T(" P2P伙伴=", " p2pPartners=")).Append(p2pPartners.Length);
             }
             return sb.ToString();
         }
@@ -217,11 +221,11 @@ namespace ControlPanelPlus
             if (!Multi.Remove(key))
             {
                 Multi.Add(key);
-                Tip($"已加入多选：{Multi.Count} 座塔");
+                Tip(Lang.T($"已加入多选：{Multi.Count} 座塔", $"Added {Multi.Count} station(s) to the multi-selection"));
             }
             else
             {
-                Tip(Multi.Count > 0 ? $"已移出多选：剩余 {Multi.Count} 座" : "已清空多选");
+                Tip(Multi.Count > 0 ? Lang.T($"已移出多选：剩余 {Multi.Count} 座", $"Removed from the multi-selection: {Multi.Count} left") : Lang.T("已清空多选", "Multi-selection cleared"));
             }
             CppLog.Debug($"multi-select toggled astro={target.astroId} obj={target.objId} count={Multi.Count}");
             return true;
@@ -250,7 +254,7 @@ namespace ControlPanelPlus
                 if (ResolveStation(candidate.astroId, candidate.objId) == null) continue;
                 Multi.Add(Key(candidate.astroId, candidate.objId));
             }
-            Tip($"已批量选择 {Multi.Count} 座塔");
+            Tip(Lang.T($"已批量选择 {Multi.Count} 座塔", $"Selected {Multi.Count} station(s) in range"));
             CppLog.Debug($"range select {from}..{to} -> {Multi.Count} stations");
             return Multi.Count > 0;
         }
@@ -298,13 +302,13 @@ namespace ControlPanelPlus
             UIControlPanelStationInspector inspector = w != null ? w.currentInspector as UIControlPanelStationInspector : null;
             if (inspector == null || inspector.station == null || inspector.factory == null || inspector.station.id <= 0)
             {
-                Tip("请先在左侧选中一个物流塔再复制");
+                Tip(Lang.T("请先在左侧选中一个物流塔再复制", "Select a station on the left before copying"));
                 return;
             }
 
             _clipboard = Capture(inspector.station, inspector.factory);
             CppLog.Info("copied station settings: " + _clipboard.Summary());
-            Tip("已复制：" + _clipboard.Summary());
+            Tip(Lang.T("已复制：", "Copied: ") + _clipboard.Summary());
         }
 
         private static StationSnapshot Capture(StationComponent station, PlanetFactory factory)
@@ -397,7 +401,7 @@ namespace ControlPanelPlus
         {
             if (_clipboard == null)
             {
-                Tip("剪贴板为空：先选中物流塔按复制键");
+                Tip(Lang.T("剪贴板为空：先选中物流塔按复制键", "Clipboard is empty: select a station and press the copy key first"));
                 return;
             }
 
@@ -436,7 +440,7 @@ namespace ControlPanelPlus
 
                 if (targets.Count == 0)
                 {
-                    Tip("请先在左侧选中一个物流塔再粘贴");
+                    Tip(Lang.T("请先在左侧选中一个物流塔再粘贴", "Select a station on the left before pasting"));
                     return;
                 }
 
@@ -465,15 +469,15 @@ namespace ControlPanelPlus
                     GameMain.data.galacticTransport.RefreshTraffic();
                 }
 
-                string message = $"已粘贴到 {ok} 座物流塔（槽位 {slotsApplied} 项";
-                if (slotsSkipped > 0) message += $"，跳过 {slotsSkipped} 项";
-                message += "）";
+                string message = Lang.T($"已粘贴到 {ok} 座物流塔（槽位 {slotsApplied} 项", $"Pasted to {ok} station(s) ({slotsApplied} slot updates");
+                if (slotsSkipped > 0) message += Lang.T($"，跳过 {slotsSkipped} 项", $", {slotsSkipped} skipped");
+                message += Lang.T("）", ")");
                 Tip(message);
             }
             catch (Exception e)
             {
                 CppLog.Error("paste failed: " + e);
-                Tip("粘贴失败，详见 BepInEx 日志");
+                Tip(Lang.T("粘贴失败，详见 BepInEx 日志", "Paste failed, see the BepInEx log"));
             }
         }
 
@@ -483,7 +487,7 @@ namespace ControlPanelPlus
             PlanetFactory factory = localPlanet != null ? localPlanet.factory : null;
             if (factory == null)
             {
-                Tip("当前没有所在星球，无法批量粘贴");
+                Tip(Lang.T("当前没有所在星球，无法批量粘贴", "No current planet, batch paste is unavailable"));
                 return;
             }
 
@@ -512,12 +516,12 @@ namespace ControlPanelPlus
 
             if (matched == 0)
             {
-                Tip("当前星球没有槽位设置相同的物流塔");
+                Tip(Lang.T("当前星球没有槽位设置相同的物流塔", "No station on the current planet shares the same slot layout"));
                 CppLog.Info("batch paste: 0 matching stations on current planet");
                 return;
             }
             CppLog.Info($"batch paste: planet={localPlanet.displayName} matched={ok} slotsSkipped={slotsSkipped}");
-            Tip($"批量粘贴：命中 {matched} 座槽位相同的物流塔");
+            Tip(Lang.T($"批量粘贴：命中 {matched} 座槽位相同的物流塔", $"Batch paste: {matched} station(s) with the same slot layout"));
         }
 
         private static bool SlotLayoutMatches(StationComponent station, StationSnapshot snap)
