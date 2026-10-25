@@ -1,6 +1,6 @@
 # ControlPanelPlus — 物流总控面板优化
 
-《戴森球计划》0.10.35 的 BepInEx 5 插件，给游戏自带的**物流总控面板**（默认 `I` 打开）增加 8 组功能：展开/折叠策略、星图定位、物流塔设置复制粘贴、筛选交集、位置下拉框排序与热键、筛选快捷操作、非本地星球取放物品、存储模式鼠标快捷键。
+给游戏自带的**物流总控面板**（默认 `I` 打开）增加 8 组功能：展开/折叠策略、星图定位、物流塔设置复制粘贴、筛选交集、位置下拉框排序与热键、筛选快捷操作、非本地星球取放物品、存储模式鼠标快捷键。
 
 需要 BepInEx 5.4.17+。把 `ControlPanelPlus.dll` 放到 `BepInEx/plugins/ControlPanelPlus/` 即可；配置写入 `BepInEx/config/com.dsp.controlpanelplus.cfg`，也可以装 BepInEx.ConfigurationManager 在游戏实时内调整。
 

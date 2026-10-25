@@ -81,6 +81,8 @@ namespace ControlPanelPlus
     {
         public int slotsApplied;
         public int slotsSkipped;
+        public int slotsConflict;
+        public int slotsLost;
         public bool settings;
         public bool priority;
         public int routesAdded;
@@ -447,6 +449,8 @@ namespace ControlPanelPlus
                 int ok = 0;
                 int slotsApplied = 0;
                 int slotsSkipped = 0;
+                int slotsConflict = 0;
+                int slotsLost = 0;
                 bool trafficTouched = false;
                 for (int i = 0; i < targets.Count; i++)
                 {
@@ -462,6 +466,8 @@ namespace ControlPanelPlus
                     ok++;
                     slotsApplied += result.slotsApplied;
                     slotsSkipped += result.slotsSkipped;
+                    slotsConflict += result.slotsConflict;
+                    slotsLost += result.slotsLost;
                 }
 
                 if (trafficTouched && GameMain.data != null && GameMain.data.galacticTransport != null)
@@ -470,7 +476,14 @@ namespace ControlPanelPlus
                 }
 
                 string message = Lang.T($"已粘贴到 {ok} 座物流塔（槽位 {slotsApplied} 项", $"Pasted to {ok} station(s) ({slotsApplied} slot updates");
-                if (slotsSkipped > 0) message += Lang.T($"，跳过 {slotsSkipped} 项", $", {slotsSkipped} skipped");
+                if (slotsConflict > 0)
+                {
+                    message += Cfg.ForcePaste.Value
+                        ? Lang.T($"，覆盖 {slotsConflict} 项物品冲突", $", {slotsConflict} item conflict(s) overwritten")
+                        : Lang.T($"，跳过 {slotsConflict} 项物品冲突（可在配置 StationCopy/ForcePaste 开启强制覆盖）",
+                                 $", {slotsConflict} skipped (item conflict; enable StationCopy/ForcePaste to overwrite)");
+                }
+                if (slotsLost > 0) message += Lang.T($"，跳过 {slotsLost} 项（目标槽位不足）", $", {slotsLost} skipped (not enough slots)");
                 message += Lang.T("）", ")");
                 Tip(message);
             }
@@ -496,6 +509,7 @@ namespace ControlPanelPlus
             int matched = 0;
             int ok = 0;
             int slotsSkipped = 0;
+            int slotsConflict = 0;
             bool trafficTouched = false;
             for (int i = 1; i < cursor; i++)
             {
@@ -507,6 +521,7 @@ namespace ControlPanelPlus
                 trafficTouched |= result.priority;
                 ok++;
                 slotsSkipped += result.slotsSkipped;
+                slotsConflict += result.slotsConflict;
                 CppLog.Debug($"batch paste -> [{Describe(station, factory)}] slots={result.slotsApplied}/{result.slotsApplied + result.slotsSkipped} skipped={result.slotsSkipped}");
             }
             if (trafficTouched && GameMain.data != null && GameMain.data.galacticTransport != null)
@@ -521,7 +536,15 @@ namespace ControlPanelPlus
                 return;
             }
             CppLog.Info($"batch paste: planet={localPlanet.displayName} matched={ok} slotsSkipped={slotsSkipped}");
-            Tip(Lang.T($"批量粘贴：命中 {matched} 座槽位相同的物流塔", $"Batch paste: {matched} station(s) with the same slot layout"));
+            string batchMessage = Lang.T($"批量粘贴：命中 {matched} 座槽位相同的物流塔", $"Batch paste: {matched} station(s) with the same slot layout");
+            if (slotsConflict > 0)
+            {
+                batchMessage += Cfg.ForcePaste.Value
+                    ? Lang.T($"，覆盖 {slotsConflict} 项物品冲突", $", {slotsConflict} item conflict(s) overwritten")
+                    : Lang.T($"，跳过 {slotsConflict} 项物品冲突（可在配置 StationCopy/ForcePaste 开启强制覆盖）",
+                             $", {slotsConflict} skipped (item conflict; enable StationCopy/ForcePaste to overwrite)");
+            }
+            Tip(batchMessage);
         }
 
         private static bool SlotLayoutMatches(StationComponent station, StationSnapshot snap)
@@ -615,10 +638,12 @@ namespace ControlPanelPlus
                     {
                         // Keep the inventory of the target tower intact.
                         result.slotsSkipped++;
+                        result.slotsConflict++;
                         skipped.Append($"slot{i}({targetSlot.itemId}->{source.itemId},count={targetSlot.count}) ");
                         continue;
                     }
                     forceReplace = true;
+                    result.slotsConflict++;
                 }
 
                 // Force paste: replaced items go to the player unless the destroy switch is on; the
@@ -646,6 +671,7 @@ namespace ControlPanelPlus
                 if (lost > 0)
                 {
                     result.slotsSkipped += lost;
+                    result.slotsLost += lost;
                     skipped.Append($"targetSlots={target.storage.Length} clipboardSlots={_clipboard.slots.Length} ");
                 }
             }
