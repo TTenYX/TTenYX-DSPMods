@@ -595,6 +595,13 @@ namespace ControlPanelPlus
                         // Keep the original max even when it is above the target station's capacity.
                         target.storage[i].max = source.max;
                     }
+                    else
+                    {
+                        // The default behaviour is the reduced copy: never exceed the target station's
+                        // own capacity, even when another mod removes the engine-side clamp.
+                        int capacity = StationCapacity(target, factory);
+                        if (capacity > 0 && target.storage[i].max > capacity) target.storage[i].max = capacity;
+                    }
                     result.slotsApplied++;
                     continue;
                 }
@@ -683,6 +690,24 @@ namespace ControlPanelPlus
             else if (Cfg.SetPilerCount.Value)
             {
                 target.pilerCount = _clipboard.pilerCount;
+            }
+        }
+
+        private static int StationCapacity(StationComponent station, PlanetFactory factory)
+        {
+            try
+            {
+                int modelIndex = factory.entityPool[station.entityId].modelIndex;
+                ModelProto model = LDB.models.Select(modelIndex);
+                int capacity = model != null && model.prefabDesc != null ? model.prefabDesc.stationMaxItemCount : 0;
+                int extra = station.isStellar && !station.isCollector && !station.isVeinCollector
+                    ? GameMain.history.remoteStationExtraStorage
+                    : GameMain.history.localStationExtraStorage;
+                return capacity + extra;
+            }
+            catch (Exception)
+            {
+                return 0;
             }
         }
 

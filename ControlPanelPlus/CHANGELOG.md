@@ -5,7 +5,7 @@
 - 定位按钮：浅蓝色图标底色；悬浮提示固定三行、宽度按语言自适应；打开仪表盘时定位会强制关闭仪表盘（优先于 DashboardOverhaul 的锁定）。
 - 新增强制粘贴（`StationCopy/ForcePaste`，默认关闭）：覆盖已有其他物品的槽位，保持原槽位绑定，替换物品默认取回。
 - 新增替换物品直接销毁（`StationCopy/DestroyReplacedItems`，默认关闭）：强制粘贴与远程清空有物品槽位时直接销毁原有物品。
-- 新增采矿机溢出（`StationCopy/AllowMinerOverflow`，默认关闭）：大型采矿机 / 轨道采集器保留原上限并允许溢出。
+- 新增采矿机溢出（`StationCopy/AllowMinerOverflow`，默认关闭）：开启后大型采矿机 / 轨道采集器保留原上限并允许溢出；关闭时显式缩减到目标塔容量（即使 UXAssist 的溢出补丁处于开启状态）。
 - 位置下拉框新增「当前星系」范围（第三项）。
 - README 按功能重排（存储快捷键改为 F7、非本地取放改为 F8），移除实现细节；新增 AGENTS.md 默认制作规则。
 
