@@ -111,13 +111,13 @@
 | `Expand/ExpandDefaultSingle` | true | 单星球结果默认展开 |
 | `Locate/EnableStarmapButton` | true | 星球条目「定位」按钮 |
 | `Station/AllowRemoteItemTransfer` | false | 允许从非本地星球取放物品（CheatEnabler 优先） |
+| `StationCopy/ForcePaste` | false | 强制粘贴：覆盖已有其他物品的槽位（原槽位绑定保持） |
+| `StationCopy/DestroyReplacedItems` | false | 强制粘贴/远程清空时直接销毁被替换物品 |
+| `StationCopy/AllowMinerOverflow` | false | 大型采矿机/轨道采集器保留原上限并允许溢出 |
 | `StationCopy/CopyKey` | Comma | 复制键（`<`） |
 | `StationCopy/PasteKey` | Period | 粘贴键（`>`） |
 | `StationCopy/EnableSlots` | true | 复制/粘贴第一块：槽位设置 |
 | `StationCopy/Slot1` … `Slot5` | true | 粘贴时是否写入第 1–5 槽位（可单独关闭以保护该槽位） |
-| `StationCopy/ForcePaste` | false | 强制粘贴：覆盖已有其他物品的槽位（原槽位绑定保持） |
-| `StationCopy/DestroyReplacedItems` | false | 强制粘贴/远程清空时直接销毁被替换物品 |
-| `StationCopy/AllowMinerOverflow` | false | 大型采矿机/轨道采集器保留原上限并允许溢出 |
 | `StationCopy/EnableSettings` | true | 复制/粘贴第二块：塔设置 |
 | `StationCopy/SetChargePower` | true | 粘贴充电功率 |
 | `StationCopy/SetTripDrones` / `SetTripShips` | true | 粘贴物流运输机/运输船航程 |

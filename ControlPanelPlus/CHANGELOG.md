@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.2.6
+
+- 配置界面把 `ForcePaste` / `DestroyReplacedItems` / `AllowMinerOverflow` 三项移到 `StationCopy` 段最上方（按键设置之前）。
+
 ## 0.2.5
 
 - 定位按钮改回文字按钮「定位」（英文界面 Locate），移除程序绘制的图标与相关透明/去高亮处理；悬浮提示保留。

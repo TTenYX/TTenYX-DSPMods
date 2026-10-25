@@ -84,11 +84,11 @@ namespace ControlPanelPlus
                     "粘贴时是否写入第 " + slot + " 槽位（关闭后该槽位保持不变）。 / Paste gate for slot " + slot + " (when off the slot is left untouched).", 210 - i * 10));
             }
             ForcePaste = config.Bind("StationCopy", "ForcePaste", false, Ordered(
-                "强制粘贴：目标槽位已有其他物品时直接覆盖（关闭时跳过该槽位，默认关闭）。 / Force paste: overwrite a slot that already holds a different item (off = skip it, default off).", 160));
+                "强制粘贴：目标槽位已有其他物品时直接覆盖（关闭时跳过该槽位，默认关闭）。 / Force paste: overwrite a slot that already holds a different item (off = skip it, default off).", 270));
             DestroyReplacedItems = config.Bind("StationCopy", "DestroyReplacedItems", false, Ordered(
-                "强制粘贴或远程清空时直接销毁被替换的物品（关闭时取回到背包，默认关闭）。 / Destroy the replaced items instead of returning them (also applies to clearing remote slots, default off).", 150));
+                "强制粘贴或远程清空时直接销毁被替换的物品（关闭时取回到背包，默认关闭）。 / Destroy the replaced items instead of returning them (also applies to clearing remote slots, default off).", 260));
             AllowMinerOverflow = config.Bind("StationCopy", "AllowMinerOverflow", false, Ordered(
-                "大型采矿机 / 轨道采集器保留原始槽位上限并允许溢出（关闭时自动缩减到目标塔容量，默认关闭）。 / Keep the original slot max for vein collectors / orbital collectors and allow overflow (off = clamp to the target capacity, default off).", 140));
+                "大型采矿机 / 轨道采集器保留原始槽位上限并允许溢出（关闭时自动缩减到目标塔容量，默认关闭）。 / Keep the original slot max for vein collectors / orbital collectors and allow overflow (off = clamp to the target capacity, default off).", 250));
             EnableSettings = config.Bind("StationCopy", "EnableSettings", true, Ordered(
                 "复制/粘贴第二块：塔设置（充电功率、运输机/运输船路程、曲速路程、起送量、集装数量、轨道采集器开关、翘曲器必备）。 / Block 2: station settings (charging power, trip ranges, warp distance, delivery counts, piler count, orbital collector flag, warper requirement).", 130));
             SetChargePower = config.Bind("StationCopy", "SetChargePower", true, Ordered(
