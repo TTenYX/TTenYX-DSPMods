@@ -1,9 +1,7 @@
 {
   "name": "ControlPanelPlus",
-  "version_number": "0.2.6",
-  "website_url": "",
-  "description": "Logistics control panel tweaks: default expand/collapse, starmap locate button, station settings copy/paste (multi-select + range/batch), item filter intersection + right-click filter shortcuts, remote item transfer, storage mode mouse shortcuts, astro list sorting/prefix/hotkeys | 物流总控面板优化：展开折叠、星图定位、物流塔复制粘贴（多选/框选/批量）、物品筛选交集与右键快捷筛选、非本地取放、存储模式快捷键、星系排序与热键",
-  "dependencies": [
-    "BepInEx-BepInExPack-5.4.2100"
-  ]
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/ControlPanelPlus",
+  "description": "Quality-of-life upgrades for the logistics control panel: expand/collapse, starmap locate, station copy/paste with per-slot gates, filter intersection, remote item transfer, storage shortcuts and astro list sorting.",
+  "dependencies": []
 }
