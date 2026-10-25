@@ -2,21 +2,21 @@
 
 《戴森球计划》0.10.35 的 BepInEx 5 插件，给游戏自带的**物流总控面板**（默认 `I` 打开）增加 8 组功能：展开/折叠策略、星图定位、物流塔设置复制粘贴、筛选交集、位置下拉框排序与热键、筛选快捷操作、非本地星球取放物品、存储模式鼠标快捷键。
 
-需要 BepInEx 5.4.17+。把 `ControlPanelPlus.dll` 放到 `BepInEx/plugins/ControlPanelPlus/` 即可；配置写入 `BepInEx/config/com.dsp.controlpanelplus.cfg`，也可以装 BepInEx.ConfigurationManager 在游戏内调整。
+需要 BepInEx 5.4.17+。把 `ControlPanelPlus.dll` 放到 `BepInEx/plugins/ControlPanelPlus/` 即可；配置写入 `BepInEx/config/com.dsp.controlpanelplus.cfg`，也可以装 BepInEx.ConfigurationManager 在游戏实时内调整。
 
 ## 功能
 
 ### F1 星球条目默认展开 / 折叠 + 顶部按钮
 
-- **多星球结果**（查看全星区，或某星系里有多个已建物流设施的星球）→ 打开面板或切换筛选后，所有星球条目**默认折叠**。
-- **单星球结果**（筛选到某个星球，或某星系只有 1 个星球有设施）→ 该星球条目**默认展开**。
-- 标题栏右侧有一个 **全部展开 / 全部折叠** 切换按钮，标签跟随当前状态，样式与「筛选：并集/交集」一致。
-- 默认值只在**切换筛选 / 打开面板**时套用，建塔、拆塔等列表刷新不会重置手动展开的状态。
+- **多星球结果**（查看全星区，或某星系里有多个已建物流设施的星球）→ 打开面板或切换筛选后，所有星球条目**默认折叠**，仅展示满足条件的每个星球。
+- **单星球结果**（筛选到某个星球，或某星系只有 1 个星球满足条件）→ 该星球条目**默认展开**。
+- 以上折叠展开默认只在**切换筛选 / 打开面板**时套用，建塔、拆塔等列表刷新不会重置手动展开的状态。
 - **重新打开面板会保留上次的展开/折叠状态**，优先级高于两个默认开关；状态仍写入游戏自己的 `astroExpands`（随存档保存）。
+- 标题栏右上角有一个 **全部展开 / 全部折叠** 切换按钮，实现快速展开/折叠当前界面中所有星球的设施。
 
 ### F2 星图定位按钮
 
-每个星球条目的导航按钮**左侧**新增一个小按钮「定位」：点击后关闭冲突窗口（背包、科技树、仪表盘、戴森球编辑器等），打开星图、把相机对准该星球并选中它。
+每个星球条目的导航按钮**左侧**新增一个与 PlanetFinder「view planet」同款的**图标按钮**（使用星图里的「查看星球」图标，鼠标悬浮会弹出提示浮窗，浮窗里列出三种点击方式）。
 
 点击方式决定行为：
 
@@ -24,7 +24,9 @@
 - **右键**：打开星图并关闭总控面板；
 - **Shift+右键**：打开星图、关闭总控面板，并把导航线指向该星球。
 
-### F3 物流塔设置复制粘贴
+点击后统一按原版定位流程：关闭其他冲突窗口（背包、科技树、仪表盘、戴森球编辑器等）→ 打开星图 → 相机对准该星球 → 在星图中选中它。
+
+### F3 物流塔设置批量复制粘贴
 
 在总控面板中选中一个物流塔后：
 
@@ -73,7 +75,7 @@
 
 ### F7 非本地星球取放物品
 
-默认关闭（`Station/AllowRemoteItemTransfer`）。开启后可以在总控面板上直接对**非本地星球**的物流塔取放物品：右键图标拿取、手持同种物品左键放入、清空按钮取回（复用原版本地逻辑）。
+默认关闭（`Station/AllowRemoteItemTransfer`）。开启后可以在总控面板上直接从**非本地星球**的物流设施中取放物品：右键图标拿取、手持同种物品左键放入、清空按钮取回（复用原版本地逻辑）。
 
 **优先级低于 CheatEnabler**：检测到 CheatEnabler 时本功能不生效，由其 Architect 模式决定。
 
@@ -90,7 +92,9 @@
 
 ## 配置
 
-配置文件：`BepInEx/config/com.dsp.controlpanelplus.cfg`（可用 BepInEx.ConfigurationManager 在游戏内修改；同组条目按固定顺序显示，重启游戏后生效）。
+配置文件：`BepInEx/config/com.dsp.controlpanelplus.cfg`，修改后重启游戏生效
+
+建议搭配MOD ConfigurationManager 使用，在游戏内实时修改生效
 
 | 配置 | 默认 | 说明 |
 |---|---|---|
@@ -132,7 +136,7 @@ Requirements: BepInEx 5.4.17+. Drop `ControlPanelPlus.dll` into `BepInEx/plugins
 ### Features
 
 - **F1 Expand / collapse** — Multi-planet results collapse by default, single-planet results expand by default; a title-bar toggle button switches all rows; reopening the panel keeps the previous state (stored in the game's `astroExpands`).
-- **F2 Locate button** — A small button left of each planet row's navigation button opens the star map, aims the camera at the planet and selects it. Left click keeps the control panel open; right click closes it; Shift+right click also points the navigation line at the planet.
+- **F2 Locate button** — A small PlanetFinder-style "View Planet" icon button left of each planet row's navigation button; hovering it shows a tooltip with the three click modes. Left click opens the star map and keeps the panel; right click closes the panel; Shift+right click also points the navigation line at the planet.
 - **F3 Copy / paste station settings** — `<` copies the selected station, `>` pastes. `Ctrl`+click multi-selects, `Shift`+click selects a range (across planets), `Shift`+`>` batch-pastes onto all stations on the current planet with identical slot layout. Data is split into three independently switchable blocks (slots, station settings, priority), and the first two blocks have per-item switches (`Slot1`–`Slot5`, nine `Set*` toggles). It never moves items or clears inventories; incompatible occupied slots are skipped.
 - **F4 Item filter intersection** — Turns the vanilla union filter into an intersection; a title-bar button toggles it instantly.
 - **F5 Astro list sorting / hotkeys** — Sorts the location dropdown by star name (first two entries pinned), stars yellow and planets indented; `PageUp`/`PageDown` step the list (Ctrl = stars only), `←`/`→` jump to the previous/next planet, `↑`/`↓` step through the result list.

@@ -15,13 +15,35 @@ namespace ControlPanelPlus
     {
         public const string ButtonName = "cpt-locate-btn";
 
+        private static Sprite _viewPlanetIcon;
+
+        /// <summary>Same star map "view planet" sprite PlanetFinder uses for its button.</summary>
+        private static Sprite ViewPlanetIcon
+        {
+            get
+            {
+                if (_viewPlanetIcon != null) return _viewPlanetIcon;
+                UIStarmap starmap = UIRoot.instance != null && UIRoot.instance.uiGame != null ? UIRoot.instance.uiGame.starmap : null;
+                if (starmap != null && starmap.cursorFunctionButton2 != null)
+                {
+                    Transform icon = starmap.cursorFunctionButton2.transform.Find("icon");
+                    Image image = icon != null ? icon.GetComponent<Image>() : null;
+                    if (image != null) _viewPlanetIcon = image.sprite;
+                }
+                return _viewPlanetIcon;
+            }
+        }
+
         public static void EnsureButton(UIControlPanelPlanetEntry entry)
         {
             if (entry == null || entry.navigationButton == null) return;
             Transform banner = entry.navigationButton.transform.parent;
             if (banner == null || banner.Find(ButtonName) != null) return;
 
-            UIButton button = NativeUi.MakeSmallTextButton("定位", new Vector2(36f, 22f), 12, ButtonName);
+            Sprite icon = ViewPlanetIcon;
+            UIButton button = icon != null ? NativeUi.MakeIconButton(ButtonName, icon, 22f) : null;
+            bool iconStyle = button != null;
+            if (button == null) button = NativeUi.MakeSmallTextButton("定位", new Vector2(36f, 22f), 12, ButtonName);
             if (button == null) return;
 
             RectTransform naviRect = (RectTransform)entry.navigationButton.transform;
@@ -31,8 +53,19 @@ namespace ControlPanelPlus
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
             rect.anchoredPosition = new Vector2(naviRect.anchoredPosition.x - 6f, 0f);
-            rect.sizeDelta = new Vector2(36f, 22f);
-            rect.localScale = Vector3.one;
+            if (iconStyle)
+            {
+                button.tips.tipTitle = "定位 / Locate";
+                button.tips.tipText = "左键：打开星图并保留总控面板\n右键：打开星图并关闭总控面板\nShift+右键：关闭总控面板并点亮导航线";
+                button.tips.corner = 3;
+                button.tips.offset = new Vector2(18f, -20f);
+                button.tips.delay = 0.7f;
+            }
+            else
+            {
+                rect.sizeDelta = new Vector2(36f, 22f);
+                rect.localScale = Vector3.one;
+            }
 
             LocateButtonHandler handler = button.gameObject.AddComponent<LocateButtonHandler>();
             handler.entry = entry;

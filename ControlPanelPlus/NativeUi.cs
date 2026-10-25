@@ -73,6 +73,48 @@ namespace ControlPanelPlus
             return btn;
         }
 
+        /// <summary>
+        /// Clones the research queue's pause icon button - the same template PlanetFinder uses for its
+        /// "View Planet" button - and scales it to the requested visual size.
+        /// </summary>
+        public static UIButton MakeIconButton(string name, Sprite sprite, float size)
+        {
+            UIGame game = UIRoot.instance != null ? UIRoot.instance.uiGame : null;
+            UIButton src = game != null && game.researchQueue != null ? game.researchQueue.pauseButton : null;
+            if (src == null)
+            {
+                CppLog.Warn("native icon button template (researchQueue.pauseButton) is not available");
+                return null;
+            }
+
+            GameObject go = Object.Instantiate(src.gameObject);
+            go.name = name;
+            UIButton btn = go.GetComponent<UIButton>();
+            if (btn == null)
+            {
+                Object.Destroy(go);
+                return null;
+            }
+
+            RectTransform rt = (RectTransform)go.transform;
+            float sourceSize = rt.rect.width > 1f ? rt.rect.width : Mathf.Max(1f, rt.sizeDelta.x);
+            float scale = size / sourceSize;
+            rt.localScale = new Vector3(scale, scale, scale);
+
+            if (sprite != null)
+            {
+                Transform icon = go.transform.Find("icon");
+                Image image = icon != null ? icon.GetComponent<Image>() : null;
+                if (image != null) image.sprite = sprite;
+            }
+
+            btn.tips.tipTitle = "";
+            btn.tips.tipText = "";
+            btn.tips.delay = 0.7f;
+            go.SetActive(true);
+            return btn;
+        }
+
         /// <summary>Anchors a rect to the top-right corner of its parent; y is negative going down.</summary>
         public static void AnchorTopRight(RectTransform rt, float rightOffset, float topOffset, Vector2 size)
         {
