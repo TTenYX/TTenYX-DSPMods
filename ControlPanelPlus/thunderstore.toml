@@ -1,0 +1,25 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "TTenYX"
+name = "ControlPanelPlus"
+versionNumber = "1.0.0"
+description = "Quality-of-life upgrades for the logistics control panel: expand/collapse, starmap locate, station copy/paste with per-slot gates, filter intersection, remote item transfer, storage shortcuts and astro list sorting."
+websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods"
+containsNsfwContent = false
+
+[package.dependencies]
+xiaoye97-BepInEx = "5.4.17"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./build"
+[[build.copy]]
+source = "./bin/Release/netstandard2.1/ControlPanelPlus.dll"
+target = ""
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "dyson-sphere-program", ]
