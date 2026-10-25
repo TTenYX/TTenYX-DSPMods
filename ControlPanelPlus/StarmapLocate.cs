@@ -16,6 +16,104 @@ namespace ControlPanelPlus
         public const string ButtonName = "cpt-locate-btn";
 
         private static Sprite _viewPlanetIcon;
+        private static Sprite _cleanIcon;
+
+        /// <summary>
+        /// The starmap "view planet" sprite ships with a glowing halo. Take only its solid glyph
+        /// (threshold the alpha) so the button shows a crisp icon without the glow; when the texture
+        /// cannot be read, draw a clean magnifier instead.
+        /// </summary>
+        /// <summary>Icon shown on the button (cleaned once).</summary>
+        public static Sprite LocateIcon => CleanIcon(ViewPlanetIcon);
+
+        private static Sprite CleanIcon(Sprite source)
+        {
+            if (_cleanIcon != null) return _cleanIcon;
+            if (source != null)
+            {
+                try
+                {
+                    Texture2D texture = source.texture;
+                    if (texture != null && texture.isReadable)
+                    {
+                        Rect r = source.rect;
+                        int w = Mathf.RoundToInt(r.width);
+                        int h = Mathf.RoundToInt(r.height);
+                        if (w > 0 && h > 0)
+                        {
+                            Color[] pixels = texture.GetPixels((int)r.x, (int)r.y, w, h);
+                            for (int i = 0; i < pixels.Length; i++)
+                            {
+                                pixels[i].a = pixels[i].a >= 0.72f ? 1f : 0f;
+                            }
+                            Texture2D clean = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                            clean.filterMode = FilterMode.Bilinear;
+                            clean.wrapMode = TextureWrapMode.Clamp;
+                            clean.SetPixels(pixels);
+                            clean.Apply();
+                            _cleanIcon = Sprite.Create(clean, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
+                            _cleanIcon.name = "cpt-locate-clean";
+                            return _cleanIcon;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    CppLog.Debug("clean icon from sprite failed: " + e.Message);
+                }
+            }
+            _cleanIcon = CreateMagnifierIcon();
+            return _cleanIcon;
+        }
+
+        private static Sprite CreateMagnifierIcon()
+        {
+            const int size = 64;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            Color32[] pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float alpha = 0f;
+                    for (int sy = 0; sy < 2; sy++)
+                    {
+                        for (int sx = 0; sx < 2; sx++)
+                        {
+                            float px = x + (sx + 0.5f) * 0.5f;
+                            float py = y + (sy + 0.5f) * 0.5f;
+                            float ring = Mathf.Sqrt((px - 25f) * (px - 25f) + (py - 39f) * (py - 39f));
+                            if (ring >= 11.5f && ring <= 15.5f) alpha += 0.25f;
+                            // small "planet" dot inside the lens
+                            float dot = Mathf.Sqrt((px - 25f) * (px - 25f) + (py - 39f) * (py - 39f));
+                            if (dot <= 4.5f) alpha += 0.25f;
+                            if (DistanceToSegment(px, py, 35.5f, 28.5f, 49f, 15f) <= 3.6f) alpha += 0.25f;
+                        }
+                    }
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f));
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = "cpt-locate-magnifier";
+            return sprite;
+        }
+
+        private static float DistanceToSegment(float px, float py, float ax, float ay, float bx, float by)
+        {
+            float vx = bx - ax;
+            float vy = by - ay;
+            float wx = px - ax;
+            float wy = py - ay;
+            float len2 = vx * vx + vy * vy;
+            float t = len2 > 0f ? Mathf.Clamp01((wx * vx + wy * vy) / len2) : 0f;
+            float dx = wx - vx * t;
+            float dy = wy - vy * t;
+            return Mathf.Sqrt(dx * dx + dy * dy);
+        }
 
         /// <summary>Localized tooltip of the locate button (also exercised by the self test).</summary>
         public static void GetTooltip(out string title, out string text)
@@ -49,7 +147,7 @@ namespace ControlPanelPlus
             Transform banner = entry.navigationButton.transform.parent;
             if (banner == null || banner.Find(ButtonName) != null) return;
 
-            Sprite icon = ViewPlanetIcon;
+            Sprite icon = LocateIcon;
             UIButton button = icon != null ? NativeUi.MakeIconButton(ButtonName, icon, 22f) : null;
             bool iconStyle = button != null;
             if (button == null) button = NativeUi.MakeSmallTextButton(Lang.T("定位", "Locate"), new Vector2(36f, 22f), 12, ButtonName);

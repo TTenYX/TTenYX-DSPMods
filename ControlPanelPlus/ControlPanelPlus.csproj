@@ -3,7 +3,7 @@
   <PropertyGroup>
     <BepInExPluginGuid>com.dsp.controlpanelplus</BepInExPluginGuid>
     <Description>DSP MOD - ControlPanelPlus (logistics control panel QoL)</Description>
-    <Version>0.2.3</Version>
+    <Version>0.2.4</Version>
     <PackageId>ControlPanelPlus</PackageId>
     <AssemblyName>ControlPanelPlus</AssemblyName>
     <RootNamespace>ControlPanelPlus</RootNamespace>
