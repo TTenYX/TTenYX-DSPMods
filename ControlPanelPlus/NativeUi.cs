@@ -116,30 +116,19 @@ namespace ControlPanelPlus
         }
 
         /// <summary>Recolours an icon button (background image + transitions), leaving the icon sprite untouched.</summary>
-        public static void TintIconButton(UIButton button, Color color)
+        /// <summary>Drops the plate behind the icon; the glyph stays fully visible and hover gives a faint white wash.</summary>
+        public static void MakeIconButtonTransparent(UIButton button)
         {
             if (button == null) return;
             Transform icon = button.transform.Find("icon");
-            bool touched = false;
             foreach (Image image in button.GetComponentsInChildren<Image>(true))
             {
-                if (icon != null && image.transform == icon) continue;
-                image.color = color;
-                touched = true;
-            }
-            if (!touched)
-            {
-                GameObject bg = new GameObject("cpt-bg");
-                bg.transform.SetParent(button.transform, false);
-                bg.transform.SetAsFirstSibling();
-                RectTransform rt = bg.AddComponent<RectTransform>();
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
-                rt.offsetMin = new Vector2(6f, 6f);
-                rt.offsetMax = new Vector2(-6f, -6f);
-                Image image = bg.AddComponent<Image>();
-                image.color = color;
-                image.raycastTarget = false;
+                if (icon != null && image.transform == icon)
+                {
+                    image.color = Color.white;
+                    continue;
+                }
+                image.color = Color.clear;
             }
             if (button.transitions == null) return;
             for (int i = 0; i < button.transitions.Length; i++)
@@ -148,10 +137,10 @@ namespace ControlPanelPlus
                 Graphic target = t.target;
                 if (target == null) continue;
                 if (icon != null && target.transform == icon) continue;
-                t.normalColor = color;
-                t.mouseoverColor = Color.Lerp(color, Color.white, 0.25f);
-                t.pressedColor = Color.Lerp(color, Color.white, 0.45f);
-                t.disabledColor = new Color(color.r, color.g, color.b, 0.12f);
+                t.normalColor = Color.clear;
+                t.mouseoverColor = new Color(1f, 1f, 1f, 0.10f);
+                t.pressedColor = new Color(1f, 1f, 1f, 0.18f);
+                t.disabledColor = Color.clear;
                 button.transitions[i] = t;
             }
         }

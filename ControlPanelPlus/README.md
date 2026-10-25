@@ -18,7 +18,7 @@
 
 ### F2 星图定位按钮
 
-每个星球条目的导航按钮**左侧**新增一个「查看星球」的**浅蓝色图标按钮**
+每个星球条目的导航按钮**左侧**新增一个「查看星球」的**透明底色图标按钮**
 
 鼠标悬浮会弹出提示浮窗（固定三行，宽度随语言自适应），浮窗里列出三种点击方式：
 
@@ -149,7 +149,7 @@ In-game text follows the game language (Chinese, otherwise English); configurati
 ### Features
 
 - **F1 Expand / collapse** — Multi-planet results collapse by default, single-planet results expand by default; a title-bar toggle button switches all rows; reopening the panel keeps the previous state (stored in the game's `astroExpands`).
-- **F2 Locate button** — A small light-blue PlanetFinder-style "View Planet" icon button left of each planet row's navigation button; hovering it shows a three-line tooltip (width adapts to the language) with the three click modes. Left click opens the star map and keeps the panel; right click closes the panel; Shift+right click also points the navigation line at the planet.
+- **F2 Locate button** — A small transparent-background PlanetFinder-style "View Planet" icon button left of each planet row's navigation button; hovering it shows a three-line tooltip (width adapts to the language) with the three click modes. Left click opens the star map and keeps the panel; right click closes the panel; Shift+right click also points the navigation line at the planet.
 - **F3 Copy / paste station settings** — `<` copies the selected station, `>` pastes. `Ctrl`+click multi-selects, `Shift`+click selects a range (across planets), `Shift`+`>` batch-pastes onto all stations on the current planet with identical slot layout. Data is split into three independently switchable blocks (slots, station settings, priority), and the first two blocks have per-item switches (`Slot1`–`Slot5`, nine `Set*` toggles). By default it never moves items or clears inventories; incompatible occupied slots are skipped. Optional strategies (all off by default): `ForcePaste` overwrites a slot that holds a different item in place (keeping the station's input/output slot binding; replaced items go back to the player), `DestroyReplacedItems` destroys those items instead (also for clearing remote slots), and `AllowMinerOverflow` keeps the original slot max for vein collectors / orbital collectors and allows overflow.
 - **F4 Item filter intersection** — Turns the vanilla union filter into an intersection; a title-bar button toggles it instantly.
 - **F5 Astro list sorting / hotkeys** — Sorts the location dropdown by star name (first two entries pinned), adds a "current star system" scope as the third entry, stars yellow and planets indented; `PageUp`/`PageDown` step the list (Ctrl = stars only), `←`/`→` jump to the previous/next planet, `↑`/`↓` step through the result list.

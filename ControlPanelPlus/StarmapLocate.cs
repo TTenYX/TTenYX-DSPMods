@@ -17,9 +17,6 @@ namespace ControlPanelPlus
 
         private static Sprite _viewPlanetIcon;
 
-        /// <summary>Light blue close to the planet row background.</summary>
-        private static readonly Color ButtonColor = new Color(0.45f, 0.68f, 0.90f, 0.92f);
-
         /// <summary>Localized tooltip of the locate button (also exercised by the self test).</summary>
         public static void GetTooltip(out string title, out string text)
         {
@@ -77,7 +74,7 @@ namespace ControlPanelPlus
                 button.tips.delay = 0.7f;
                 // fixed three lines: widen the tip so neither language wraps
                 button.tips.width = NativeUi.MeasureTipWidth(tipText, 16);
-                NativeUi.TintIconButton(button, ButtonColor);
+                NativeUi.MakeIconButtonTransparent(button);
             }
             else
             {
