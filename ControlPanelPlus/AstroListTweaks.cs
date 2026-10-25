@@ -41,7 +41,6 @@ namespace ControlPanelPlus
             const string planetPrefix = "  ";
 
             bool wantSort = Cfg.SortByName.Value;
-            if (!wantSort) return;
 
             int count = box.entryCount;
             if (count <= 2) return;
@@ -90,6 +89,20 @@ namespace ControlPanelPlus
                 box.ClearEntries();
                 box.AddEntry(all[0]);
                 box.AddEntry(all[1]);
+                int localStarId = 0;
+                try
+                {
+                    if (GameMain.localStar != null) localStarId = GameMain.localStar.astroId;
+                }
+                catch (Exception)
+                {
+                    // ignore
+                }
+                if (localStarId != 0)
+                {
+                    // StatsUITweaks-style shortcut: all planets of the current star system
+                    box.AddEntry(new ComboBox.EntryData(Lang.T("当前星系", "Current star system"), localStarId));
+                }
                 for (int g = 0; g < groups.Count; g++)
                 {
                     StarGroup group = groups[g];

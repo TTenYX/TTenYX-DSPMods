@@ -17,6 +17,9 @@ namespace ControlPanelPlus
 
         private static Sprite _viewPlanetIcon;
 
+        /// <summary>Light blue close to the planet row background.</summary>
+        private static readonly Color ButtonColor = new Color(0.45f, 0.68f, 0.90f, 0.92f);
+
         /// <summary>Localized tooltip of the locate button (also exercised by the self test).</summary>
         public static void GetTooltip(out string title, out string text)
         {
@@ -72,6 +75,9 @@ namespace ControlPanelPlus
                 button.tips.corner = 3;
                 button.tips.offset = new Vector2(18f, -20f);
                 button.tips.delay = 0.7f;
+                // fixed three lines: widen the tip so neither language wraps
+                button.tips.width = NativeUi.MeasureTipWidth(tipText, 16);
+                NativeUi.TintIconButton(button, ButtonColor);
             }
             else
             {
@@ -121,14 +127,24 @@ namespace ControlPanelPlus
                     // right click: close the control panel like the vanilla flow
                     uiGame.ShutAllFunctionWindow();
                 }
-                else
-                {
-                    // left click: keep the control panel open, only close the full screen editors
-                    uiGame.ShutTechTree();
-                    uiGame.ShutDashboard();
-                    uiGame.ShutDysonEditorImmediately();
-                }
+                // Always clear the other full screen editors. DashboardOverhaul can pin its window,
+                // so a second direct close is attempted below when the first one did not stick.
+                uiGame.ShutTechTree();
+                uiGame.ShutDashboard();
+                uiGame.ShutDysonEditorImmediately();
                 uiGame.CloseEnemyBriefInfo();
+                if (uiGame.dashboard != null && uiGame.dashboard.active)
+                {
+                    CppLog.Warn("dashboard is still active after ShutDashboard; forcing it closed");
+                    try
+                    {
+                        uiGame.dashboard._Close();
+                    }
+                    catch (Exception e)
+                    {
+                        CppLog.Error("forced dashboard close failed: " + e);
+                    }
+                }
 
                 if (!starmap.active)
                 {

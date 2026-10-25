@@ -19,6 +19,9 @@ namespace ControlPanelPlus
 
         public static ConfigEntry<bool> EnableSlots;
         public static ConfigEntry<bool>[] SlotSwitches = new ConfigEntry<bool>[5];
+        public static ConfigEntry<bool> ForcePaste;
+        public static ConfigEntry<bool> DestroyReplacedItems;
+        public static ConfigEntry<bool> AllowMinerOverflow;
         public static ConfigEntry<bool> EnableSettings;
         public static ConfigEntry<bool> SetChargePower;
         public static ConfigEntry<bool> SetTripDrones;
@@ -69,39 +72,45 @@ namespace ControlPanelPlus
                 "允许在总控面板上从非本地星球取放物品（右键拿取 / 手持物品左键放入 / 清空按钮取回）。若安装了 CheatEnabler，则由其 Architect 模式决定，本项不生效。 / Allow taking/placing items on stations of non-local planets (right click takes, left click places, the clear button retrieves). Inactive when CheatEnabler is installed (its Architect mode wins).");
 
             CopyKey = config.Bind("StationCopy", "CopyKey", KeyCode.Comma, Ordered(
-                "复制物流塔设置的按键（默认 < ，即逗号键）。仅当总控面板选中物流塔时生效。 / Key that copies the selected station settings (default <, comma). Only works while a station is selected in the control panel.", 180));
+                "复制物流塔设置的按键（默认 < ，即逗号键）。仅当总控面板选中物流塔时生效。 / Key that copies the selected station settings (default <, comma). Only works while a station is selected in the control panel.", 240));
             PasteKey = config.Bind("StationCopy", "PasteKey", KeyCode.Period, Ordered(
-                "粘贴物流塔设置的按键（默认 > ，即句号键）。按住 Shift 时批量粘贴到当前星球槽位设置相同的塔。 / Key that pastes onto the selected station(s) (default >, period). Hold Shift to batch paste onto every station on the current planet with the same slot layout.", 170));
+                "粘贴物流塔设置的按键（默认 > ，即句号键）。按住 Shift 时批量粘贴到当前星球槽位设置相同的塔。 / Key that pastes onto the selected station(s) (default >, period). Hold Shift to batch paste onto every station on the current planet with the same slot layout.", 230));
             EnableSlots = config.Bind("StationCopy", "EnableSlots", true, Ordered(
-                "复制/粘贴第一块：槽位设置（物品种类、数量上限、本地/远程供需、运输机/运输船自动填充）。 / Block 1: slot settings (item type, max count, local/remote supply-demand, auto-replenish flags).", 160));
+                "复制/粘贴第一块：槽位设置（物品种类、数量上限、本地/远程供需、运输机/运输船自动填充）。 / Block 1: slot settings (item type, max count, local/remote supply-demand, auto-replenish flags).", 220));
             for (int i = 0; i < SlotSwitches.Length; i++)
             {
                 int slot = i + 1;
                 SlotSwitches[i] = config.Bind("StationCopy", "Slot" + slot, true, Ordered(
-                    "粘贴时是否写入第 " + slot + " 槽位（关闭后该槽位保持不变）。 / Paste gate for slot " + slot + " (when off the slot is left untouched).", 150 - i * 10));
+                    "粘贴时是否写入第 " + slot + " 槽位（关闭后该槽位保持不变）。 / Paste gate for slot " + slot + " (when off the slot is left untouched).", 210 - i * 10));
             }
+            ForcePaste = config.Bind("StationCopy", "ForcePaste", false, Ordered(
+                "强制粘贴：目标槽位已有其他物品时直接覆盖（关闭时跳过该槽位，默认关闭）。 / Force paste: overwrite a slot that already holds a different item (off = skip it, default off).", 160));
+            DestroyReplacedItems = config.Bind("StationCopy", "DestroyReplacedItems", false, Ordered(
+                "强制粘贴或远程清空时直接销毁被替换的物品（关闭时取回到背包，默认关闭）。 / Destroy the replaced items instead of returning them (also applies to clearing remote slots, default off).", 150));
+            AllowMinerOverflow = config.Bind("StationCopy", "AllowMinerOverflow", false, Ordered(
+                "大型采矿机 / 轨道采集器保留原始槽位上限并允许溢出（关闭时自动缩减到目标塔容量，默认关闭）。 / Keep the original slot max for vein collectors / orbital collectors and allow overflow (off = clamp to the target capacity, default off).", 140));
             EnableSettings = config.Bind("StationCopy", "EnableSettings", true, Ordered(
-                "复制/粘贴第二块：塔设置（充电功率、运输机/运输船路程、曲速路程、起送量、集装数量、轨道采集器开关、翘曲器必备）。 / Block 2: station settings (charging power, trip ranges, warp distance, delivery counts, piler count, orbital collector flag, warper requirement).", 100));
+                "复制/粘贴第二块：塔设置（充电功率、运输机/运输船路程、曲速路程、起送量、集装数量、轨道采集器开关、翘曲器必备）。 / Block 2: station settings (charging power, trip ranges, warp distance, delivery counts, piler count, orbital collector flag, warper requirement).", 130));
             SetChargePower = config.Bind("StationCopy", "SetChargePower", true, Ordered(
-                "粘贴时是否写入充电功率。 / Paste the charging power.", 90));
+                "粘贴时是否写入充电功率。 / Paste the charging power.", 120));
             SetTripDrones = config.Bind("StationCopy", "SetTripDrones", true, Ordered(
-                "粘贴时是否写入物流运输机航程。 / Paste the logistics drone trip range.", 80));
+                "粘贴时是否写入物流运输机航程。 / Paste the logistics drone trip range.", 110));
             SetTripShips = config.Bind("StationCopy", "SetTripShips", true, Ordered(
-                "粘贴时是否写入物流运输船航程（仅星际物流站）。 / Paste the logistics ship trip range (interstellar stations).", 70));
+                "粘贴时是否写入物流运输船航程（仅星际物流站）。 / Paste the logistics ship trip range (interstellar stations).", 100));
             SetWarpDistance = config.Bind("StationCopy", "SetWarpDistance", true, Ordered(
-                "粘贴时是否写入曲速启用距离（仅星际物流站）。 / Paste the warp enable distance (interstellar stations).", 60));
+                "粘贴时是否写入曲速启用距离（仅星际物流站）。 / Paste the warp enable distance (interstellar stations).", 90));
             SetWarperNecessary = config.Bind("StationCopy", "SetWarperNecessary", true, Ordered(
-                "粘贴时是否写入“翘曲器必备”开关（仅星际物流站）。 / Paste the warper-required flag (interstellar stations).", 50));
+                "粘贴时是否写入“翘曲器必备”开关（仅星际物流站）。 / Paste the warper-required flag (interstellar stations).", 80));
             SetOrbitCollector = config.Bind("StationCopy", "SetOrbitCollector", true, Ordered(
-                "粘贴时是否写入“包含轨道采集器”开关（仅星际物流站）。 / Paste the include-orbital-collectors flag (interstellar stations).", 40));
+                "粘贴时是否写入“包含轨道采集器”开关（仅星际物流站）。 / Paste the include-orbital-collectors flag (interstellar stations).", 70));
             SetDeliveryDrones = config.Bind("StationCopy", "SetDeliveryDrones", true, Ordered(
-                "粘贴时是否写入配送运输机数量。 / Paste the delivery drone count.", 30));
+                "粘贴时是否写入配送运输机数量。 / Paste the delivery drone count.", 60));
             SetDeliveryShips = config.Bind("StationCopy", "SetDeliveryShips", true, Ordered(
-                "粘贴时是否写入配送运输船数量（仅星际物流站）。 / Paste the delivery ship count (interstellar stations).", 20));
+                "粘贴时是否写入配送运输船数量（仅星际物流站）。 / Paste the delivery ship count (interstellar stations).", 50));
             SetPilerCount = config.Bind("StationCopy", "SetPilerCount", true, Ordered(
-                "粘贴时是否写入集装数量。 / Paste the piler count.", 10));
+                "粘贴时是否写入集装数量。 / Paste the piler count.", 40));
             EnablePriority = config.Bind("StationCopy", "EnablePriority", true, Ordered(
-                "复制/粘贴第三块：优先级设置（塔名/点对点、星际航路优先级、分组、槽位优先级锁）。 / Block 3: priority settings (station name/P2P, route priority, group, slot priority locks).", 0));
+                "复制/粘贴第三块：优先级设置（塔名/点对点、星际航路优先级、分组、槽位优先级锁）。 / Block 3: priority settings (station name/P2P, route priority, group, slot priority locks).", 30));
 
             ItemFilterIntersect = config.Bind("Filter", "ItemFilterIntersect", false,
                 "物品筛选由“并集”改为“交集”：选 A+B 时只显示同时含有 A 和 B 的条目（默认关闭，保持原版并集）。 / Item filter works as intersection instead of the vanilla union (A and B instead of A or B).");

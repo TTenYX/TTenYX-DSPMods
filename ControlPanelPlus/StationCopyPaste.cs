@@ -590,25 +590,42 @@ namespace ControlPanelPlus
                     if (targetSlot.itemId <= 0) continue;
                     factory.transport.SetStationStorage(target.id, i, targetSlot.itemId, source.max,
                         source.localLogic, source.remoteLogic, player);
+                    if (Cfg.AllowMinerOverflow.Value && source.max > 0)
+                    {
+                        // Keep the original max even when it is above the target station's capacity.
+                        target.storage[i].max = source.max;
+                    }
                     result.slotsApplied++;
                     continue;
                 }
 
                 if (source.itemId <= 0) continue; // never clear existing target slots
 
-                if (targetSlot.itemId > 0 && targetSlot.itemId != source.itemId)
+                bool forceReplace = false;
+                if (targetSlot.itemId > 0 && targetSlot.itemId != source.itemId && targetSlot.count > 0)
                 {
-                    if (targetSlot.count > 0)
+                    if (!Cfg.ForcePaste.Value)
                     {
                         // Keep the inventory of the target tower intact.
                         result.slotsSkipped++;
                         skipped.Append($"slot{i}({targetSlot.itemId}->{source.itemId},count={targetSlot.count}) ");
                         continue;
                     }
+                    forceReplace = true;
                 }
 
+                // Force paste: replaced items go to the player unless the destroy switch is on; the
+                // station's input/output slot order (port binding) is preserved.
+                int localOrder = targetSlot.localOrder;
+                int remoteOrder = targetSlot.remoteOrder;
+                Player receiver = forceReplace && Cfg.DestroyReplacedItems.Value ? null : player;
                 factory.transport.SetStationStorage(target.id, i, source.itemId, source.max,
-                    source.localLogic, source.remoteLogic, player);
+                    source.localLogic, source.remoteLogic, receiver);
+                if (forceReplace)
+                {
+                    target.storage[i].localOrder = localOrder;
+                    target.storage[i].remoteOrder = remoteOrder;
+                }
                 result.slotsApplied++;
             }
 

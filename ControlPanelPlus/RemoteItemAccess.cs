@@ -96,6 +96,35 @@ namespace ControlPanelPlus
         }
     }
 
+    [HarmonyPatch(typeof(UIControlPanelStationStorage), "OnTakeBackButtonClick")]
+    internal static class StationStorageRemoteClearDestroyPatch
+    {
+        [HarmonyPrefix]
+        public static bool Prefix(UIControlPanelStationStorage __instance)
+        {
+            if (!Cfg.DestroyReplacedItems.Value) return true;
+            if (!Cfg.Enabled.Value || !Cfg.AllowRemoteItemTransfer.Value) return true;
+            if (PluginPresence.CheatEnablerInstalled) return true;
+            if (__instance == null || !__instance.isStationDataValid) return true;
+            if (__instance.index < 0 || __instance.index >= __instance.station.storage.Length) return true;
+            PlanetData local = GameMain.localPlanet;
+            if (local != null && __instance.factory != null && __instance.factory.planet.id == local.id) return true;
+            if (__instance.station.storage[__instance.index].count <= 0) return true;
+            try
+            {
+                // Destroy instead of returning the items (player = null skips the hand-back).
+                __instance.factory.transport.SetStationStorage(__instance.station.id, __instance.index, 0, 0,
+                    ELogisticStorage.None, ELogisticStorage.None, null);
+                CppLog.Debug("remote clear destroyed the items on purpose");
+            }
+            catch (Exception e)
+            {
+                CppLog.Error("remote clear destroy failed: " + e);
+            }
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(UIControlPanelStationStorage), "get_isLocal")]
     internal static class StationStorageIsLocalPatch
     {

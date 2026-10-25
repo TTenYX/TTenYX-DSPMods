@@ -115,6 +115,90 @@ namespace ControlPanelPlus
             return btn;
         }
 
+        /// <summary>Recolours an icon button (background image + transitions), leaving the icon sprite untouched.</summary>
+        public static void TintIconButton(UIButton button, Color color)
+        {
+            if (button == null) return;
+            Transform icon = button.transform.Find("icon");
+            bool touched = false;
+            foreach (Image image in button.GetComponentsInChildren<Image>(true))
+            {
+                if (icon != null && image.transform == icon) continue;
+                image.color = color;
+                touched = true;
+            }
+            if (!touched)
+            {
+                GameObject bg = new GameObject("cpt-bg");
+                bg.transform.SetParent(button.transform, false);
+                bg.transform.SetAsFirstSibling();
+                RectTransform rt = bg.AddComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = new Vector2(6f, 6f);
+                rt.offsetMax = new Vector2(-6f, -6f);
+                Image image = bg.AddComponent<Image>();
+                image.color = color;
+                image.raycastTarget = false;
+            }
+            if (button.transitions == null) return;
+            for (int i = 0; i < button.transitions.Length; i++)
+            {
+                UIButton.Transition t = button.transitions[i];
+                Graphic target = t.target;
+                if (target == null) continue;
+                if (icon != null && target.transform == icon) continue;
+                t.normalColor = color;
+                t.mouseoverColor = Color.Lerp(color, Color.white, 0.25f);
+                t.pressedColor = Color.Lerp(color, Color.white, 0.45f);
+                t.disabledColor = new Color(color.r, color.g, color.b, 0.12f);
+                button.transitions[i] = t;
+            }
+        }
+
+        /// <summary>Width (px) needed by the widest line of a multi-line tooltip.</summary>
+        public static int MeasureTipWidth(string text, int fontSize)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            Font font = null;
+            try
+            {
+                UIControlPanelWindow w = CurrentWindow();
+                if (w != null) font = w.FONT_SAIRASB;
+            }
+            catch (System.Exception)
+            {
+                // fall back to the estimate below
+            }
+
+            string[] lines = text.Split('\n');
+            float best = 0f;
+            TextGenerator gen = new TextGenerator();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                float width = 0f;
+                if (font != null)
+                {
+                    TextGenerationSettings settings = new TextGenerationSettings
+                    {
+                        font = font,
+                        fontSize = fontSize,
+                        scaleFactor = 1f,
+                        lineSpacing = 1f,
+                        richText = false,
+                        horizontalOverflow = HorizontalWrapMode.Overflow,
+                        verticalOverflow = VerticalWrapMode.Overflow,
+                        textAnchor = TextAnchor.UpperLeft,
+                        generationExtents = new Vector2(0f, 0f)
+                    };
+                    width = gen.GetPreferredWidth(lines[i], settings);
+                }
+                if (width <= 0f) width = lines[i].Length * fontSize;
+                if (width > best) best = width;
+            }
+            return Mathf.CeilToInt(best * 1.15f) + 30;
+        }
+
         /// <summary>Anchors a rect to the top-right corner of its parent; y is negative going down.</summary>
         public static void AnchorTopRight(RectTransform rt, float rightOffset, float topOffset, Vector2 size)
         {
