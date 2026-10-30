@@ -36,7 +36,6 @@ namespace BulletTime
         public static ConfigEntry<KeyboardShortcut> KeySliderSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFullSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFrameRate;
-        public static ConfigEntry<KeyboardShortcut> KeyFrameCount;
 
         public static ConfigEntry<float> FrameRate;
 
@@ -59,7 +58,6 @@ namespace BulletTime
             KeySliderSpeed = Config.Bind("Hotkey", "KeySliderSpeed", new KeyboardShortcut(KeyCode.End, KeyCode.LeftControl), "Hotkey for the slider speed preset (reset the speedup track and re-apply the slider value)\n切换到滑块倍速档的热键（重置加速档并重新应用滑块当前设定值）");
             KeyFullSpeed = Config.Bind("Hotkey", "KeyFullSpeed", new KeyboardShortcut(KeyCode.Home, KeyCode.LeftControl), "Hotkey for the 100% speed preset (standard 1x speed)\n切换到 100% 速度档（标准 1 倍速）的热键");
             KeyFrameRate = Config.Bind("Hotkey", "KeyFrameRate", new KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl), "Hotkey for the frame-rate preset (restore the last frame-rate setting)\n切换到帧速率档的热键（恢复上次帧速率设定值）");
-            KeyFrameCount = Config.Bind("Hotkey", "KeyFrameCount", new KeyboardShortcut(KeyCode.Delete, KeyCode.LeftControl), "Hotkey to toggle the game time display at the bottom-right between duration and frame count\n切换右下角游戏时长为帧数显示的热键");
 
             EnableMechaFunc = Config.Bind("Pause", "EnableMechaFunc", false, "Enable mecha function in hotkey pause mode\n在热键战术暂停模式下启用机甲功能");
             EnableBackgroundAutosave = Config.Bind("Save", "EnableBackgroundAutosave", false, "Do auto-save in background thread\n在後台执行自动存档");
@@ -196,11 +194,6 @@ namespace BulletTime
             {
                 Log.Debug("KeyFrameRate");
                 IngameUI.OnKeyFrameRate();
-            }
-            if (KeyFrameCount.Value.IsDown())
-            {
-                Log.Debug("KeyFrameCount");
-                IngameUI.OnKeyFrameCount();
             }
 
 

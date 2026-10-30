@@ -2,11 +2,9 @@
 
 #### v1.6.0 (DSP-0.10.35)  
 \- Add preset speed-slot hotkeys: `KeySliderSpeed` (Ctrl+End, re-apply the slider value), `KeyFullSpeed` (Ctrl+Home, standard 1x speed), `KeyFrameRate` (Ctrl+Ins, last frame-rate setting). New config: `Speed`:`FrameRate`.  
-\- The bottom-right speed indicator now shows the actual speed together with the frame speed (for example `60F/s 1x`).  
-\- Add `KeyFrameCount` (Ctrl+Del) to toggle the game time display at the bottom-right between duration and frame count.  
+\- The bottom-right speed indicator now shows the actual speed together with the frame speed below the speed-up buttons (for example `60F/s 1x`); it is hidden while paused.  
 \- 新增预设档位热键：`KeySliderSpeed`（Ctrl+End，滑块倍速档）、`KeyFullSpeed`（Ctrl+Home，100% 速度档）、`KeyFrameRate`（Ctrl+Ins，帧速率档）。新增配置：`Speed`:`FrameRate`。  
-\- 右下角速度指示现在同时显示实际速度与帧速度（例如 `60F/s 1x`）。  
-\- 新增 `KeyFrameCount`（Ctrl+Del）切换右下角游戏时长为帧数显示。  
+\- 右下角速度指示移至加速按钮下方，同时显示实际速度与帧速度（例如 `60F/s 1x`）；暂停时隐藏。  
 
 #### v1.5.14 (DSP-0.10.34.28529)  
 \- Add `KeyImmediateSave` hotkey for immediate auto save. Default: F10 + LeftControl + LeftAlt   

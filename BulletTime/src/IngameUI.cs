@@ -204,11 +204,17 @@ namespace BulletTime
                     var rectTransfrom = (RectTransform)realTimeTextGo.transform;
                     rectTransfrom.sizeDelta = new Vector2(50, rectTransfrom.sizeDelta.y); // Reduce button width
                     var ratioGo = GameObject.Instantiate(realTimeTextGo, realTimeTextGo.transform.parent);
-                    ratioGo.name = "speed ratio-text";                    
-                    ratioGo.transform.localPosition += new Vector3(0, 15f);
+                    ratioGo.name = "speed ratio-text";
                     GameObject.Destroy(ratioGo.GetComponent<UIButton>()); // Remove the time format toggle
                     ratioGo.SetActive(true);
                     speedRatioText = ratioGo.GetComponent<Text>();
+                    // 速度文本移到加速按钮下方、靠左对齐（原位置与时长/时钟文本重叠）
+                    var ratioRect = (RectTransform)ratioGo.transform;
+                    ratioRect.sizeDelta = new Vector2(110f, ratioRect.sizeDelta.y);
+                    ratioRect.pivot = new Vector2(0f, 0.5f);
+                    speedRatioText.alignment = TextAnchor.MiddleLeft;
+                    if (speedBtnGo[0] != null)
+                        ratioGo.transform.localPosition = speedBtnGo[0].transform.localPosition + new Vector3(-16f, -30f);
 
                     // Make sure time text stays on top
                     timeTextGo.transform.SetAsLastSibling();
@@ -301,6 +307,11 @@ namespace BulletTime
             if (NebulaCompat.IsClient) // 客戶端的UPS是跟隨主機隨時在變動的, 因此不顯示
             { 
                 speedRatioText.text = "";
+                return;
+            }
+            if (GameStateManager.Pause)
+            {
+                speedRatioText.text = ""; // 暂停时隐藏速度文本，避免与时长/帧数重叠
                 return;
             }
 
@@ -508,15 +519,7 @@ namespace BulletTime
             slider.SetValueWithoutNotify(Mathf.Clamp((float)(GameStateManager.LastFrameRate / 60.0 * 100.0), 0f, 100f));
         }
 
-        // Ctrl+Del：右下角游戏时长切换为帧数显示（复用原版 showTickDetail 的帧数态）
-        public static void OnKeyFrameCount()
-        {
-            UIFpsStat fpsStat = UIRoot.instance != null && UIRoot.instance.uiGame != null
-                ? UIRoot.instance.uiGame.upsTool?.uiFpsStat
-                : null;
-            if (fpsStat == null) return;
-            fpsStat.showTickDetail = fpsStat.showTickDetail == 2 ? 0 : 2;
-        }
+        // （Ctrl+Del 帧数时长功能已按需求移除）
 
         private static void OnAutosaveToggleChange(bool val)
         {

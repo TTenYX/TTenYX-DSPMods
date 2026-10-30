@@ -30,9 +30,8 @@ You can also advance the game by a single frame using the `KeyStepOneFrame` hotk
   - **What it does:** Four hotkeys switch between speed presets: `Ctrl+End` re-applies the current slider value, `Pause` toggles the tactical pause, `Ctrl+Home` resets to standard 1x speed (100%), and `Ctrl+Ins` restores the last frame-rate setting. All of them can be changed in the config (`KeySliderSpeed` / `KeyPause` / `KeyFullSpeed` / `KeyFrameRate`).
   - **Note:** Pressing any non-pause preset key while in tactical pause first releases the pause. The presets are unavailable during the background-autosave freeze, and in multiplayer they are host-only.
 
-#### 5\. Speed & Time Indicators
-  - **What it does:** The bottom-right speed indicator shows the actual speed together with the frame speed (for example `60F/s 1x`, and `0F/s 0x` while paused).
-  - **Frame-count time:** Press `Ctrl+Del` (`KeyFrameCount`) to switch the game time display at the bottom-right between duration and frame count.
+#### 5\. Speed Indicator
+  - **What it does:** The bottom-right speed indicator shows the actual speed together with the frame speed below the speed buttons (for example `60F/s 1x`); it is hidden while paused.
 
 ## Other Utility Features
 
@@ -52,7 +51,6 @@ It is recommended to install it through [r2modman](https://thunderstore.io/c/dys
   - **Tactical Pause:** Press the `Pause` / `Break` key to toggle.
   - **Bullet-Time Slider:** Open the Performance Statistics panel to find and adjust the World Speed slider.
   - **Preset Speed Slots:** `Ctrl+End` slider value / `Pause` tactical pause / `Ctrl+Home` 100% (1x) / `Ctrl+Ins` frame-rate preset.
-  - **Frame-count time:** Press `Ctrl+Del` to show the game time as a frame count.
   - **Background Autosave Toggle:** Open the Performance Statistics panel to enable background autosave on the top-right checkbox.  
   - **View Performance:** Press `Shift + F12` to see the real-time FPS and UPS in the top-left corner.
 
@@ -76,7 +74,6 @@ After running the game once with the mod installed, a config file will be genera
 | `KeySliderSpeed` | Hotkey for the slider speed preset (reset the speedup track and re-apply the slider value). | `Ctrl + End` |
 | `KeyFullSpeed` | Hotkey for the 100% speed preset (standard 1x speed). | `Ctrl + Home` |
 | `KeyFrameRate` | Hotkey for the frame-rate preset (restore the last frame-rate setting). | `Ctrl + Ins` |
-| `KeyFrameCount` | Hotkey to toggle the game time display between duration and frame count. | `Ctrl + Del` |
 | `EnableMechaFunc` | If true, your mecha can move in Tactical Pause mode. | `false` |
 | `EnableBackgroundAutosave` | Run autosave in the background. | `false` |
 | `EnableHotkeyAutosave` | Enable hotkey to trigger autosave. | `false` |
@@ -139,9 +136,8 @@ After running the game once with the mod installed, a config file will be genera
   - **功能介绍：** 四个热键在速度档位之间切换：`Ctrl+End` 重新应用滑块当前设定值，`Pause` 切换战术暂停，`Ctrl+Home` 恢复标准 1 倍速（100%），`Ctrl+Ins` 恢复上次帧速率设定值。所有按键都可在配置文件中修改（`KeySliderSpeed` / `KeyPause` / `KeyFullSpeed` / `KeyFrameRate`）。
   - **请注意：** 在战术暂停中按下任意非暂停档热键，会先解除暂停再切换档位。后台自动存档时停期间预设档位不可用；联机时预设档位仅主机可用。
 
-#### 5\. 速度与时长指示
-  - **功能介绍：** 右下角的速度指示同时显示实际速度与帧速度（例如 `60F/s 1x`，暂停时为 `0F/s 0x`）。
-  - **帧数时长：** 按 `Ctrl+Del`（`KeyFrameCount`）可把右下角的游戏时长在时长与帧数两种显示之间切换。
+#### 5\. 速度指示
+  - **功能介绍：** 右下角速度指示显示在加速按钮下方，同时显示实际速度与帧速度（例如 `60F/s 1x`）；暂停时隐藏。
 
 ## 其他实用功能
 
@@ -160,7 +156,6 @@ After running the game once with the mod installed, a config file will be genera
   - **战术暂停：** 按下 `Pause` / `Break` 键切换。
   - **子弹时间滑块：** 打开游戏内的“性能测试”面板，即可在上方找到并调整“世界速度”滑块。
   - **预设档位热键：** `Ctrl+End` 滑块倍速档 / `Pause` 战术暂停 / `Ctrl+Home` 100%（1 倍速）/ `Ctrl+Ins` 帧速率档。
-  - **帧数时长：** 按 `Ctrl+Del` 把右下角游戏时长切换为帧数显示。
   - **后台自动保存**：打开性能统计面板，在右上角的选框上启用后台自动保存。
   - **查看性能：** 按 `Shift + F12` 可以在左上角查看实时的 FPS 和 UPS。
 
@@ -184,7 +179,6 @@ After running the game once with the mod installed, a config file will be genera
 | `KeySliderSpeed` | 切换到滑块倍速档的热键（重置加速档并重新应用滑块当前设定值）。 | `Ctrl + End` |
 | `KeyFullSpeed` | 切换到 100% 速度档（标准 1 倍速）的热键。 | `Ctrl + Home` |
 | `KeyFrameRate` | 切换到帧速率档的热键（恢复上次帧速率设定值）。 | `Ctrl + Ins` |
-| `KeyFrameCount` | 切换右下角游戏时长为帧数显示的热键。 | `Ctrl + Del` |
 | `EnableMechaFunc` | 设为 true 时，你的机甲能在战术暂停模式中移动。 | `false` |
 | `EnableBackgroundAutosave` | 在后台执行自动存档。 | `false` |
 | `EnableHotkeyAutosave` | 允许用热键触发自动存档。 | `false` |
