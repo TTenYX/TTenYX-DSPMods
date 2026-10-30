@@ -17,6 +17,7 @@ namespace BulletTime
         private static GameObject infoTextGo;
         private static Text infoText; // Show the current (stored) gameTick
         private static Text speedRatioText;
+        private static Text frameSpeedText;
         private static readonly GameObject[] speedBtnGo = new GameObject[3];
 
         public static string FormatFrameRate(double fps) => fps < 10.0 ? $"{fps:0.00}F/s" : $"{fps:0.#}F/s";
@@ -58,6 +59,11 @@ namespace BulletTime
             GameObject.Destroy(infoTextGo);
             infoTextGo = null;
             infoText = null;
+            if (frameSpeedText != null)
+            {
+                GameObject.Destroy(frameSpeedText.gameObject);
+            }
+            frameSpeedText = null;
             if (speedRatioText != null) // 不能用 ?. ：对已销毁对象会绕过 Unity null 判断
             {
                 GameObject.Destroy(speedRatioText.gameObject);
@@ -208,16 +214,22 @@ namespace BulletTime
                     rectTransfrom.sizeDelta = new Vector2(50, rectTransfrom.sizeDelta.y); // Reduce button width
                     var ratioGo = GameObject.Instantiate(realTimeTextGo, realTimeTextGo.transform.parent);
                     ratioGo.name = "speed ratio-text";
+                    ratioGo.transform.localPosition += new Vector3(0, 15f);
                     GameObject.Destroy(ratioGo.GetComponent<UIButton>()); // Remove the time format toggle
                     ratioGo.SetActive(true);
                     speedRatioText = ratioGo.GetComponent<Text>();
-                    // 速度文本移到加速按钮下方、靠左对齐（原位置与时长/时钟文本重叠）
-                    var ratioRect = (RectTransform)ratioGo.transform;
-                    ratioRect.sizeDelta = new Vector2(110f, ratioRect.sizeDelta.y);
-                    ratioRect.pivot = new Vector2(0f, 0.5f);
-                    speedRatioText.alignment = TextAnchor.MiddleLeft;
+                    // 帧速度文本：加速按钮下方、靠左对齐（倍率保持上游原位置，避免与时长/时钟重叠）
+                    var frameGo = GameObject.Instantiate(realTimeTextGo, realTimeTextGo.transform.parent);
+                    frameGo.name = "frame speed-text";
+                    GameObject.Destroy(frameGo.GetComponent<UIButton>());
+                    frameGo.SetActive(true);
+                    frameSpeedText = frameGo.GetComponent<Text>();
+                    var frameRect = (RectTransform)frameGo.transform;
+                    frameRect.sizeDelta = new Vector2(110f, frameRect.sizeDelta.y);
+                    frameRect.pivot = new Vector2(0f, 0.5f);
+                    frameSpeedText.alignment = TextAnchor.MiddleLeft;
                     if (speedBtnGo[0] != null)
-                        ratioGo.transform.localPosition = speedBtnGo[0].transform.localPosition + new Vector3(-16f, -22f);
+                        frameGo.transform.localPosition = speedBtnGo[0].transform.localPosition + new Vector3(-16f, -22f);
 
                     // Make sure time text stays on top
                     timeTextGo.transform.SetAsLastSibling();
@@ -306,19 +318,28 @@ namespace BulletTime
 
         public static void SetSpeedRatioText()
         {
-            if (speedRatioText == null) return;
             if (NebulaCompat.IsClient) // 客戶端的UPS是跟隨主機隨時在變動的, 因此不顯示
-            { 
-                speedRatioText.text = "";
+            {
+                if (speedRatioText != null) speedRatioText.text = "";
+                if (frameSpeedText != null) frameSpeedText.text = "";
                 return;
             }
-            // 同時顯示實際速度(倍率)與幀速度(F/s)：例 60F/s 1x（暂停时显示 0F/s 0x）
-            // 倍率低于 1x 时精确到 3 位小数（尾零自动省略），≥1x 时整数或 1 位小数
-            double ratio = EffectiveFrameRate() / 60.0;
-            string ratioText = ratio < 1.0
-                ? System.Math.Round(ratio, 3).ToString("0.###")
-                : System.Math.Round(ratio, 2).ToString("0.#");
-            speedRatioText.text = FormatFrameRate(EffectiveFrameRate()) + " " + ratioText + "x";
+
+            // 倍率：上游原位置（时钟上方）；低于 1x 时精确到 3 位小数（尾零自动省略）
+            if (speedRatioText != null)
+            {
+                double ratio = EffectiveFrameRate() / 60.0;
+                string ratioText = ratio < 1.0
+                    ? System.Math.Round(ratio, 3).ToString("0.###")
+                    : System.Math.Round(ratio, 2).ToString("0.#");
+                speedRatioText.text = ratioText + "x";
+            }
+
+            // 帧速度：加速按钮下方
+            if (frameSpeedText != null)
+            {
+                frameSpeedText.text = FormatFrameRate(EffectiveFrameRate());
+            }
         }
 
         public static void OnStoredGameTickChange()
@@ -474,7 +495,19 @@ namespace BulletTime
         // 切换任一非暂停档前，若处于暂停状态先解除（回归滑块设定值）
         private static void ExitPauseIfPaused()
         {
-            if (GameStateManager.Pause) OnKeyPause();
+            if (!GameStateManager.Pause) return;
+            if (slider != null && slider.value > 0f)
+            {
+                OnKeyPause(); // 正常路径：回归滑块设定值
+            }
+            else
+            {
+                // 滑块位于 0（帧速率 <0.6F/s 时等效百分比不足 1%，无法用整数滑块表达）：
+                // 若仍走 OnKeyPause 会经 OnSliderChange(0) 再次暂停。改为直接解除时停，
+                // 保持当前丢帧比例，随后由档位应用实际帧速率
+                GameStateManager.SetPauseMode(false);
+                GameStateManager.ManualPause = false;
+            }
         }
 
         // 滑块倍速档：重置加速档，重新应用滑块当前设定值

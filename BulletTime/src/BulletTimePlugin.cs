@@ -76,6 +76,8 @@ namespace BulletTime
 
             GameStateManager.EnableMechaFunc = EnableMechaFunc.Value;
             GameStateManager.LastFrameRate = FrameRate.Value;
+            // 配置管理器/cfg 手改帧速率时，即时同步到帧速率档记忆值
+            FrameRate.SettingChanged += (s, e) => GameStateManager.LastFrameRate = FrameRate.Value;
         }
 
         private bool TestGameVersion()
