@@ -217,7 +217,7 @@ namespace BulletTime
                     ratioRect.pivot = new Vector2(0f, 0.5f);
                     speedRatioText.alignment = TextAnchor.MiddleLeft;
                     if (speedBtnGo[0] != null)
-                        ratioGo.transform.localPosition = speedBtnGo[0].transform.localPosition + new Vector3(-16f, -30f);
+                        ratioGo.transform.localPosition = speedBtnGo[0].transform.localPosition + new Vector3(-16f, -22f);
 
                     // Make sure time text stays on top
                     timeTextGo.transform.SetAsLastSibling();
@@ -312,13 +312,7 @@ namespace BulletTime
                 speedRatioText.text = "";
                 return;
             }
-            if (GameStateManager.Pause)
-            {
-                speedRatioText.text = ""; // 暂停时隐藏速度文本，避免与时长/帧数重叠
-                return;
-            }
-
-            // 同時顯示實際速度(倍率)與幀速度(F/s)：例 60F/s 1x
+            // 同時顯示實際速度(倍率)與幀速度(F/s)：例 60F/s 1x（暂停时显示 0F/s 0x）
             // 倍率低于 1x 时精确到 3 位小数（尾零自动省略），≥1x 时整数或 1 位小数
             double ratio = EffectiveFrameRate() / 60.0;
             string ratioText = ratio < 1.0
