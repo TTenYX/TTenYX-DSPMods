@@ -19,57 +19,14 @@ namespace BulletTime
         private static Text speedRatioText;
         private static readonly GameObject[] speedBtnGo = new GameObject[3];
 
-        private static bool UseFrameRateSlider => BulletTimePlugin.FrameRateSlider != null && BulletTimePlugin.FrameRateSlider.Value;
+        public static string FormatFrameRate(double fps) => fps < 10.0 ? $"{fps:0.00}F/s" : $"{fps:0.#}F/s";
 
-        // 帧速率滑块：slider.value ∈ [0,1] 对数映射到 [MinFrameRate, 60×MaxSpeedupScale]
-        private static double MinFrameRate => BulletTimePlugin.MinFrameRate != null ? BulletTimePlugin.MinFrameRate.Value : 0.01f;
-        private static double MaxFrameRate => 60.0 * (BulletTimePlugin.MaxSpeedupScale != null ? BulletTimePlugin.MaxSpeedupScale.Value : 10);
-
-        private static double ValueToFrameRate(double v)
-        {
-            if (v <= 0.0) return MinFrameRate;
-            if (v >= 1.0) return MaxFrameRate;
-            return MinFrameRate * System.Math.Pow(MaxFrameRate / MinFrameRate, v);
-        }
-
-        private static double FrameRateToValue(double fps)
-        {
-            if (fps <= MinFrameRate) fps = MinFrameRate;
-            if (fps > MaxFrameRate) fps = MaxFrameRate;
-            return System.Math.Log(fps / MinFrameRate) / System.Math.Log(MaxFrameRate / MinFrameRate);
-        }
-
-        public static string FormatFrameRate(double fps) => fps < 10.0 ? $"{fps:0.00} F/s" : $"{fps:0.#} F/s";
-
-        // 当前有效速度（帧速率）：加速轨道生效时取 fixUPS，否则取丢帧轨道 60×(1-SkipRatio)
+        // 当前有效速度：整体 UPS × (1 - SkipRatio)，暂停为 0（两轨道叠加时仍反映真实速度）
         private static double EffectiveFrameRate()
         {
             if (GameStateManager.Pause) return 0.0;
-            if (FPSController.instance != null && FPSController.instance.fixUPS > 0.0)
-                return FPSController.instance.fixUPS;
-            return 60.0 * (1.0 - GameStateManager.SkipRatio);
-        }
-
-        // 依当前状态刷新滑块文本（暂停 / 帧速率 / 百分比）
-        private static void RefreshSliderText()
-        {
-            if (sliderText == null || slider == null) return;
-            if (GameStateManager.Pause)
-            {
-                sliderText.text = "Pause".Translate();
-            }
-            else if (GameStateManager.FrameRateModeActive)
-            {
-                sliderText.text = FormatFrameRate(EffectiveFrameRate());
-            }
-            else if (UseFrameRateSlider)
-            {
-                sliderText.text = $"{(int)System.Math.Round(EffectiveFrameRate() / 60.0 * 100.0)}%";
-            }
-            else
-            {
-                sliderText.text = $"{(int)slider.value}%";
-            }
+            double ups = FPSController.instance != null && FPSController.instance.fixUPS > 0.0 ? FPSController.instance.fixUPS : 60.0;
+            return ups * (1.0 - GameStateManager.SkipRatio);
         }
 
         public static void Dispose()
@@ -121,22 +78,10 @@ namespace BulletTime
                     sliderGo.transform.localPosition = cpuPanel.Find("title-text").localPosition + new Vector3(-120, 1, 0);
                     slider = sliderGo.GetComponent<Slider>();
                     sliderText = sliderGo.GetComponentInChildren<Text>();
-                    if (UseFrameRateSlider)
-                    {
-                        // 帧速率滑块模式：0-1 对数刻度，实时显示 F/s
-                        slider.minValue = 0f;
-                        slider.maxValue = 1f;
-                        slider.wholeNumbers = false;
-                        slider.value = (float)FrameRateToValue(BulletTimePlugin.StartingSpeed.Value * 60f / 100f);
-                    }
-                    else
-                    {
-                        // 百分比滑块模式：与 1.5.14 行为一致
-                        slider.minValue = 0f;
-                        slider.maxValue = 100f;
-                        slider.wholeNumbers = true;
-                        slider.value = BulletTimePlugin.StartingSpeed.Value;
-                    }
+                    slider.minValue = 0f;
+                    slider.maxValue = 100f;
+                    slider.wholeNumbers = true;
+                    slider.value = BulletTimePlugin.StartingSpeed.Value;
                     slider.onValueChanged.AddListener(value => OnSliderChange(value));
                     OnSliderChange(slider.value);
 
@@ -359,19 +304,9 @@ namespace BulletTime
                 return;
             }
 
-            if (GameStateManager.FrameRateModeActive)
-            {
-                speedRatioText.text = FormatFrameRate(EffectiveFrameRate());
-                return;
-            }
-
-            float ratio = (float)FPSController.instance.fixUPS / 60.0f;
-            if (ratio == 0.0f)
-                speedRatioText.text = "1 x"; //正常流速
-            else if ((ratio - (int)ratio) < 0.05) 
-                speedRatioText.text = (int)ratio + " x"; //整數倍率
-            else
-                speedRatioText.text = $"{ratio:0.0} x"; //顯示到小數點1位
+            // 同時顯示實際速度(倍率)與幀速度(F/s)：例 60F/s 1x
+            double ratio = System.Math.Round(EffectiveFrameRate() / 60.0, 2);
+            speedRatioText.text = FormatFrameRate(EffectiveFrameRate()) + " " + ratio.ToString("0.#") + "x";
         }
 
         public static void OnStoredGameTickChange()
@@ -392,7 +327,7 @@ namespace BulletTime
 
                 if (sliderText != null)
                 {
-                    RefreshSliderText();
+                    sliderText.text = pause ? "Pause".Translate() : $"{(int)slider.value}%";
                 }
                 SetSpeedRatioText();
             }
@@ -402,17 +337,6 @@ namespace BulletTime
 
         private static void OnSliderChange(float value)
         {
-            if (UseFrameRateSlider)
-            {
-                // 帧速率滑块模式：拖动即设定帧速率（F/s）
-                bool wasPaused = GameStateManager.Pause;
-                GameStateManager.ApplyFrameRate(ValueToFrameRate(value));
-                if (wasPaused && NebulaCompat.IsMultiplayerActive)
-                    NebulaCompat.SendPacket(PauseEvent.Resume);
-                RefreshSliderText();
-                SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
-                return;
-            }
             if (value == 0)
             {                
                 GameStateManager.ManualPause = true; //滑條拉至0
@@ -548,16 +472,7 @@ namespace BulletTime
             if (slider == null) return; // 主菜单中 UI 尚未创建
             ExitPauseIfPaused();
             FPSController.SetFixUPS(0); // 重置加速档
-            if (UseFrameRateSlider)
-            {
-                GameStateManager.ApplyFrameRate(ValueToFrameRate(slider.value));
-            }
-            else
-            {
-                GameStateManager.FrameRateModeActive = false;
-                OnSliderChange(slider.value);
-            }
-            RefreshSliderText();
+            OnSliderChange(slider.value);
             SetSpeedRatioText();
         }
 
@@ -569,17 +484,8 @@ namespace BulletTime
             if (slider == null) return; // 主菜单中 UI 尚未创建
             ExitPauseIfPaused();
             FPSController.SetFixUPS(0);
-            GameStateManager.FrameRateModeActive = false;
-            if (UseFrameRateSlider)
-            {
-                GameStateManager.SetSpeedRatio(1f);
-                slider.SetValueWithoutNotify((float)FrameRateToValue(60.0));
-            }
-            else
-            {
-                slider.value = 100f; // 触发 onValueChanged -> OnSliderChange -> SetSpeedRatio(1)
-            }
-            RefreshSliderText();
+            GameStateManager.SetSpeedRatio(1f);
+            slider.SetValueWithoutNotify(100f);
             SetSpeedRatioText();
         }
 
@@ -592,19 +498,24 @@ namespace BulletTime
             ExitPauseIfPaused();
             GameStateManager.ApplyFrameRate(GameStateManager.LastFrameRate);
             SyncSliderPosition();
-            RefreshSliderText();
             SetSpeedRatioText();
         }
 
-        // 把滑块位置同步到帧速率档记忆值（不触发 OnSliderChange 重複結算）
+        // 把滑块位置同步到帧速率档记忆值的等价百分比（不触发 OnSliderChange 重複結算）
         private static void SyncSliderPosition()
         {
             if (slider == null) return;
-            double fps = GameStateManager.LastFrameRate;
-            if (UseFrameRateSlider)
-                slider.SetValueWithoutNotify((float)FrameRateToValue(fps));
-            else
-                slider.SetValueWithoutNotify(Mathf.Clamp((float)(fps / 60.0 * 100.0), 0f, 100f));
+            slider.SetValueWithoutNotify(Mathf.Clamp((float)(GameStateManager.LastFrameRate / 60.0 * 100.0), 0f, 100f));
+        }
+
+        // Ctrl+Del：右下角游戏时长切换为帧数显示（复用原版 showTickDetail 的帧数态）
+        public static void OnKeyFrameCount()
+        {
+            UIFpsStat fpsStat = UIRoot.instance != null && UIRoot.instance.uiGame != null
+                ? UIRoot.instance.uiGame.upsTool?.uiFpsStat
+                : null;
+            if (fpsStat == null) return;
+            fpsStat.showTickDetail = fpsStat.showTickDetail == 2 ? 0 : 2;
         }
 
         private static void OnAutosaveToggleChange(bool val)

@@ -36,10 +36,9 @@ namespace BulletTime
         public static ConfigEntry<KeyboardShortcut> KeySliderSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFullSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFrameRate;
+        public static ConfigEntry<KeyboardShortcut> KeyFrameCount;
 
-        public static ConfigEntry<bool> FrameRateSlider;
         public static ConfigEntry<float> FrameRate;
-        public static ConfigEntry<float> MinFrameRate;
 
         public static ConfigEntry<int> StatusTextHeightOffset;
         public static ConfigEntry<string> StatusTextPause;
@@ -60,6 +59,7 @@ namespace BulletTime
             KeySliderSpeed = Config.Bind("Hotkey", "KeySliderSpeed", new KeyboardShortcut(KeyCode.End, KeyCode.LeftControl), "Hotkey for the slider speed preset (reset the speedup track and re-apply the slider value)\n切换到滑块倍速档的热键（重置加速档并重新应用滑块当前设定值）");
             KeyFullSpeed = Config.Bind("Hotkey", "KeyFullSpeed", new KeyboardShortcut(KeyCode.Home, KeyCode.LeftControl), "Hotkey for the 100% speed preset (standard 1x speed)\n切换到 100% 速度档（标准 1 倍速）的热键");
             KeyFrameRate = Config.Bind("Hotkey", "KeyFrameRate", new KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl), "Hotkey for the frame-rate preset (restore the last frame-rate setting)\n切换到帧速率档的热键（恢复上次帧速率设定值）");
+            KeyFrameCount = Config.Bind("Hotkey", "KeyFrameCount", new KeyboardShortcut(KeyCode.Delete, KeyCode.LeftControl), "Hotkey to toggle the game time display at the bottom-right between duration and frame count\n切换右下角游戏时长为帧数显示的热键");
 
             EnableMechaFunc = Config.Bind("Pause", "EnableMechaFunc", false, "Enable mecha function in hotkey pause mode\n在热键战术暂停模式下启用机甲功能");
             EnableBackgroundAutosave = Config.Bind("Save", "EnableBackgroundAutosave", false, "Do auto-save in background thread\n在後台执行自动存档");
@@ -67,9 +67,7 @@ namespace BulletTime
             EnableFastLoading = Config.Bind("Speed", "EnableFastLoading", true, "Increase main menu loading speed\n加快载入主选单");
             RemoveGC = Config.Bind("Speed", "RemoveGC", true, "Remove force garbage collection of build tools\n移除建筑工具的强制内存回收");
             StartingSpeed = Config.Bind("Speed", "StartingSpeed", 100f, new ConfigDescription("Game speed when the game begin (0-100)\n游戏开始时的游戏速度 (0-100)", new AcceptableValueRange<float>(0f, 100f)));
-            FrameRateSlider = Config.Bind("Speed", "FrameRateSlider", true, "Use frame-rate slider (F/s) instead of percentage slider\n启用帧速率滑块（以 F/s 为单位）；关闭则回退为百分比滑块");
             FrameRate = Config.Bind("Speed", "FrameRate", 60f, "Initial speed of the frame-rate preset, in frames per second (60 = 1x)\n帧速率档的初始速度，单位为帧每秒（60 = 1 倍速）");
-            MinFrameRate = Config.Bind("Speed", "MinFrameRate", 0.01f, new ConfigDescription("Minimum frame rate of the slider, in frames per second\n滑块的最低帧速率，单位为帧每秒", new AcceptableValueRange<float>(0.01f, 60f)));
             StatusTextHeightOffset = Config.Bind("UI", "StatusTextHeightOffset", 100, "Height of Status text relative to auto save text\n状态提示相对于自动存档提示的高度");
             StatusTextPause = Config.Bind("UI", "StatusTextPause", "Bullet Time", "Status text when in pause mode\n暂停时的状态提示文字");
             MaxSpeedupScale = Config.Bind("UI", "MaxSpeedupScale", 10, "Maximum game speed multiplier for speedup button\n加速按钮的最大游戏速度倍率");
@@ -198,6 +196,11 @@ namespace BulletTime
             {
                 Log.Debug("KeyFrameRate");
                 IngameUI.OnKeyFrameRate();
+            }
+            if (KeyFrameCount.Value.IsDown())
+            {
+                Log.Debug("KeyFrameCount");
+                IngameUI.OnKeyFrameCount();
             }
 
 
