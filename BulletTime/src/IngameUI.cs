@@ -319,8 +319,12 @@ namespace BulletTime
             }
 
             // 同時顯示實際速度(倍率)與幀速度(F/s)：例 60F/s 1x
-            double ratio = System.Math.Round(EffectiveFrameRate() / 60.0, 2);
-            speedRatioText.text = FormatFrameRate(EffectiveFrameRate()) + " " + ratio.ToString("0.#") + "x";
+            // 倍率低于 1x 时精确到 3 位小数（尾零自动省略），≥1x 时整数或 1 位小数
+            double ratio = EffectiveFrameRate() / 60.0;
+            string ratioText = ratio < 1.0
+                ? System.Math.Round(ratio, 3).ToString("0.###")
+                : System.Math.Round(ratio, 2).ToString("0.#");
+            speedRatioText.text = FormatFrameRate(EffectiveFrameRate()) + " " + ratioText + "x";
         }
 
         public static void OnStoredGameTickChange()
@@ -371,6 +375,7 @@ namespace BulletTime
             GameStateManager.SetSpeedRatio(value/100f);
 
             SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
+            SetSpeedRatioText(); // 右下角实际速度/帧速度随滑块实时更新
         }
 
         public static void SetHotkeyPauseMode(bool active)
