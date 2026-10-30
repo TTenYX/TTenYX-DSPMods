@@ -58,7 +58,10 @@ namespace BulletTime
             GameObject.Destroy(infoTextGo);
             infoTextGo = null;
             infoText = null;
-            GameObject.Destroy(speedRatioText?.gameObject);
+            if (speedRatioText != null) // 不能用 ?. ：对已销毁对象会绕过 Unity null 判断
+            {
+                GameObject.Destroy(speedRatioText.gameObject);
+            }
             speedRatioText = null;
         }
 

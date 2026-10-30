@@ -42,8 +42,10 @@ namespace BulletTime
         // 统一入口：帧速率档。F <= 60 走丢帧轨道（并停用加速轨道），F > 60 走加速轨道（并清除丢帧）
         public static void ApplyFrameRate(double fps)
         {
-            if (fps <= 0.0) fps = 0.01;
+            if (fps < 0.06) fps = 0.06; // 0.001x
+            if (fps > 6000.0) fps = 6000.0; // 100x
             LastFrameRate = fps;
+            if (BulletTimePlugin.FrameRate != null) BulletTimePlugin.FrameRate.Value = (float)fps; // 回写配置，跨存档保持
             if (fps <= 60.0)
             {
                 if (FPSController.instance != null && FPSController.instance.fixUPS > 0.0)

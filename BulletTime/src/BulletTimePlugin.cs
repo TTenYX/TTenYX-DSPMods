@@ -46,6 +46,8 @@ namespace BulletTime
         public static ConfigEntry<float> MaxSimulationSpeed;
         static Harmony harmony;
         static string errorMessage = "";
+        public static BulletTimePlugin Instance { get; private set; }
+        public static void SaveConfig() { if (Instance != null) Instance.Config.Save(); }
 
         private void LoadConfig()
         {
@@ -65,7 +67,7 @@ namespace BulletTime
             EnableFastLoading = Config.Bind("Speed", "EnableFastLoading", true, "Increase main menu loading speed\n加快载入主选单");
             RemoveGC = Config.Bind("Speed", "RemoveGC", true, "Remove force garbage collection of build tools\n移除建筑工具的强制内存回收");
             StartingSpeed = Config.Bind("Speed", "StartingSpeed", 100f, new ConfigDescription("Game speed when the game begin (0-100)\n游戏开始时的游戏速度 (0-100)", new AcceptableValueRange<float>(0f, 100f)));
-            FrameRate = Config.Bind("Speed", "FrameRate", 60f, "Initial speed of the frame-rate preset, in frames per second (60 = 1x)\n帧速率档的初始速度，单位为帧每秒（60 = 1 倍速）");
+            FrameRate = Config.Bind("Speed", "FrameRate", 60f, new ConfigDescription("Actual speed of the frame-rate preset, in frames per second (0.06-6000 = 0.001x-100x). Adjusted in game, saved automatically and kept across saves\n帧速率档的实际设定速率，单位为帧每秒（0.06-6000，对应 0.001x-100x）。游戏内调整后自动保存，跨存档保持", new AcceptableValueRange<float>(0.06f, 6000f)));
             StatusTextHeightOffset = Config.Bind("UI", "StatusTextHeightOffset", 100, "Height of Status text relative to auto save text\n状态提示相对于自动存档提示的高度");
             StatusTextPause = Config.Bind("UI", "StatusTextPause", "Bullet Time", "Status text when in pause mode\n暂停时的状态提示文字");
             MaxSpeedupScale = Config.Bind("UI", "MaxSpeedupScale", 10, "Maximum game speed multiplier for speedup button\n加速按钮的最大游戏速度倍率");
@@ -93,6 +95,7 @@ namespace BulletTime
 
         public void Awake()
         {
+            Instance = this;
             Log.Init(Logger);
             harmony = new Harmony(GUID);
             LoadConfig();
@@ -214,6 +217,7 @@ namespace BulletTime
 
         public void OnDestroy()
         {
+            SaveConfig(); // 退出时持久化帧速率档设定
             harmony.UnpatchSelf();
             harmony = null;
             IngameUI.Dispose();

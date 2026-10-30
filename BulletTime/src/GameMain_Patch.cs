@@ -25,6 +25,7 @@ namespace BulletTime
             IngameUI.Dispose();
             GameStateManager.SetSpeedRatio(1f);
             GameStateManager.ResetFrameRateState();
+            BulletTimePlugin.SaveConfig();
         }
 
         [HarmonyPrefix]
