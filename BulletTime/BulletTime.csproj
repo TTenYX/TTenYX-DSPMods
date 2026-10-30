@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>BulletTime</AssemblyName>
+    <Version>1.6.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>none</DebugType>
+    <RootNamespace>BulletTime</RootNamespace>
+    <!-- 本地离线源优先（仓库根 .work/offline-feed），再回退 BepInEx 官方源 -->
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)..\..\.work\offline-feed;https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <!-- Nebula 联机引用（上游随仓库自带 stripped DLL，与 NuGet 包不同源，避免程序集身份冲突） -->
+  <ItemGroup>
+    <Reference Include="NebulaAPI">
+      <HintPath>reference\NebulaAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="NebulaModel">
+      <HintPath>reference\NebulaModel-nstrip.dll</HintPath>
+    </Reference>
+    <Reference Include="NebulaWorld">
+      <HintPath>reference\NebulaWorld-nstrip.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,183 @@
+## Changelog
+
+#### v1.6.0 (DSP-0.10.35)  
+\- Add preset speed-slot hotkeys: `KeySliderSpeed` (Ctrl+End, re-apply the slider value), `KeyFullSpeed` (Ctrl+Home, standard 1x speed), `KeyFrameRate` (Ctrl+Ins, last frame-rate setting).  
+\- The world speed slider can now work in frame-rate units (F/s) with fine granularity down to 0.01 F/s. New configs: `Speed`:`FrameRateSlider`, `Speed`:`FrameRate`, `Speed`:`MinFrameRate`.  
+\- 新增预设档位热键：`KeySliderSpeed`（Ctrl+End，滑块倍速档）、`KeyFullSpeed`（Ctrl+Home，100% 速度档）、`KeyFrameRate`（Ctrl+Ins，帧速率档）。  
+\- 世界速度滑块支持以帧速率（F/s）为单位操作，细颗粒度最低 0.01 F/s。新增配置：`Speed`:`FrameRateSlider`、`Speed`:`FrameRate`、`Speed`:`MinFrameRate`。  
+
+#### v1.5.14 (DSP-0.10.34.28529)  
+\- Add `KeyImmediateSave` hotkey for immediate auto save. Default: F10 + LeftControl + LeftAlt   
+\- Add `KeySpeedUp` / `KeySpeedDown` hotkeys for speed up/down.  
+\- Add Nebula API as dependency in manifest to prevent error in LDBTool.  
+\- 新增 `KeyImmediateSave` 立即自动存档热键。默认按键: F10 + LeftControl + LeftAlt   
+\- 新增 `KeySpeedUp` / `KeySpeedDown` 热键配置：加速/减速。  
+\- 在清单中添加了 Nebula API 作为依赖项，以防止 LDBTool 报错。  
+
+#### v1.5.13 (DSP-0.10.34.28289)
+\- Fix error in IngameUI.ShowStatus  
+\- 修正IngameUI.ShowStatus在新版本的报错  
+
+#### v1.5.12 (DSP-0.10.33.27026)
+\- Add new config `MaxSimulationSpeed` to fast set/reset simulation speed in outer space by shift-click.  
+\- 添加新配置项 `MaxSimulationSpeed`，可通过按住 Shift 键并单击来快速设置/重置在外太空时的模拟速度。  
+
+#### v1.5.11 (DSP-0.10.33.26941)
+\- Adapt to game version 0.10.33.26941
+\- Show notification when the current game version is not supported (0.10.32 and below)  
+\- Move screenshot button upward to prevent it from overlapping with speed scale text  
+\- Known issue: time cost in performance test panel does not display correctly when pausing  
+\- 适配游戏版本 0.10.33.26941  
+\- 当前游戏版本不支援（0.10.32 及更早版本）时，显示通知。  
+\- 将截图按钮上移，避免与游戏速度倍率文字重叠。  
+\- 已知问题: 性能测试面板中的耗时在游戏暂停时显示不正确。  
+
+----
+
+#### v1.5.10
+\- Fix crash in async background autosave when UPS is very low.  
+
+#### v1.5.9
+\- Prevent user from using sandbox teleport during pause mode to avoid endless loading.  
+\- (UI) Move speed control buttons to higher position.  
+
+#### v1.5.8
+\- Add config `Hotkey`:`KeyStepOneFrame`, default value is none  
+\- The bottom right time text now shows the current gameTick in pause mode.  
+
+#### v1.5.7
+\- Fix crash when background autosaving.  
+
+#### v1.5.6
+\- Autosave UI toggle now store `EnableBackgroundAutosave` change in the config file.  
+
+#### v1.5.5
+\- (Nebula) Client is now able to change game speed.  
+\- (Nebula) Add system notification for pause and speed change events.  
+
+#### v1.5.4
+\- Fix background autosave error about PlayerPrefs.SetInt
+
+#### v1.5.3 (DSP-0.10.32.25496)
+\- Adapt to game version 0.10.32.25496  
+\- Add config `Save`:`EnableHotkeyAutosave`, default value is false  
+
+<details>
+<summary>Previous Changelog</summary>
+
+#### v1.5.2
+\- Add config `UI`:`MaxSpeedupScale`  
+
+#### v1.5.1 (DSP-0.10.30.23430)
+\- Fix background button UI.  
+\- Fix rockets don't dock into dyson nodes when dyson sphere rotation is paused.  
+
+#### v1.5.0 (DSP-0.10.30.22350)
+\- Add pause/resume/speedup speed control buttons.  
+
+#### v1.4.8 (DSP-0.10.30.22292)
+\- (Nebula) Update download progression for other players.  
+
+#### v1.4.7 (DSP-0.10.29.21950)  
+\- Fix crash when viewing remote hives in starmap during background autosave.  
+
+#### v1.4.6
+\- Update to NebulaAPI 2.0.0 (Nebula Multiplayer Mod 0.9.0)  
+\- (Nebula) Fix the screen wrongly displaying "Saving" when a player joins.  
+\- (Nebula) Fix UI window gets closed when resume event trigger.  
+
+#### v1.4.5
+\- Fix that host can't place building after client joining.  
+\- Enable client to pause the game.  
+
+#### v1.4.4
+\- Properly stop animation when hotkey pause.  
+
+#### v1.4.3
+\- Prevent autosave when pausing.  
+
+#### v1.4.2
+\- Fix that replicator queue doesn't work in pause mode.  
+
+#### v1.4.1
+\- Fix error when enabling background autosave.  
+
+#### v1.4.0
+\- Add compat to Nebula pre-release version.  
+\- Add config `Pause`:`EnableMechaFunc`  
+\- Add config `UI`:`StatusTextHeightOffset`, `StatusTextPause`  
+\- Remove config `Speed`:`UIBlueprintAsync`. This feature has been move to BuildToolOpt mod.  
+\- Remove config `Multiplayer`:`MinimumUPS`  
+
+#### v1.3.1
+\- Fix error when creating a new game with dark fog enabled.  
+\- Pause mode using pause hotkey will now let projectiles fire in normal speed and display a notification.  
+
+#### v1.3.0
+\- Adapt to game version 0.10.28.20829 For game version 0.9.27, please roll back to BulletTime v1.2.14.  
+\- Add a toggle button to enable background auto feature in performance pannel. The default value is set to off now.  
+\- Add config `Hotkey`-`KeyPause`, which will toggle pause mode by hitting the hotkey.  
+\- Config option `KeyAutosave` has been move to `Hotkey` catagory.  
+
+#### v1.2.14
+\- Fix error by fast travel when pasueThisFrame. Fast travel to another planet is now disable during pause mode.  
+
+#### v1.2.13
+\- Fix a bug that corrupts large blueprint when editing its title or desc.  
+\- `UIBlueprintAsync` default value is false now.  
+
+#### v1.2.12
+\- Fix a bug that Ctrl+V no longer load the previous blueprint.  
+
+#### v1.2.11 (DSP0.9.27.15466)  
+\- Add `UIBlueprintAsync` config option.  
+
+#### v1.2.10  
+\- Remove game speed indicator for 0.9.27.14546.  
+
+#### v1.2.9
+\- Add `RemoveGC`config option.  
+\- Backward compatible with 0.9.26.13034.  
+
+#### v1.2.8
+\- Adapt to game version 0.9.27.14546.  
+
+#### v1.2.7
+\- (Nebula) Add `MinimumUPS` config option.  
+\- Disable force GC in vanilla game when placing buildings.  
+
+#### v1.2.6
+\- Change `KeyAutosave` from KeyCode to KeyboardShortcut  
+\- Small tweak to backgroud autosave. (Game version 0.9.26.12201)  
+
+#### v1.2.5
+\- Add EnableFastLoading config option. (Game version 0.9.25.11996)  
+\- (Nebula) Fix an issue that sometimes when client disconnect, the host will enter pause state.  
+
+#### v1.2.4
+\- (Nebula) Resume from pause when a client disconnect during loading a factory.  
+
+#### v1.2.3
+\- (Nebula) Fix host sometimes hangs in pause mode when loading factories. Now manual saving will reset pause states.   
+\- Make block image in background autosave transparent.  
+
+#### v1.2.2
+\- (Nebula) Enable dyson sphere rotation start/stop button in editor.   
+\- (Nebula) Handle multiple pause events that happen at the same time.  
+
+#### v1.2.1
+\- Show game speed in FPS indicator (Shift + F12)  
+\- Fix camera & mecha movement speed in low speed.  
+
+#### v1.2.0
+\- (Nebula) Add support for multiplayer.  
+
+
+#### v1.1.0
+\- Add StartingSpeed config option.  
+\- Only block interaction during exporting local factory.  
+
+#### v1.0.2  
+\- Initial release. (Game version 0.9.24.11286) 
+
+</details>

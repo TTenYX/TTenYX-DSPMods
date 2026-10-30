@@ -1,0 +1,635 @@
+﻿using BulletTime.Nebula;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace BulletTime
+{
+    class IngameUI
+    {
+        public static string CurrentStatus = "";
+        private static Slider slider;
+        private static Text sliderText;
+        private static Text stateMessage;
+        private static UIToggle backgroundSaveToggle;
+
+        // 右下角的時間速度控制
+        private static GameObject timeTextGo;
+        private static GameObject infoTextGo;
+        private static Text infoText; // Show the current (stored) gameTick
+        private static Text speedRatioText;
+        private static readonly GameObject[] speedBtnGo = new GameObject[3];
+
+        private static bool UseFrameRateSlider => BulletTimePlugin.FrameRateSlider != null && BulletTimePlugin.FrameRateSlider.Value;
+
+        // 帧速率滑块：slider.value ∈ [0,1] 对数映射到 [MinFrameRate, 60×MaxSpeedupScale]
+        private static double MinFrameRate => BulletTimePlugin.MinFrameRate != null ? BulletTimePlugin.MinFrameRate.Value : 0.01f;
+        private static double MaxFrameRate => 60.0 * (BulletTimePlugin.MaxSpeedupScale != null ? BulletTimePlugin.MaxSpeedupScale.Value : 10);
+
+        private static double ValueToFrameRate(double v)
+        {
+            if (v <= 0.0) return MinFrameRate;
+            if (v >= 1.0) return MaxFrameRate;
+            return MinFrameRate * System.Math.Pow(MaxFrameRate / MinFrameRate, v);
+        }
+
+        private static double FrameRateToValue(double fps)
+        {
+            if (fps <= MinFrameRate) fps = MinFrameRate;
+            if (fps > MaxFrameRate) fps = MaxFrameRate;
+            return System.Math.Log(fps / MinFrameRate) / System.Math.Log(MaxFrameRate / MinFrameRate);
+        }
+
+        public static string FormatFrameRate(double fps) => fps < 10.0 ? $"{fps:0.00} F/s" : $"{fps:0.#} F/s";
+
+        // 当前有效速度（帧速率）：加速轨道生效时取 fixUPS，否则取丢帧轨道 60×(1-SkipRatio)
+        private static double EffectiveFrameRate()
+        {
+            if (GameStateManager.Pause) return 0.0;
+            if (FPSController.instance != null && FPSController.instance.fixUPS > 0.0)
+                return FPSController.instance.fixUPS;
+            return 60.0 * (1.0 - GameStateManager.SkipRatio);
+        }
+
+        // 依当前状态刷新滑块文本（暂停 / 帧速率 / 百分比）
+        private static void RefreshSliderText()
+        {
+            if (sliderText == null || slider == null) return;
+            if (GameStateManager.Pause)
+            {
+                sliderText.text = "Pause".Translate();
+            }
+            else if (GameStateManager.FrameRateModeActive)
+            {
+                sliderText.text = FormatFrameRate(EffectiveFrameRate());
+            }
+            else if (UseFrameRateSlider)
+            {
+                sliderText.text = $"{(int)System.Math.Round(EffectiveFrameRate() / 60.0 * 100.0)}%";
+            }
+            else
+            {
+                sliderText.text = $"{(int)slider.value}%";
+            }
+        }
+
+        public static void Dispose()
+        {
+            if (slider != null)
+            {
+                slider.onValueChanged.RemoveAllListeners();
+                GameObject.Destroy(slider.gameObject);
+            }
+            slider = null;
+            sliderText = null;
+            if (stateMessage != null)
+            {
+                GameObject.Destroy(stateMessage.transform.parent.gameObject);
+                stateMessage = null;
+            }
+            if (backgroundSaveToggle != null)
+            {
+                GameObject.Destroy(backgroundSaveToggle.transform.parent.gameObject);
+                backgroundSaveToggle = null;
+            }
+
+            timeTextGo = null;
+            for (int i = 0; i < speedBtnGo.Length; i++)
+            {
+                GameObject.Destroy(speedBtnGo[i]);
+                speedBtnGo[i] = null;
+            }
+            GameObject.Destroy(infoTextGo);
+            infoTextGo = null;
+            infoText = null;
+            GameObject.Destroy(speedRatioText?.gameObject);
+            speedRatioText = null;
+        }
+
+        public static void Init()
+        {
+            try
+            {
+                if (slider == null)
+                {
+                    bool oldUIflag = GameConfig.gameVersion < new Version(0, 10, 34);
+
+                    // Set slider
+                    GameObject sliderGo = UIRoot.instance.optionWindow.audioVolumeComp.transform.gameObject;
+                    Transform cpuPanel = UIRoot.instance.uiGame.statWindow.performancePanelUI.cpuActiveButton.gameObject.transform.parent;
+                    sliderGo = GameObject.Instantiate(sliderGo, cpuPanel);
+                    sliderGo.name = "RealTickRatioSlider";
+                    sliderGo.transform.localPosition = cpuPanel.Find("title-text").localPosition + new Vector3(-120, 1, 0);
+                    slider = sliderGo.GetComponent<Slider>();
+                    sliderText = sliderGo.GetComponentInChildren<Text>();
+                    if (UseFrameRateSlider)
+                    {
+                        // 帧速率滑块模式：0-1 对数刻度，实时显示 F/s
+                        slider.minValue = 0f;
+                        slider.maxValue = 1f;
+                        slider.wholeNumbers = false;
+                        slider.value = (float)FrameRateToValue(BulletTimePlugin.StartingSpeed.Value * 60f / 100f);
+                    }
+                    else
+                    {
+                        // 百分比滑块模式：与 1.5.14 行为一致
+                        slider.minValue = 0f;
+                        slider.maxValue = 100f;
+                        slider.wholeNumbers = true;
+                        slider.value = BulletTimePlugin.StartingSpeed.Value;
+                    }
+                    slider.onValueChanged.AddListener(value => OnSliderChange(value));
+                    OnSliderChange(slider.value);
+
+                    if (oldUIflag)
+                    {
+                        // Set toggle
+                        GameObject checkBoxWithText = UIRoot.instance.optionWindow.vsyncComp.transform.parent.gameObject;
+                        Transform dataPanel = UIRoot.instance.uiGame.statWindow.performancePanelUI.dataActiveButton.gameObject.transform.parent;
+                        GameObject backgroundSaveGo = GameObject.Instantiate(checkBoxWithText, dataPanel);
+                        backgroundSaveGo.name = "Background autosave toggle";
+                        backgroundSaveGo.transform.localPosition = new Vector3(250, 390, 0);
+                        GameObject.Destroy(backgroundSaveGo.GetComponent<Localizer>());
+                        Text text_local = backgroundSaveGo.GetComponent<Text>();
+                        //text_local.font = text_factory.font;
+                        text_local.fontSize = 14;
+                        text_local.text = "Background autosave".Translate();
+
+                        backgroundSaveToggle = backgroundSaveGo.GetComponentInChildren<UIToggle>();
+                        backgroundSaveToggle.transform.localPosition = new Vector3(65, -20, 0);
+                        backgroundSaveToggle.isOn = GameSave_Patch.isEnabled;
+                        backgroundSaveToggle.toggle.onValueChanged.AddListener(OnAutosaveToggleChange);
+                    }
+                    else // 0.10.34 and above version
+                    {
+                        Transform dataPanel = UIRoot.instance.uiGame.statWindow.performancePanelUI.dataActiveButton.gameObject.transform.parent;
+                        GameObject textGo = UIRoot.instance.uiGame.statWindow.performancePanelUI.cpuValueText1.gameObject;
+                        GameObject checkBoxGo = UIRoot.instance.optionWindow.vsyncComp.transform.gameObject;
+
+                        GameObject group = new("[BulletTime]Background autosave toggle");
+                        group.transform.SetParent(dataPanel);
+                        group.transform.localPosition = new Vector3(260, 390, 0);
+                        group.transform.localScale = Vector3.one;
+
+                        GameObject backgroundSaveGo = GameObject.Instantiate(checkBoxGo, group.transform);
+                        backgroundSaveGo.transform.localPosition = new Vector3(0, 0, 0);
+                        backgroundSaveToggle = backgroundSaveGo.GetComponent<UIToggle>();
+                        backgroundSaveToggle.isOn = GameSave_Patch.isEnabled;
+                        backgroundSaveToggle.toggle.onValueChanged.AddListener(OnAutosaveToggleChange);
+
+                        GameObject backgroundSaveTextGo = GameObject.Instantiate(textGo, group.transform);
+                        backgroundSaveTextGo.transform.localPosition = new Vector3(-60, 0, 0);
+                        GameObject.Destroy(backgroundSaveTextGo.GetComponent<Localizer>());
+                        Text backgroundSaveText = backgroundSaveTextGo.GetComponent<Text>();
+                        backgroundSaveText.fontSize = 12;
+                        backgroundSaveText.text = "Background\nautosave".Translate();
+                    }
+                }
+                // Only host can have control slider
+                slider.gameObject.SetActive(!NebulaCompat.IsClient);
+                GameStateManager.ManualPause = false;
+                SetHotkeyPauseMode(false);
+            }
+            catch (System.Exception e)
+            {
+                Log.Warn("IngameUI fail! error:\n" + e);
+            }
+
+            try
+            {
+                if (timeTextGo == null)
+                {
+                    timeTextGo = GameObject.Find("UI Root/Overlay Canvas/In Game/Game Menu/time-text");
+                    timeTextGo.SetActive(true);
+
+                    // Create pause, resume and speedup button
+                    RectTransform prefab = GameObject.Find("UI Root/Overlay Canvas/In Game/Game Menu/button-1-bg").GetComponent<RectTransform>();
+                    Vector3 newPos = prefab.localPosition;
+                    newPos.x += 35f + 5f;
+                    newPos.y -= 20f - 13f;
+                    for (int i = 0; i  < 3; i++)
+                    {
+                        var go = GameObject.Instantiate<RectTransform>(prefab, timeTextGo.transform.parent);
+                        go.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+                        go.localPosition = newPos;
+                        newPos.x += 22f;
+
+                        var btn = go.GetComponent<UIButton>();
+                        btn.OnPointerDown(null);
+                        btn.OnPointerEnter(null);
+                        btn.data = i;
+                        btn.onClick += OnSpeedButtonClick;
+
+                        Sprite iconSprite = null;
+                        switch (i)
+                        {
+                            case 0: // Sprite Path: "ui/textures/sprites/icons/pause-icon"
+                                iconSprite = UIRoot.instance.uiGame.researchQueue.pauseButton.gameObject.transform.Find("icon").GetComponent<Image>().sprite;
+                                btn.tips.tipTitle = go.name = "Pause".Translate();
+                                btn.tips.tipText = "Toggle tactical pause mode".Translate();
+                                break;
+
+                            case 1: // Sprite Path: "ui/textures/sprites/icons/resume-icon"
+                                iconSprite = UIRoot.instance.uiGame.researchQueue.resumeButton.gameObject.transform.Find("icon").GetComponent<Image>().sprite;
+                                btn.tips.tipTitle = go.name = "Resume".Translate();
+                                btn.tips.tipText = "Reset game speed back to 1x".Translate();
+                                break;
+
+
+                            case 2: // Sprite Path: "ui/textures/sprites/test/next-icon-2"
+                                iconSprite = Resources.Load<Sprite>("ui/textures/sprites/test/next-icon-2");
+                                btn.tips.tipTitle = go.name = "SpeedUp".Translate();
+                                btn.tips.tipText = string.Format("Left click to increase game speed\nRight click to set to max ({0}x)".Translate(), BulletTimePlugin.MaxSpeedupScale.Value);
+                                btn.onRightClick += OnSpeedupButtonRightClcik;
+                                break;
+                        }
+                        go.Find("button-1/icon").GetComponent<Image>().sprite = iconSprite;
+                        speedBtnGo[i] = go.gameObject;
+                    }
+
+                    // Create info text
+                    infoTextGo = GameObject.Instantiate(timeTextGo, timeTextGo.transform.parent);
+                    infoTextGo.name = "pause info-text";
+                    infoText = infoTextGo.GetComponent<Text>();
+                    infoText.text = "Pause".Translate();
+                    infoText.enabled = true;
+                    infoTextGo.SetActive(false);
+
+                    // Create speed ratio text and reduce realTime text width
+                    var realTimeTextGo = GameObject.Find("UI Root/Overlay Canvas/In Game/Game Menu/real-time-text");
+                    var rectTransfrom = (RectTransform)realTimeTextGo.transform;
+                    rectTransfrom.sizeDelta = new Vector2(50, rectTransfrom.sizeDelta.y); // Reduce button width
+                    var ratioGo = GameObject.Instantiate(realTimeTextGo, realTimeTextGo.transform.parent);
+                    ratioGo.name = "speed ratio-text";                    
+                    ratioGo.transform.localPosition += new Vector3(0, 15f);
+                    GameObject.Destroy(ratioGo.GetComponent<UIButton>()); // Remove the time format toggle
+                    ratioGo.SetActive(true);
+                    speedRatioText = ratioGo.GetComponent<Text>();
+
+                    // Make sure time text stays on top
+                    timeTextGo.transform.SetAsLastSibling();
+                    realTimeTextGo.transform.SetAsLastSibling();
+
+                    // Make screenshot button little higher to avoid overlap
+                    var screenshotGo = GameObject.Find("UI Root/Overlay Canvas/In Game/Game Menu/button-screenshot");
+                    screenshotGo.transform.localPosition = new Vector2(-28, 75);
+                }
+                // Test: Let client has speedUp button enable
+                // speedBtnGo[2].SetActive(!NebulaCompat.IsClient);
+                SetSpeedRatioText();
+            }
+            catch (System.Exception e)
+            {
+                Log.Warn("Game Menu button UI fail! error:\n" + e);
+            }
+        }
+
+        private static void OnSpeedButtonClick(int mode)
+        {
+            switch (mode)
+            {
+                case 0: // Pause
+                    OnKeyPause();
+                    break;
+
+                case 1: // Resume                    
+                    if (GameStateManager.Pause) OnKeyPause();
+                    else // 如果不在暫停狀態, 則回復至普通速度
+                    {
+                        FPSController.SetFixUPS(0);
+                        if (NebulaCompat.IsMultiplayerActive && NebulaCompat.SyncUps)
+                        {
+                            if (NebulaCompat.IsClient) NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedReset);
+                            else NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedSet);
+                        }
+                    }
+                    break;
+
+                case 2: // SpeedUp
+                    if (GameStateManager.Pause)
+                    {
+                        // If it is in pause state, resume
+                        OnKeyPause();
+                    }
+                    else if (FPSController.instance.fixUPS == 0.0)
+                    {
+                        FPSController.SetFixUPS(120.0);
+                        if (NebulaCompat.IsMultiplayerActive && NebulaCompat.SyncUps)
+                        {
+                            if (NebulaCompat.IsClient) NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedUp);
+                            else NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedSet);
+                        }
+                    }
+                    else if (FPSController.instance.fixUPS < 60.0 * BulletTimePlugin.MaxSpeedupScale.Value)
+                    {
+                        FPSController.SetFixUPS(FPSController.instance.fixUPS + 60.0);
+                        if (NebulaCompat.IsMultiplayerActive && NebulaCompat.SyncUps)
+                        {
+                            if (NebulaCompat.IsClient) NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedUp);
+                            else NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedSet);
+                        }
+                    }
+                    break;
+            }
+            SetSpeedRatioText();
+        }
+
+        private static void OnSpeedupButtonRightClcik(int _)
+        {
+            if (GameStateManager.Pause)
+            {
+                // If it is in pause state, resume
+                OnKeyPause();
+            }
+            FPSController.SetFixUPS(60.0 * BulletTimePlugin.MaxSpeedupScale.Value);
+            SetSpeedRatioText();
+
+            if (NebulaCompat.IsMultiplayerActive && NebulaCompat.SyncUps)
+            {
+                if (NebulaCompat.IsClient) NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedMax);
+                else NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedSet);
+            }
+        }
+
+        public static void SetSpeedRatioText()
+        {
+            if (speedRatioText == null) return;
+            if (NebulaCompat.IsClient) // 客戶端的UPS是跟隨主機隨時在變動的, 因此不顯示
+            { 
+                speedRatioText.text = "";
+                return;
+            }
+
+            if (GameStateManager.FrameRateModeActive)
+            {
+                speedRatioText.text = FormatFrameRate(EffectiveFrameRate());
+                return;
+            }
+
+            float ratio = (float)FPSController.instance.fixUPS / 60.0f;
+            if (ratio == 0.0f)
+                speedRatioText.text = "1 x"; //正常流速
+            else if ((ratio - (int)ratio) < 0.05) 
+                speedRatioText.text = (int)ratio + " x"; //整數倍率
+            else
+                speedRatioText.text = $"{ratio:0.0} x"; //顯示到小數點1位
+        }
+
+        public static void OnStoredGameTickChange()
+        {
+            if (infoTextGo != null)
+            {
+                infoText.text = GameStateManager.StoredGameTick.ToString();
+            }
+        }
+
+        public static void OnPauseModeChange(bool pause)
+        {
+            if (infoTextGo != null)
+            {
+                timeTextGo.SetActive(!pause);
+                infoTextGo.SetActive(pause);
+                infoText.text = GameStateManager.StoredGameTick.ToString();
+
+                if (sliderText != null)
+                {
+                    RefreshSliderText();
+                }
+                SetSpeedRatioText();
+            }
+
+            SetHotkeyPauseMode(false); //當暫停模式有任何變化時取消熱鍵時停
+        }
+
+        private static void OnSliderChange(float value)
+        {
+            if (UseFrameRateSlider)
+            {
+                // 帧速率滑块模式：拖动即设定帧速率（F/s）
+                bool wasPaused = GameStateManager.Pause;
+                GameStateManager.ApplyFrameRate(ValueToFrameRate(value));
+                if (wasPaused && NebulaCompat.IsMultiplayerActive)
+                    NebulaCompat.SendPacket(PauseEvent.Resume);
+                RefreshSliderText();
+                SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
+                return;
+            }
+            if (value == 0)
+            {                
+                GameStateManager.ManualPause = true; //滑條拉至0
+                sliderText.text = "pause".Translate();
+                if (!GameStateManager.Pause && NebulaCompat.IsMultiplayerActive)
+                    NebulaCompat.SendPacket(PauseEvent.Pause);
+            }
+            else
+            {
+                GameStateManager.ManualPause = false;
+                sliderText.text = $"{(int)value}%";
+                if (GameStateManager.Pause && NebulaCompat.IsMultiplayerActive)
+                {
+                    NebulaCompat.SendPacket(PauseEvent.Resume);                    
+                }
+                ShowStatus("");
+            }
+            GameStateManager.SetSpeedRatio(value/100f);
+
+            SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
+        }
+
+        public static void SetHotkeyPauseMode(bool active)
+        {
+            GameStateManager.HotkeyPause = active;
+            if (active)
+            {
+                if (NebulaCompat.IsMultiplayerActive && !NebulaCompat.IsClient)
+                    NebulaCompat.SendPacket(PauseEvent.Pause);
+                GameStateManager.PlayerPosition = GameMain.mainPlayer?.position ?? Vector3.zero;
+                SkillSystem_Patch.Enable = GameStateManager.EnableMechaFunc;
+                ShowStatus(BulletTimePlugin.StatusTextPause.Value);
+            }
+            else
+            {
+                SkillSystem_Patch.Enable = false;
+            }
+        }
+
+        public static void OnKeyPause()
+        {
+            if (NebulaCompat.IsClient) //客戶端向主機提出暫停/恢復請求
+            {
+                if (!GameStateManager.Interactable) return; //鎖定狀態時無法送出請求
+
+                if (!GameStateManager.Pause)
+                {
+                    NebulaCompat.SendPacket(PauseEvent.Pause);
+                    NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Pause);
+                }
+                else
+                {
+                    NebulaCompat.SendPacket(PauseEvent.Resume);
+                    NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Resume);
+                }
+                return;
+            }
+
+            if (GameStateManager.Pause == false) //不在時停狀態時,切換至熱鍵時停
+            {
+                if (UIRoot.instance.uiGame.autoSave.showTime == 0) // 不在自動存檔的動畫
+                {
+                    GameStateManager.ManualPause = true; //進入手動時停狀態
+                    GameStateManager.SetPauseMode(true);
+                    SetHotkeyPauseMode(true); //啟動熱鍵時停
+                    if (NebulaCompat.IsMultiplayerActive) // 主機廣播暫停訊息
+                        NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Pause);
+                }
+            }
+            else if (GameStateManager.Interactable) //如果不是在自動存檔中, 回歸滑條設定值
+            {
+                OnSliderChange(slider.value);                
+                if (NebulaCompat.IsMultiplayerActive) // 主機廣播恢復訊息
+                    NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Resume);
+            }
+        }
+
+        public static void OnKeyStepOneFrame()
+        {
+            GameStateManager.StepOneFrame = true;
+        }
+
+        public static void OnKeySpeedUp()
+        {
+            // 直接复用现有的加速逻辑（mode=2）
+            OnSpeedButtonClick(2);
+        }
+
+        public static void OnKeySpeedDown()
+        {
+            // 如果处于暂停状态，先恢复（与加速行为一致）
+            if (GameStateManager.Pause)
+            {
+                OnKeyPause();
+            }
+
+            double currentUps = FPSController.instance.fixUPS;
+            // 减速一档：减60，但不低于0（普通速度）
+            double newUps = currentUps - 60.0;
+            if (newUps < 0.0) newUps = 0.0;
+
+            // 只有速度实际变化时才执行操作
+            if ((currentUps - newUps) > 0.001)
+            {
+                FPSController.SetFixUPS(newUps);
+
+                // 网络同步（参考加速逻辑，客户端用 SpeedDown，服务器用 SpeedSet）
+                if (NebulaCompat.IsMultiplayerActive && NebulaCompat.SyncUps)
+                {
+                    if (NebulaCompat.IsClient)
+                        NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedDown);
+                    else
+                        NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.SpeedSet);
+                }
+            }
+            // 更新速度显示
+            SetSpeedRatioText();
+        }
+
+        // ---- 预设档位热键 ----
+
+        // 切换任一非暂停档前，若处于暂停状态先解除（回归滑块设定值）
+        private static void ExitPauseIfPaused()
+        {
+            if (GameStateManager.Pause) OnKeyPause();
+        }
+
+        // 滑块倍速档：重置加速档，重新应用滑块当前设定值
+        public static void OnKeySliderSpeed()
+        {
+            if (NebulaCompat.IsClient) return; // 客户端不可控制速度
+            if (!GameStateManager.Interactable) return; // 自動存檔時停中不接受切換
+            if (slider == null) return; // 主菜单中 UI 尚未创建
+            ExitPauseIfPaused();
+            FPSController.SetFixUPS(0); // 重置加速档
+            if (UseFrameRateSlider)
+            {
+                GameStateManager.ApplyFrameRate(ValueToFrameRate(slider.value));
+            }
+            else
+            {
+                GameStateManager.FrameRateModeActive = false;
+                OnSliderChange(slider.value);
+            }
+            RefreshSliderText();
+            SetSpeedRatioText();
+        }
+
+        // 100% 速度档：滑块归位 100%，重置加速档，恢复标准 1x
+        public static void OnKeyFullSpeed()
+        {
+            if (NebulaCompat.IsClient) return;
+            if (!GameStateManager.Interactable) return;
+            if (slider == null) return; // 主菜单中 UI 尚未创建
+            ExitPauseIfPaused();
+            FPSController.SetFixUPS(0);
+            GameStateManager.FrameRateModeActive = false;
+            if (UseFrameRateSlider)
+            {
+                GameStateManager.SetSpeedRatio(1f);
+                slider.SetValueWithoutNotify((float)FrameRateToValue(60.0));
+            }
+            else
+            {
+                slider.value = 100f; // 触发 onValueChanged -> OnSliderChange -> SetSpeedRatio(1)
+            }
+            RefreshSliderText();
+            SetSpeedRatioText();
+        }
+
+        // 帧速率档：恢复上次帧速率设定值（运行期记忆，初始取 cfg FrameRate）
+        public static void OnKeyFrameRate()
+        {
+            if (NebulaCompat.IsClient) return;
+            if (!GameStateManager.Interactable) return;
+            if (slider == null) return; // 主菜单中 UI 尚未创建
+            ExitPauseIfPaused();
+            GameStateManager.ApplyFrameRate(GameStateManager.LastFrameRate);
+            SyncSliderPosition();
+            RefreshSliderText();
+            SetSpeedRatioText();
+        }
+
+        // 把滑块位置同步到帧速率档记忆值（不触发 OnSliderChange 重複結算）
+        private static void SyncSliderPosition()
+        {
+            if (slider == null) return;
+            double fps = GameStateManager.LastFrameRate;
+            if (UseFrameRateSlider)
+                slider.SetValueWithoutNotify((float)FrameRateToValue(fps));
+            else
+                slider.SetValueWithoutNotify(Mathf.Clamp((float)(fps / 60.0 * 100.0), 0f, 100f));
+        }
+
+        private static void OnAutosaveToggleChange(bool val)
+        {
+            BulletTimePlugin.EnableBackgroundAutosave.Value = val;
+            GameSave_Patch.Enable(val);
+            backgroundSaveToggle.isOn = val;
+        }
+
+        public static void ShowStatus(string message)
+        {
+            if (stateMessage == null)
+            {
+                GameObject go = GameObject.Find("UI Root/Overlay Canvas/In Game/Top Tips/Auto Save/content/tip-panel");
+                GameObject statePanel = GameObject.Instantiate(go, go.transform.parent.parent);
+                statePanel.transform.localPosition = new Vector3(-35, statePanel.transform.localPosition.y + BulletTimePlugin.StatusTextHeightOffset.Value, 0);
+                GameObject.Destroy(statePanel.transform.Find("bg")?.gameObject);
+                GameObject.Destroy(statePanel.transform.Find("icon")?.gameObject);
+                GameObject.Destroy(statePanel.transform.Find("glow-1")?.gameObject);
+                GameObject.Destroy(statePanel.transform.Find("achiev-ban-text")?.gameObject);
+                stateMessage = statePanel.transform.Find("text").GetComponent<Text>();
+            }
+            stateMessage.transform.parent.gameObject.SetActive(message != "");
+            stateMessage.text = message;
+            CurrentStatus = message;
+        }
+    }
+}
