@@ -517,6 +517,12 @@ namespace BulletTime
             if (!GameStateManager.Interactable) return;
             if (slider == null) return; // 主菜单中 UI 尚未创建
             ExitPauseIfPaused();
+            // 记忆当前滑块值作为滑块减速模式（Ctrl+End 可恢复；100% 时保留原记忆）
+            if (slider.value > 0f && slider.value < 100f)
+            {
+                GameStateManager.LastSliderSpeed = slider.value;
+                if (BulletTimePlugin.SliderSpeed != null) BulletTimePlugin.SliderSpeed.Value = slider.value;
+            }
             FPSController.SetFixUPS(0);
             GameStateManager.SetSpeedRatio(1f);
             slider.SetValueWithoutNotify(100f);
@@ -533,6 +539,26 @@ namespace BulletTime
             ExitPauseIfPaused();
             GameStateManager.ApplyFrameRate(GameStateManager.LastFrameRate);
             SyncSliderPosition();
+            SetSpeedRatioText();
+        }
+
+        // 滑块减速模式：恢复记忆的滑块值（按 Ctrl+Home 时自动记忆，cfg SliderSpeed 跨存档保持）
+        public static void OnKeySliderSpeed()
+        {
+            if (NebulaCompat.IsClient) return; // 客户端不可控制速度
+            if (!GameStateManager.Interactable) return; // 自動存檔時停中不接受切換
+            if (slider == null) return; // 主菜单中 UI 尚未创建
+            ExitPauseIfPaused();
+            FPSController.SetFixUPS(0); // 重置加速档
+            float target = Mathf.Clamp(GameStateManager.LastSliderSpeed, 1f, 100f);
+            if (slider.value != target)
+            {
+                slider.value = target; // 触发 onValueChanged -> OnSliderChange（同步速度与文字）
+            }
+            else
+            {
+                OnSliderChange(target); // 位置已一致时显式结算
+            }
             SetSpeedRatioText();
         }
 

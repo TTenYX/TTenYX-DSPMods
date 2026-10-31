@@ -34,9 +34,11 @@ namespace BulletTime
         public static ConfigEntry<KeyCode> KeyPause;
         public static ConfigEntry<KeyCode> KeyStepOneFrame;
         public static ConfigEntry<KeyboardShortcut> KeyFullSpeed;
+        public static ConfigEntry<KeyboardShortcut> KeySliderSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFrameRate;
 
         public static ConfigEntry<float> FrameRate;
+        public static ConfigEntry<float> SliderSpeed;
 
         public static ConfigEntry<int> StatusTextHeightOffset;
         public static ConfigEntry<string> StatusTextPause;
@@ -56,7 +58,8 @@ namespace BulletTime
             KeySpeedDown = Config.Bind("Hotkey", "KeySpeedDown", new KeyboardShortcut(), "Keyboard shortcut for speed down\n减速的热键");
             KeyPause = Config.Bind("Hotkey", "KeyPause", KeyCode.Pause, "Hotkey for toggling special pause mode\n战术暂停(世界停止+画面提示)的热键");
             KeyStepOneFrame = Config.Bind("Hotkey", "KeyStepOneFrame", KeyCode.None, "Hotkey to forward 1 frame in pause mode\n暂停模式下前进1帧的热键");
-            KeyFullSpeed = Config.Bind("Hotkey", "KeyFullSpeed", new KeyboardShortcut(KeyCode.Home, KeyCode.LeftControl), "Hotkey for the 100% speed preset (standard 1x speed)\n切换到 100% 速度档（标准 1 倍速）的热键");
+            KeyFullSpeed = Config.Bind("Hotkey", "KeyFullSpeed", new KeyboardShortcut(KeyCode.Home, KeyCode.LeftControl), "Hotkey for the 100% speed preset (standard 1x speed). Memorizes the current slider value for Ctrl+End\n切换到 100% 速度档（标准 1 倍速）的热键，同时记忆当前滑块值供 Ctrl+End 恢复");
+            KeySliderSpeed = Config.Bind("Hotkey", "KeySliderSpeed", new KeyboardShortcut(KeyCode.End, KeyCode.LeftControl), "Hotkey for the slider speed preset (restore the memorized slider value)\n切换到滑块减速模式的热键（恢复记忆的滑块值）");
             KeyFrameRate = Config.Bind("Hotkey", "KeyFrameRate", new KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl), "Hotkey for the frame-rate preset (restore the last frame-rate setting)\n切换到帧速率档的热键（恢复上次帧速率设定值）");
 
             EnableMechaFunc = Config.Bind("Pause", "EnableMechaFunc", false, "Enable mecha function in hotkey pause mode\n在热键战术暂停模式下启用机甲功能");
@@ -66,6 +69,7 @@ namespace BulletTime
             RemoveGC = Config.Bind("Speed", "RemoveGC", true, "Remove force garbage collection of build tools\n移除建筑工具的强制内存回收");
             StartingSpeed = Config.Bind("Speed", "StartingSpeed", 100f, new ConfigDescription("Game speed when the game begin (0-100)\n游戏开始时的游戏速度 (0-100)", new AcceptableValueRange<float>(0f, 100f)));
             FrameRate = Config.Bind("Speed", "FrameRate", 60f, new ConfigDescription("Actual speed of the frame-rate preset, in frames per second (0.06-6000 = 0.001x-100x). Adjusted in game, saved automatically and kept across saves\n帧速率档的实际设定速率，单位为帧每秒（0.06-6000，对应 0.001x-100x）。游戏内调整后自动保存，跨存档保持", new AcceptableValueRange<float>(0.06f, 6000f)));
+            SliderSpeed = Config.Bind("Speed", "SliderSpeed", 100f, new ConfigDescription("Slider value of the slider preset in percent (1-100). Memorized automatically by Ctrl+Home, saved and kept across saves\n滑块减速模式的速度百分比（1-100）。按 Ctrl+Home 时自动记忆当前滑块值，自动保存，跨存档保持", new AcceptableValueRange<float>(1f, 100f)));
             StatusTextHeightOffset = Config.Bind("UI", "StatusTextHeightOffset", 100, "Height of Status text relative to auto save text\n状态提示相对于自动存档提示的高度");
             StatusTextPause = Config.Bind("UI", "StatusTextPause", "Bullet Time", "Status text when in pause mode\n暂停时的状态提示文字");
             MaxSpeedupScale = Config.Bind("UI", "MaxSpeedupScale", 10, "Maximum game speed multiplier for speedup button\n加速按钮的最大游戏速度倍率");
@@ -74,8 +78,10 @@ namespace BulletTime
 
             GameStateManager.EnableMechaFunc = EnableMechaFunc.Value;
             GameStateManager.LastFrameRate = FrameRate.Value;
-            // 配置管理器/cfg 手改帧速率时，即时同步到帧速率档记忆值
+            GameStateManager.LastSliderSpeed = SliderSpeed.Value;
+            // 配置管理器/cfg 手改时，即时同步到对应档位记忆值
             FrameRate.SettingChanged += (s, e) => GameStateManager.LastFrameRate = FrameRate.Value;
+            SliderSpeed.SettingChanged += (s, e) => GameStateManager.LastSliderSpeed = SliderSpeed.Value;
         }
 
         private bool TestGameVersion()
@@ -187,6 +193,11 @@ namespace BulletTime
             {
                 Log.Debug("KeyFullSpeed");
                 IngameUI.OnKeyFullSpeed();
+            }
+            if (KeySliderSpeed.Value.IsDown())
+            {
+                Log.Debug("KeySliderSpeed");
+                IngameUI.OnKeySliderSpeed();
             }
             if (KeyFrameRate.Value.IsDown())
             {
