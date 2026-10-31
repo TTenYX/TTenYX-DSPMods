@@ -9,63 +9,111 @@ using UnityEngine.UI.Youthcat;
 namespace IconFix
 {
     /// <summary>
-    /// Shift+左键点击文本框中的纯图标（\tag;，TextTriggerBounds.type==2）时，
-    /// 原地替换为带名称图标（\tag-;）。
-    /// 定位策略：TextTriggerBounds.index 是点击命中字符位置，在其 ±4 字符窗口内找
-    /// 该图标的纯码（如 \meik;）；带名称码（\meik-;）不包含纯码子串，不会被误匹配；
-    /// 窗口未命中时回退全文最近位置。
+    /// Shift+左键点击文本框中的纯图标（\tag;），原地替换为带名称图标（\tag-;）。
+    ///
+    /// 定位：实测 TextTriggerBounds 的 index/iconId 不可靠（恒为 0），改用
+    /// InputField.caretPosition——游戏在 PointerDown 阶段就把光标移到点击字符处，
+    /// 我们在 Click 阶段执行时它已是本次点击位置。
+    /// 算法：从光标处（及前一位兜底）向右找分号，回溯 [字母数字-] 段并验证段前是
+    /// 反斜杠，要求点击落在该码范围内；段内已含 '-'（带名称码）则跳过。
     /// </summary>
     internal static class IconTextUpgrader
     {
-        private static int _lastFrame = -1;
-
-        /// <summary>
-        /// 纯逻辑：在 text 中 hintIndex 附近找 plainTag，返回在分号前插入 '-' 后的新文本与光标位置。
-        /// 找不到时返回 null。plainTag 由调用方传入（便于自测）。
-        /// </summary>
-        public static string UpgradeAt(string text, int hintIndex, string plainTag, out int caretPos)
+        public enum UpgradeResult
         {
-            caretPos = -1;
-            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(plainTag) || plainTag[plainTag.Length - 1] != ';')
-            {
-                return null;
-            }
-
-            var pos = FindNearest(text, plainTag, hintIndex);
-            if (pos < 0)
-            {
-                return null;
-            }
-
-            var sb = new StringBuilder(text.Length + 1);
-            sb.Append(text, 0, pos + plainTag.Length - 1);
-            sb.Append('-');
-            sb.Append(text, pos + plainTag.Length - 1, text.Length - (pos + plainTag.Length - 1));
-            caretPos = pos + plainTag.Length + 1;
-            return sb.ToString();
+            NotFound,
+            AlreadyNamed,
+            Replaced
         }
 
-        /// <summary>在 hint 附近（覆盖整个码长 ±4）优先匹配，失败时回退全文最近出现位置。</summary>
-        private static int FindNearest(string text, string tag, int hint)
+        private static int _lastFrame = -1;
+
+        /// <summary>纯逻辑：按光标位置定位纯图标码并在分号前插 '-'。返回 null 表示未替换。</summary>
+        public static string UpgradeAtCaret(string text, int caret, out int newCaret, out UpgradeResult result)
         {
-            var windowFrom = Math.Max(0, hint - tag.Length - 4);
-            var p = text.IndexOf(tag, windowFrom, StringComparison.Ordinal);
-            if (p >= 0 && p <= hint + 4)
+            newCaret = -1;
+            result = UpgradeResult.NotFound;
+            if (string.IsNullOrEmpty(text))
             {
-                return p;
+                return null;
+            }
+            if (caret < 0)
+            {
+                caret = 0;
+            }
+            if (caret > text.Length)
+            {
+                caret = text.Length;
             }
 
-            var best = -1;
-            var from = 0;
-            while ((p = text.IndexOf(tag, from, StringComparison.Ordinal)) >= 0)
+            for (var k = 0; k < 2; k++)
             {
-                if (best < 0 || Math.Abs(p - hint) < Math.Abs(best - hint))
+                var anchor = caret - k;
+                if (anchor < 0 || anchor >= text.Length)
                 {
-                    best = p;
+                    continue;
                 }
-                from = p + 1;
+
+                // 向右找第一个分号
+                var semi = -1;
+                var limit = Math.Min(text.Length, anchor + 32);
+                for (var i = anchor; i < limit; i++)
+                {
+                    if (text[i] == ';')
+                    {
+                        semi = i;
+                        break;
+                    }
+                }
+                if (semi < 0)
+                {
+                    continue;
+                }
+
+                // 回溯 tag 段 [start+1 .. semi)
+                var j = semi - 1;
+                var hasDash = false;
+                while (j >= 0)
+                {
+                    var c = text[j];
+                    if (c == '-')
+                    {
+                        hasDash = true;
+                        j--;
+                        continue;
+                    }
+                    if (char.IsLetterOrDigit(c))
+                    {
+                        j--;
+                        continue;
+                    }
+                    break;
+                }
+                if (j < 0 || text[j] != '\\')
+                {
+                    continue;
+                }
+                var start = j;
+                // 点击必须落在该码范围内（anchor ∈ [start, semi]）
+                if (start > anchor || semi < anchor)
+                {
+                    continue;
+                }
+                if (hasDash)
+                {
+                    result = UpgradeResult.AlreadyNamed;
+                    return null;
+                }
+
+                var sb = new StringBuilder(text.Length + 1);
+                sb.Append(text, 0, semi);
+                sb.Append('-');
+                sb.Append(text, semi, text.Length - semi);
+                newCaret = semi + 2;
+                result = UpgradeResult.Replaced;
+                return sb.ToString();
             }
-            return best;
+            return null;
         }
 
         private static void DebugLog(string msg)
@@ -74,6 +122,21 @@ namespace IconFix
             {
                 IconFixPlugin.Log.LogInfo("[upgrade] " + msg);
             }
+        }
+
+        private static string Describe(InputField field)
+        {
+            if (field == null)
+            {
+                return "<null>";
+            }
+            var path = field.gameObject.name;
+            var p = field.transform.parent;
+            for (var i = 0; p != null && i < 3; i++, p = p.parent)
+            {
+                path = p.name + "/" + path;
+            }
+            return $"{field.GetType().Name}({path})";
         }
 
         private static bool CanProcess(InputField field, PointerEventData e, TextTriggerBounds bounds)
@@ -101,56 +164,43 @@ namespace IconFix
             if (bounds.type != 2)
             {
                 // ICON_TEXT_TYPE(3) 已带名称，无需升级
-                DebugLog($"skip: bounds.type={bounds.type} iconId={bounds.iconId} index={bounds.index} field={Describe(field)}");
+                DebugLog($"skip: bounds.type={bounds.type} iconId={bounds.iconId} field={Describe(field)}");
                 return false;
             }
             return true;
         }
 
-        private static string Describe(InputField field)
+        private static void Apply(InputField field, string newText, int caret)
         {
-            if (field == null)
-            {
-                return "<null>";
-            }
-            var t = field.GetType().Name;
-            var path = field.gameObject.name;
-            var p = field.transform.parent;
-            for (var i = 0; p != null && i < 3; i++, p = p.parent)
-            {
-                path = p.name + "/" + path;
-            }
-            return $"{t}({path})";
-        }
-
-        /// <summary>普通输入框（UIInputField / UISmartInputField）的 Shift 升级处理。</summary>
-        public static void Handle(InputField field, PointerEventData e, TextTriggerBounds bounds)
-        {
-            if (field == null || !CanProcess(field, e, bounds))
-            {
-                return;
-            }
-            // 同帧只处理一次：UIInputField 的 inputFieldText 与 overText 两个 Text 都挂了同一回调
-            if (_lastFrame == Time.frameCount)
-            {
-                return;
-            }
-
-            var plainTag = LDB.signals.IconTag((int)bounds.iconId, false);
-            var newText = UpgradeAt(field.text, bounds.index, plainTag, out var caret);
-            if (newText == null)
-            {
-                DebugLog($"miss: tag={plainTag} index={bounds.index} field={Describe(field)}");
-                return;
-            }
-
             field.text = newText;
             field.caretPosition = caret;
             field.selectionAnchorPosition = caret;
             field.selectionFocusPosition = caret;
             field.ForceLabelUpdate();
-            DebugLog($"ok: field={Describe(field)} caret={caret}");
+        }
+
+        private static void Finish(InputField field, TextTriggerBounds bounds, UpgradeResult result, int caret)
+        {
+            DebugLog($"{result}: caret={caret} bounds(index={bounds.index},iconId={bounds.iconId},type={bounds.type}) field={Describe(field)}");
             _lastFrame = Time.frameCount;
+        }
+
+        /// <summary>普通输入框（UIInputField 等）的 Shift 升级处理。</summary>
+        public static void Handle(InputField field, PointerEventData e, TextTriggerBounds bounds)
+        {
+            if (field == null || !CanProcess(field, e, bounds) || _lastFrame == Time.frameCount)
+            {
+                return;
+            }
+            var caret = field.caretPosition;
+            var newText = UpgradeAtCaret(field.text, caret, out var newCaret, out var result);
+            if (newText == null)
+            {
+                Finish(field, bounds, result, caret);
+                return;
+            }
+            Apply(field, newText, newCaret);
+            Finish(field, bounds, result, newCaret);
         }
 
         /// <summary>UISmartInputField 富文本编辑器：替换后还需重算着色。</summary>
@@ -160,52 +210,38 @@ namespace IconFix
             {
                 return;
             }
-            var plainTag = LDB.signals.IconTag((int)bounds.iconId, false);
-            var newText = UpgradeAt(field.text, bounds.index, plainTag, out var caret);
+            var caret = field.caretPosition;
+            var newText = UpgradeAtCaret(field.text, caret, out var newCaret, out var result);
             if (newText == null)
             {
-                DebugLog($"miss: tag={plainTag} index={bounds.index} field={Describe(field)}");
+                Finish(field, bounds, result, caret);
                 return;
             }
-
-            field.text = newText;
-            field.caretPosition = caret;
-            field.selectionAnchorPosition = caret;
-            field.selectionFocusPosition = caret;
+            Apply(field, newText, newCaret);
             field.CalculateColorText();
-            field.ForceLabelUpdate();
-            DebugLog($"ok(smart): field={Describe(field)} caret={caret}");
-            _lastFrame = Time.frameCount;
+            Finish(field, bounds, result, newCaret);
         }
 
         /// <summary>行星标记备注（UIMarkerDesc）：替换后同步写回标记存盘并刷新窗口布局。</summary>
         public static void HandleMarker(UIMarkerDesc marker, PointerEventData e, TextTriggerBounds bounds)
         {
-            if (marker == null || marker.marker == null || marker.marker.id == 0 || !CanProcess(marker.todoInputField, e, bounds))
-            {
-                return;
-            }
-            if (_lastFrame == Time.frameCount)
+            if (marker == null || marker.marker == null || marker.marker.id == 0)
             {
                 return;
             }
             var field = marker.todoInputField;
-            if (field == null)
+            if (field == null || !CanProcess(field, e, bounds) || _lastFrame == Time.frameCount)
             {
                 return;
             }
-
-            var plainTag = LDB.signals.IconTag((int)bounds.iconId, false);
-            var newText = UpgradeAt(field.text, bounds.index, plainTag, out var caret);
+            var caret = field.caretPosition;
+            var newText = UpgradeAtCaret(field.text, caret, out var newCaret, out var result);
             if (newText == null)
             {
+                Finish(field, bounds, result, caret);
                 return;
             }
-
-            field.text = newText;
-            field.caretPosition = caret;
-            field.selectionAnchorPosition = caret;
-            field.selectionFocusPosition = caret;
+            Apply(field, newText, newCaret);
             marker.factory?.WriteMarkerComment(marker.marker.id, field.text);
             try
             {
@@ -224,7 +260,7 @@ namespace IconFix
             {
                 IconFixPlugin.Log.LogWarning($"marker layout refresh failed: {ex.Message}");
             }
-            _lastFrame = Time.frameCount;
+            Finish(field, bounds, result, newCaret);
         }
     }
 }
