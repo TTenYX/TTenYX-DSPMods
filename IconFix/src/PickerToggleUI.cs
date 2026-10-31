@@ -13,6 +13,8 @@ namespace IconFix
     {
         public const string ObjectName = "iconfix-include-name-toggle";
         private const float Gap = 10f;
+        /// <summary>标签文本在按钮内的起点 x（checkbox 20 + 间隙 4）。</summary>
+        private const float LabelStartX = 24f;
 
         private static UIButton _button;
         private static Image _checkImage;
@@ -33,10 +35,15 @@ namespace IconFix
             var existing = parent.Find(ObjectName);
             if (existing != null)
             {
-                // 重进游戏（域重载）后的旧对象：重新抓引用即可
+                // 重进游戏（域重载）后的旧对象：重新抓引用并修正布局
                 _button = existing.GetComponent<UIButton>();
                 _checkImage = FindCheckImage(picker, existing.gameObject);
                 _label = existing.GetComponentInChildren<Text>(true);
+                if (_label != null)
+                {
+                    _label.text = IconFixText.ToggleLabel;
+                    FixLabelRect(_label);
+                }
                 RefreshVisual(picker);
                 return;
             }
@@ -89,10 +96,25 @@ namespace IconFix
             _label.horizontalOverflow = HorizontalWrapMode.Overflow;
             _label.verticalOverflow = VerticalWrapMode.Overflow;
             _label.raycastTarget = false;
+            FixLabelRect(_label);
 
             _checkImage = FindCheckImage(picker, go);
 
             Layout(picker, srcRT, (RectTransform)go.transform);
+        }
+
+        /// <summary>
+        /// 把标签 rect 锚到按钮内勾选框右侧：克隆自原版的 Text 是「右缘锚 + 宽 160」，
+        /// 左对齐时文本会从按钮外左侧排进来压住勾选框；这里改为左缘锚、固定起点。
+        /// </summary>
+        private static void FixLabelRect(Text label)
+        {
+            var labelRT = (RectTransform)label.transform;
+            labelRT.anchorMin = new Vector2(0f, 0.5f);
+            labelRT.anchorMax = new Vector2(0f, 0.5f);
+            labelRT.pivot = new Vector2(0f, 0.5f);
+            labelRT.anchoredPosition = new Vector2(LabelStartX, 0f);
+            labelRT.sizeDelta = new Vector2(EstimateTextWidth(label), 30f);
         }
 
         /// <summary>克隆体里只保留一个 Text 作为标签，其余销毁（防原版 label 残留）。</summary>
@@ -170,7 +192,7 @@ namespace IconFix
             {
                 labelWidth = EstimateTextWidth(_label);
             }
-            var selfWidth = Mathf.Max(48f, 20f + labelWidth + 10f);
+            var selfWidth = Mathf.Max(48f, LabelStartX + labelWidth + 10f);
 
             // 原按钮左缘（局部 x）= anchoredPosition.x − width × pivot.x；右缘锚（pivot.x=1）时即 pos.x − width
             var srcLeft = srcRT.anchoredPosition.x - srcRT.rect.width * srcRT.pivot.x;
