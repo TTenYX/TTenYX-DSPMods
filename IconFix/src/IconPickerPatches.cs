@@ -35,7 +35,8 @@ namespace IconFix
 
         private static string IconTag(int signalId)
         {
-            return LDB.signals.IconTag(signalId, IconFixPlugin.IncludeName.Value);
+            // 勾选框状态 + Shift 临时取反（点击回调与松键同帧，Input 状态即点击瞬间状态）
+            return LDB.signals.IconTag(signalId, IconFixState.EffectiveIncludeName());
         }
 
         private static bool UIInputField_Return_Prefix(UIInputField __instance, int signalId)
