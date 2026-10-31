@@ -450,6 +450,7 @@ namespace BulletTime
                     GameStateManager.ManualPause = false;
                     GameStateManager.ApplyFrameRate(GameStateManager.LastFrameRate);
                     SyncSliderPosition();
+                    ShowStatus(""); // 清除暂停状态提示（上游路径经 OnSliderChange 清除，此分支需显式清除）
                 }
                 else
                 {
