@@ -67,6 +67,11 @@ namespace IconFix
         {
             _harmony?.UnpatchSelf();
         }
+
+        private void Update()
+        {
+            IconHoverEnabler.Tick();
+        }
     }
 
     /// <summary>勾选框最终状态计算（供补丁与自测共用）。</summary>
