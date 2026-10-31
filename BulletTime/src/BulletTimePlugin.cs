@@ -223,7 +223,7 @@ namespace BulletTime
 
         public void OnDestroy()
         {
-            SaveConfig(); // 退出时持久化帧速率档设定
+            SaveConfig();
             harmony.UnpatchSelf();
             harmony = null;
             IngameUI.Dispose();

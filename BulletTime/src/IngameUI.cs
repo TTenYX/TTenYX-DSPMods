@@ -388,7 +388,7 @@ namespace BulletTime
                 ShowStatus("");
             }
             GameStateManager.SetSpeedRatio(value/100f);
-            GameStateManager.FrameRateModeActive = false; // 滑块即离开帧速率模式
+            GameStateManager.FrameRateModeActive = false; // 拖动滑块即离开帧速率模式
 
             SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
             SetSpeedRatioText(); // 右下角实际速度/帧速度随滑块实时更新
@@ -574,7 +574,6 @@ namespace BulletTime
             {
                 OnSliderChange(target); // 位置已一致时显式结算
             }
-            SetSpeedRatioText();
         }
 
         // 把滑块位置同步到帧速率档记忆值的等价百分比（不触发 OnSliderChange 重複結算）
@@ -590,8 +589,6 @@ namespace BulletTime
         {
             if (sliderText != null) sliderText.text = $"{(int)value}%";
         }
-
-        // （Ctrl+Del 帧数时长功能已按需求移除）
 
         private static void OnAutosaveToggleChange(bool val)
         {
