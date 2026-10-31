@@ -8,6 +8,10 @@
 **Shift+左键快速插入**（默认开启，可在配置中关闭）：勾选框关闭时，按住 Shift 左键点击图标，可直接插入带名称的 `\meik-;`；
 勾选框开启时按住 Shift 点击则插入纯图标 `\meik;`，即 Shift 临时取反勾选框状态。
 
+**Shift+左键升级已有图标**（默认开启，可在配置中关闭）：在文本框中按住 Shift 左键点击已插入的**纯图标**（不含名称），
+会原地替换为带名称图标，例如 `\meik;` 变为 `\meik-;`。已带名称的图标不受影响；Ctrl+点击仍是原版的查看物品详情。
+适用于蓝图介绍、蓝图名称、星球/恒星备注、行星标记备注等所有文本框。
+
 - 作用于所有使用图标选取的输入框：蓝图介绍、蓝图名称、星球/恒星备注、行星标记备注、物流站/控制面板名称等。
 - 勾选状态跨游戏启动记忆，修改后立即生效。
 - 无前置 MOD 要求（BepInEx 5 环境即可），不写入存档。
@@ -22,6 +26,7 @@
 |---|---|---|
 | UI / IncludeNameWhenPick | false | 勾选框默认状态：开启时选取图标附带名称文本，关闭则仅插入图标 |
 | UI / ShiftClickInsertName | true | 开启后，Shift+左键点击图标临时取反勾选框状态（未勾选时 Shift+点击插入带名称文本；已勾选时插入纯图标） |
+| UI / ShiftClickUpgradeIconInText | true | 开启后，Shift+左键点击文本框中的纯图标会原地替换为带名称图标（`\meik;` → `\meik-;`） |
 
 ---
 
@@ -36,6 +41,12 @@ is kept and only the icon `\meik;` is inserted.
 **Shift+Click quick insert** (on by default, can be disabled in the config): with the checkbox off,
 holding Shift while left-clicking an icon directly inserts the named tag `\meik-;`; with the checkbox
 on, Shift+Click inserts the icon-only tag `\meik;` — Shift temporarily inverts the checkbox state.
+
+**Shift+Click upgrade existing icons** (on by default, can be disabled in the config): inside any text
+field, holding Shift and left-clicking an already-inserted **plain** icon (without a name) replaces it
+in place with the named version, e.g. `\meik;` becomes `\meik-;`. Named icons are unaffected;
+Ctrl+Click still opens the vanilla item details. Works in blueprint descriptions, names, star/planet
+memos, marker comments and every other text field.
 
 - Works with every input that opens the icon picker: blueprint description, blueprint name,
   star/planet memos, planet marker comments, logistics station / control panel names, etc.
@@ -52,3 +63,4 @@ All options live in `BepInEx\config\TTenYX.DSP.IconFix.cfg`. Toggling the checkb
 |---|---|---|
 | UI / IncludeNameWhenPick | false | Default state of the picker checkbox: when on, picking an icon also inserts its name text; when off, only the icon is inserted |
 | UI / ShiftClickInsertName | true | When on, Shift+LeftClick on an icon temporarily inverts the checkbox state (inserts the named tag with the checkbox off, the icon-only tag with the checkbox on) |
+| UI / ShiftClickUpgradeIconInText | true | When on, Shift+LeftClick on a plain icon inside a text field replaces it in place with the named version (`\meik;` → `\meik-;`) |

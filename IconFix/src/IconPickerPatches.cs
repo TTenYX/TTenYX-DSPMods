@@ -1,5 +1,7 @@
 using System;
 using HarmonyLib;
+using UnityEngine.EventSystems;
+using UnityEngine.UI.Youthcat;
 
 namespace IconFix
 {
@@ -31,6 +33,17 @@ namespace IconFix
             harmony.Patch(
                 AccessTools.Method(typeof(UISignalTagPicker), "_OnCreate"),
                 postfix: new HarmonyMethod(typeof(IconPickerPatches), nameof(SignalTagPicker_OnCreate_Postfix)));
+
+            // Shift+左键点击文本框中的纯图标 → 原地升级为带名称图标（原版 Ctrl 分支不受影响）
+            harmony.Patch(
+                AccessTools.Method(typeof(UIInputField), "OnTextTriggerClick"),
+                postfix: new HarmonyMethod(typeof(IconPickerPatches), nameof(UIInputField_Trigger_Postfix)));
+            harmony.Patch(
+                AccessTools.Method(typeof(UISmartInputField), "OnTextTriggerClick"),
+                postfix: new HarmonyMethod(typeof(IconPickerPatches), nameof(UISmartInputField_Trigger_Postfix)));
+            harmony.Patch(
+                AccessTools.Method(typeof(UIMarkerDesc), "OnTextTriggerClick"),
+                postfix: new HarmonyMethod(typeof(IconPickerPatches), nameof(UIMarkerTodo_Trigger_Postfix)));
         }
 
         private static string IconTag(int signalId)
@@ -112,6 +125,42 @@ namespace IconFix
             catch (Exception e)
             {
                 IconFixPlugin.Log.LogWarning($"toggle UI init failed: {e}");
+            }
+        }
+
+        private static void UIInputField_Trigger_Postfix(UIInputField __instance, PointerEventData e, TextTriggerBounds bounds)
+        {
+            try
+            {
+                IconTextUpgrader.Handle(__instance.inputField, e, bounds);
+            }
+            catch (Exception ex)
+            {
+                IconFixPlugin.Log.LogWarning($"icon upgrade failed: {ex.Message}");
+            }
+        }
+
+        private static void UISmartInputField_Trigger_Postfix(UISmartInputField __instance, PointerEventData e, TextTriggerBounds bounds)
+        {
+            try
+            {
+                IconTextUpgrader.HandleSmart(__instance.inputField, e, bounds);
+            }
+            catch (Exception ex)
+            {
+                IconFixPlugin.Log.LogWarning($"icon upgrade failed: {ex.Message}");
+            }
+        }
+
+        private static void UIMarkerTodo_Trigger_Postfix(UIMarkerDesc __instance, PointerEventData e, TextTriggerBounds bounds)
+        {
+            try
+            {
+                IconTextUpgrader.HandleMarker(__instance, e, bounds);
+            }
+            catch (Exception ex)
+            {
+                IconFixPlugin.Log.LogWarning($"icon upgrade failed: {ex.Message}");
             }
         }
     }

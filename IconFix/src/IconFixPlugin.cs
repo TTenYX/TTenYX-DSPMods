@@ -24,6 +24,7 @@ namespace IconFix
         internal static ManualLogSource Log;
         internal static ConfigEntry<bool> IncludeName;
         internal static ConfigEntry<bool> ShiftClickInsertName;
+        internal static ConfigEntry<bool> ShiftClickUpgradeIconInText;
         internal static IconFixPlugin Instance { get; private set; }
 
         private Harmony _harmony;
@@ -44,6 +45,12 @@ namespace IconFix
                 true,
                 "When on, Shift+LeftClick on an icon temporarily inverts the checkbox state: with the checkbox off, Shift+Click inserts the named tag \\meik-;; with the checkbox on, it inserts the icon-only tag \\meik;.\n" +
                 "开启后，Shift+左键点击图标会临时取反勾选框状态：未勾选时按住 Shift 点击插入带名称的 \\meik-;；已勾选时按住 Shift 点击则插入纯图标 \\meik;。");
+            ShiftClickUpgradeIconInText = Config.Bind(
+                "UI",
+                "ShiftClickUpgradeIconInText",
+                true,
+                "When on, Shift+LeftClick on a plain icon inside a text field upgrades it in place to the named version, e.g. \\meik; becomes \\meik-;. Works in blueprint descriptions, names, planet/star memos and marker comments. Ctrl+Click still opens the item details.\n" +
+                "开启后，在文本框中按住 Shift 左键点击不含名称的图标，会原地替换为带名称图标（如 \\meik; 变为 \\meik-;）。适用于蓝图介绍、名称、星球/恒星备注与行星标记备注。Ctrl+点击仍是查看详情。");
             _harmony = new Harmony(Guid);
             try
             {
@@ -103,7 +110,7 @@ namespace IconFix
         public static string ToggleTipTitle => L("图标附带名称", "Icon With Name");
 
         public static string ToggleTipText =>
-            L("开启时，点选图标会同时插入名称文本（\\meik-;，图标+名称）；关闭则仅插入图标（\\meik;）。\\n按住 Shift 点击图标可临时取反本选项（可在配置文件中关闭）。",
-              "When on, clicking an icon also inserts its name text (\\meik-;, icon + name); when off, only the icon (\\meik;) is inserted.\\nHold Shift while clicking an icon to temporarily invert this option (can be disabled in the config file).");
+            L("开启时，点选图标会同时插入名称文本（\\meik-;，图标+名称）；关闭则仅插入图标（\\meik;）。\\n按住 Shift 点击图标可临时取反本选项。\\n在文本框中按住 Shift 点击已插入的纯图标，可原地补上名称（Ctrl+点击为查看详情）。",
+              "When on, clicking an icon also inserts its name text (\\meik-;, icon + name); when off, only the icon (\\meik;) is inserted.\\nHold Shift while clicking an icon to temporarily invert this option.\\nHold Shift and click a plain icon inside a text field to add its name in place (Ctrl+Click opens the item details).");
     }
 }
