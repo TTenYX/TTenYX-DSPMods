@@ -1,6 +1,6 @@
 {
   "name": "IconFix",
-  "description": "Adds an \"Icon With Name\" checkbox (off by default) to the icon picker: when on, picking an icon also inserts its name text, e.g. \\meik-; (icon + name) instead of \\meik; (icon only). Shift+Click inverts the checkbox; Shift+Click a plain icon inside a text field upgrades it in place (configurable). 图标选取新增「图标附带名称」勾选框（默认关闭）：开启时选取图标附带名称文本；Shift+点击临时取反；Shift+点击文本框中的纯图标可原地补上名称（均可配置）。",
+  "description": "Icon picker checkbox: when on, picking an icon also inserts its name text. Shift+Click inverts it or upgrades a plain icon in place. 图标选取勾选框：选图标附带名称文本，Shift+点击取反或原地补名称。",
   "version_number": "1.0.0",
   "website_url": "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/IconFix",
   "dependencies": [ "xiaoye97-BepInEx-5.4.17" ]

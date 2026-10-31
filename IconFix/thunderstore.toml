@@ -1,0 +1,20 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "TTenYX"
+name = "IconFix"
+versionNumber = "1.0.0"
+description = "Icon picker checkbox: when on, picking an icon also inserts its name text. Shift+Click inverts it or upgrades a plain icon in place. 图标选取勾选框：选图标附带名称文本，Shift+点击取反或原地补名称。"
+websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/IconFix"
+containsNsfwContent = false
+
+[package.dependencies]
+xiaoye97-BepInEx = "5.4.17"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "dyson-sphere-program", ]
+
+[publish.categories]
+dyson-sphere-program = [ "quality-of-life" ]
