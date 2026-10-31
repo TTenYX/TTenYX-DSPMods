@@ -18,20 +18,20 @@
 
 每个星球条目的导航按钮**左侧**新增一个「定位」文字按钮（英文界面显示 Locate）。
 
-鼠标悬浮会弹出提示浮窗（固定三行，宽度随语言自适应），浮窗里列出三种点击方式：
+鼠标悬浮会弹出提示浮窗，浮窗里列出三种点击方式：
 
 - **左键**：打开星图并保留总控面板（看完返回时仍是原来的筛选/展开状态）；
 - **右键**：打开星图并关闭总控面板；
 - **Shift+右键**：打开星图、关闭总控面板，并把导航线指向该星球。
 
-### F3 物流塔设置批量复制粘贴
+### F3 物流塔 / 配送器设置批量复制粘贴
 
-在总控面板中选中一个物流塔后：
+在总控面板中选中一个物流塔或物流配送器后：
 
 | 按键 | 行为 |
 |---|---|
-| `<`（逗号，可配置） | 复制当前选中物流塔的设置 |
-| `>`（句号，可配置） | 粘贴到当前选中的物流塔，可以搭配多选实现批量粘贴 |
+| `<`（逗号，可配置） | 复制当前选中物流塔 / 配送器的设置 |
+| `>`（句号，可配置） | 粘贴到当前选中的物流塔 / 配送器，可以搭配多选实现批量粘贴 |
 | `Ctrl` + 点击条目 | 多选/取消多选（选中的条目会高亮）|
 | `Shift` + 点击条目 | 以当前选中条目为起点，批量选中两者之间的所有物流塔（可跨星球） |
 | `Shift` + `>` | 批量粘贴到**当前星球**上槽位设置完全相同的所有物流塔 |
@@ -47,7 +47,11 @@
 第一块与第二块还提供逐项开关：`Slot1`–`Slot5` 可单独控制粘贴时是否写入对应槽位，9 个 `Set*` 开关分别控制塔的每个设置项。
 默认全开，关闭后粘贴不会覆盖该项。
 
-安全约定：默认只改设置，**不搬运物品、不清空库存**——目标槽位已有别种物品且数量 > 0 时跳过该槽位；槽位数不足时只处理能对上的部分；大型采矿机 / 轨道采集器默认按缩减范围处理（只复制上限与供需，不复制物品种类）；配送物流、地图标记条目上按 `<`/`>` 无任何效果。
+配送器只复制它自己的设置：充电功率、物品筛选、向玩家/向箱子配送模式、配送机自动补充。
+
+充电功率**完全按复制值粘贴**，不受游戏原版范围限制（例如复制 3GW，粘贴到原版上限 300MW 的塔也保留 3GW）。
+
+安全设定：默认只改设置，**不搬运物品、不清空库存**——目标槽位已有别种物品且数量 > 0 时跳过该槽位；槽位数不足时只处理能对上的部分；大型采矿机 / 轨道采集器默认按缩减范围处理（只复制上限与供需，不复制物品种类）；地图标记等其他条目上按 `<`/`>` 无任何效果。
 
 三个可选的粘贴策略（默认均关闭）：
 
@@ -146,7 +150,7 @@ Requirements: BepInEx 5.4.17+. Drop `ControlPanelPlus.dll` into `BepInEx/plugins
 
 - **F1 Expand / collapse** — Multi-planet results collapse by default, single-planet results expand by default; a title-bar toggle button switches all rows; reopening the panel keeps the previous state (stored in the game's `astroExpands`).
 - **F2 Locate button** — A small "Locate" text button left of each planet row's navigation button (the label follows the game language); hovering it shows a three-line tooltip (width adapts to the language) with the three click modes. Left click opens the star map and keeps the panel; right click closes the panel; Shift+right click also points the navigation line at the planet.
-- **F3 Copy / paste station settings** — `<` copies the selected station, `>` pastes. `Ctrl`+click multi-selects, `Shift`+click selects a range (across planets), `Shift`+`>` batch-pastes onto all stations on the current planet with identical slot layout. Data is split into three independently switchable blocks (slots, station settings, priority), and the first two blocks have per-item switches (`Slot1`–`Slot5`, nine `Set*` toggles). By default it never moves items or clears inventories; incompatible occupied slots are skipped. Optional strategies (all off by default): `ForcePaste` overwrites a slot that holds a different item in place (keeping the station's input/output slot binding; replaced items go back to the player), `DestroyReplacedItems` destroys those items instead (also for clearing remote slots), and `AllowMinerOverflow` keeps the original slot max for vein collectors / orbital collectors and allows overflow.
+- **F3 Copy / paste station & dispenser settings** — `<` copies the selected station or logistics dispenser, `>` pastes. `Ctrl`+click multi-selects, `Shift`+click selects a range (across planets), `Shift`+`>` batch-pastes onto all stations on the current planet with identical slot layout. For stations, data is split into three independently switchable blocks (slots, station settings, priority), and the first two blocks have per-item switches (`Slot1`–`Slot5`, nine `Set*` toggles). A dispenser copies only its own settings: charging power, item filter, deliver-to-player / deliver-to-box modes, and courier auto-replenish (no slots or priority). Charging power is always pasted exactly as copied, never clamped by the vanilla range. By default it never moves items or clears inventories; incompatible occupied slots are skipped. Optional strategies (all off by default): `ForcePaste` overwrites a slot that holds a different item in place (keeping the station's input/output slot binding; replaced items go back to the player), `DestroyReplacedItems` destroys those items instead (also for clearing remote slots), and `AllowMinerOverflow` keeps the original slot max for vein collectors / orbital collectors and allows overflow.
 - **F4 Item filter intersection** — Turns the vanilla union filter into an intersection; a title-bar button toggles it instantly.
 - **F5 Astro list sorting / hotkeys** — Sorts the location dropdown by star name (first two entries pinned), adds a "current star system" scope as the third entry, stars yellow and planets indented; `PageUp`/`PageDown` step the list (Ctrl = stars only), `←`/`→` jump to the previous/next planet, `↑`/`↓` step through the result list.
 - **F6 Filter shortcuts** — Auto-filters by the item under the mouse when the panel opens; right-click a station item icon to replace the filter, `Shift`+right-click to append (max 5).

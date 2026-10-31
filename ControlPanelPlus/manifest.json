@@ -1,6 +1,6 @@
 {
   "name": "ControlPanelPlus",
-  "version_number": "1.0.0",
+  "version_number": "1.0.1",
   "website_url": "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/ControlPanelPlus",
   "description": "Quality-of-life upgrades for the logistics control panel: expand/collapse, starmap locate, station copy/paste with per-slot gates, filter intersection, remote item transfer, storage shortcuts and astro list sorting.",
   "dependencies": [

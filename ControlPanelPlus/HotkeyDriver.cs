@@ -54,22 +54,24 @@ namespace ControlPanelPlus
             KeyCode pasteKey = Cfg.PasteKey.Value;
             UIControlPanelStationInspector inspector = window.currentInspector as UIControlPanelStationInspector;
             bool hasStation = inspector != null && inspector.station != null && inspector.station.id > 0;
+            UIControlPanelDispenserInspector dispenserInspector = window.currentInspector as UIControlPanelDispenserInspector;
+            bool hasDispenser = dispenserInspector != null && dispenserInspector.dispenser != null && dispenserInspector.dispenser.id > 0;
 
             if (copyKey != KeyCode.None && copyKey != pasteKey && Input.GetKeyDown(copyKey))
             {
-                if (hasStation)
+                if (hasStation || hasDispenser)
                 {
                     StationCopyPaste.CopyFromSelection(window);
                 }
                 else
                 {
-                    CppLog.Debug("copy key pressed without a station inspector selection");
+                    CppLog.Debug("copy key pressed without a station/dispenser inspector selection");
                 }
             }
 
             if (pasteKey != KeyCode.None && Input.GetKeyDown(pasteKey))
             {
-                if (hasStation || StationCopyPaste.MultiCount > 0)
+                if (hasStation || hasDispenser || StationCopyPaste.MultiCount > 0)
                 {
                     StationCopyPaste.Paste(window, VFInput.shift);
                 }

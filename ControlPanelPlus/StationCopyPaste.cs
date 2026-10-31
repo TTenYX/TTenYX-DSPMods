@@ -77,6 +77,28 @@ namespace ControlPanelPlus
         }
     }
 
+    /// <summary>F3 clipboard for a delivery dispenser (its parameters, never its cargo).</summary>
+    public sealed class DispenserSnapshot
+    {
+        public int planetId;
+        public string name = "";
+        public long workEnergyPerTick;
+        public EPlayerDeliveryMode playerMode;
+        public EStorageDeliveryMode storageMode;
+        public int filter;
+        public bool courierAutoReplenish;
+
+        public string Summary()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(Lang.T("配送器", "Dispenser"));
+            sb.Append(Lang.T(" 物品=", " item=")).Append(filter);
+            sb.Append(Lang.T(" 向玩家=", " player=")).Append(playerMode);
+            sb.Append(Lang.T(" 向箱子=", " storage=")).Append(storageMode);
+            return sb.ToString();
+        }
+    }
+
     internal sealed class PasteResult
     {
         public int slotsApplied;
@@ -99,6 +121,7 @@ namespace ControlPanelPlus
     public static class StationCopyPaste
     {
         private static StationSnapshot _clipboard;
+        private static DispenserSnapshot _dispenserClipboard;
         private static readonly HashSet<long> Multi = new HashSet<long>();
         private static string _filterSignature;
 
@@ -111,6 +134,7 @@ namespace ControlPanelPlus
         public static void ClearClipboard()
         {
             _clipboard = null;
+            _dispenserClipboard = null;
         }
 
         /// <summary>Toggle multi-select by target instead of by entry instance (self test entry point).</summary>
@@ -198,11 +222,10 @@ namespace ControlPanelPlus
         public static bool ToggleMultiSelect(UIControlPanelObjectEntry entry)
         {
             if (entry == null || !entry.inUse) return false;
-            if (!IsStationType(entry.target.entryType)) return false;
+            if (!IsPasteableType(entry.target.entryType)) return false;
             ControlPanelTarget target = entry.target;
             if (target.astroId == 0 || target.objId == 0) return false;
-            StationComponent station = ResolveStation(target.astroId, target.objId);
-            if (station == null || station.id <= 0) return false;
+            if (!HasComponent(target)) return false;
 
             long key = Key(target.astroId, target.objId);
 
@@ -213,8 +236,8 @@ namespace ControlPanelPlus
             {
                 ControlPanelTarget selected = window.selection;
                 long selectedKey = Key(selected.astroId, selected.objId);
-                if (IsStationType(selected.entryType) && selectedKey != key && !Multi.Contains(selectedKey)
-                    && ResolveStation(selected.astroId, selected.objId) != null)
+                if (IsPasteableType(selected.entryType) && selectedKey != key && !Multi.Contains(selectedKey)
+                    && HasComponent(selected))
                 {
                     Multi.Add(selectedKey);
                 }
@@ -278,6 +301,18 @@ namespace ControlPanelPlus
                    || type == EControlPanelEntryType.VeinCollector;
         }
 
+        /// <summary>Everything F3 can copy from and paste to (stations plus delivery dispensers).</summary>
+        public static bool IsPasteableType(EControlPanelEntryType type)
+        {
+            return IsStationType(type) || type == EControlPanelEntryType.Dispenser;
+        }
+
+        private static bool HasComponent(ControlPanelTarget target)
+        {
+            return ResolveStation(target.astroId, target.objId) != null
+                   || ResolveDispenser(target.astroId, target.objId) != null;
+        }
+
         private static int IndexOf(List<ControlPanelTarget> results, ControlPanelTarget target)
         {
             if (target.isNull) return -1;
@@ -301,6 +336,18 @@ namespace ControlPanelPlus
 
         public static void CopyFromSelection(UIControlPanelWindow w)
         {
+            // delivery dispenser first: it has its own inspector
+            UIControlPanelDispenserInspector dispenserInspector = w != null ? w.currentInspector as UIControlPanelDispenserInspector : null;
+            if (dispenserInspector != null && dispenserInspector.dispenser != null && dispenserInspector.dispenser.id > 0
+                && dispenserInspector.factory != null)
+            {
+                _dispenserClipboard = CaptureDispenser(dispenserInspector.dispenser, dispenserInspector.factory);
+                _clipboard = null;
+                CppLog.Info("copied dispenser settings: " + _dispenserClipboard.Summary());
+                Tip(Lang.T("已复制：", "Copied: ") + _dispenserClipboard.Summary());
+                return;
+            }
+
             UIControlPanelStationInspector inspector = w != null ? w.currentInspector as UIControlPanelStationInspector : null;
             if (inspector == null || inspector.station == null || inspector.factory == null || inspector.station.id <= 0)
             {
@@ -309,8 +356,25 @@ namespace ControlPanelPlus
             }
 
             _clipboard = Capture(inspector.station, inspector.factory);
+            _dispenserClipboard = null;
             CppLog.Info("copied station settings: " + _clipboard.Summary());
             Tip(Lang.T("已复制：", "Copied: ") + _clipboard.Summary());
+        }
+
+        private static DispenserSnapshot CaptureDispenser(DispenserComponent dispenser, PlanetFactory factory)
+        {
+            DispenserSnapshot snap = new DispenserSnapshot();
+            snap.planetId = factory.planetId;
+            snap.name = SafeExtraInfo(factory, dispenser.entityId);
+            if (dispenser.pcId > 0 && dispenser.pcId < factory.powerSystem.consumerPool.Length)
+            {
+                snap.workEnergyPerTick = factory.powerSystem.consumerPool[dispenser.pcId].workEnergyPerTick;
+            }
+            snap.playerMode = dispenser.playerMode;
+            snap.storageMode = dispenser.storageMode;
+            snap.filter = dispenser.filter;
+            snap.courierAutoReplenish = dispenser.courierAutoReplenish;
+            return snap;
         }
 
         private static StationSnapshot Capture(StationComponent station, PlanetFactory factory)
@@ -401,6 +465,11 @@ namespace ControlPanelPlus
 
         public static void Paste(UIControlPanelWindow w, bool batch)
         {
+            if (_dispenserClipboard != null)
+            {
+                PasteDispensers(w);
+                return;
+            }
             if (_clipboard == null)
             {
                 Tip(Lang.T("剪贴板为空：先选中物流塔按复制键", "Clipboard is empty: select a station and press the copy key first"));
@@ -547,6 +616,92 @@ namespace ControlPanelPlus
             Tip(batchMessage);
         }
 
+        private static void PasteDispensers(UIControlPanelWindow w)
+        {
+            try
+            {
+                List<DispenserComponent> targets = new List<DispenserComponent>();
+                List<PlanetFactory> factories = new List<PlanetFactory>();
+
+                if (Multi.Count > 0)
+                {
+                    foreach (long key in Multi)
+                    {
+                        DispenserComponent dispenser = ResolveDispenser(KeyAstro(key), KeyObj(key));
+                        PlanetFactory factory = ResolveFactory(KeyAstro(key));
+                        if (dispenser != null && factory != null)
+                        {
+                            targets.Add(dispenser);
+                            factories.Add(factory);
+                        }
+                    }
+                }
+                else
+                {
+                    UIControlPanelDispenserInspector inspector = w != null ? w.currentInspector as UIControlPanelDispenserInspector : null;
+                    if (inspector != null && inspector.dispenser != null && inspector.dispenser.id > 0 && inspector.factory != null)
+                    {
+                        targets.Add(inspector.dispenser);
+                        factories.Add(inspector.factory);
+                    }
+                }
+
+                if (targets.Count == 0)
+                {
+                    Tip(Lang.T("请先在左侧选中一个配送器再粘贴", "Select a dispenser on the left before pasting"));
+                    return;
+                }
+
+                int ok = 0;
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    ApplyDispenserTo(targets[i], factories[i]);
+                    CppLog.Debug($"pasted dispenser to [{DescribeEntity(factories[i], targets[i].entityId)}]");
+                    ok++;
+                }
+                Tip(Lang.T($"已粘贴到 {ok} 个配送器", $"Pasted to {ok} dispenser(s)"));
+            }
+            catch (Exception e)
+            {
+                CppLog.Error("dispenser paste failed: " + e);
+                Tip(Lang.T("粘贴失败，详见 BepInEx 日志", "Paste failed, see the BepInEx log"));
+            }
+        }
+
+        private static void ApplyDispenserTo(DispenserComponent target, PlanetFactory factory)
+        {
+            if (Cfg.SetChargePower.Value && target.pcId > 0 && target.pcId < factory.powerSystem.consumerPool.Length
+                && _dispenserClipboard.workEnergyPerTick > 0)
+            {
+                // exact copied charging power: never clamped by the prefab range
+                factory.powerSystem.consumerPool[target.pcId].workEnergyPerTick = _dispenserClipboard.workEnergyPerTick;
+            }
+            if (Cfg.EnableSettings.Value)
+            {
+                factory.transport.SetDispenserFilter(target.id, _dispenserClipboard.filter);
+                factory.transport.SetDispenserPlayerDeliveryMode(target.id, _dispenserClipboard.playerMode);
+                factory.transport.SetDispenserStorageDeliveryMode(target.id, _dispenserClipboard.storageMode);
+                target.courierAutoReplenish = _dispenserClipboard.courierAutoReplenish;
+            }
+        }
+
+        private static DispenserComponent ResolveDispenser(int astroId, int entityId)
+        {
+            PlanetFactory factory = ResolveFactory(astroId);
+            if (factory == null) return null;
+            if (entityId <= 0 || entityId >= factory.entityPool.Length) return null;
+            int dispenserId = factory.entityPool[entityId].dispenserId;
+            if (dispenserId <= 0 || dispenserId >= factory.transport.dispenserPool.Length) return null;
+            DispenserComponent dispenser = factory.transport.dispenserPool[dispenserId];
+            return dispenser != null && dispenser.id == dispenserId ? dispenser : null;
+        }
+
+        private static string DescribeEntity(PlanetFactory factory, int entityId)
+        {
+            string name = SafeExtraInfo(factory, entityId);
+            return string.IsNullOrEmpty(name) ? "#" + entityId : factory.planet.displayName + "/" + name;
+        }
+
         private static bool SlotLayoutMatches(StationComponent station, StationSnapshot snap)
         {
             if (station.storage == null || snap.slots == null) return false;
@@ -679,18 +834,12 @@ namespace ControlPanelPlus
 
         private static void ApplySettings(StationComponent target, PlanetFactory factory)
         {
-            if (Cfg.SetChargePower.Value && target.pcId > 0 && target.pcId < factory.powerSystem.consumerPool.Length)
+            if (Cfg.SetChargePower.Value && target.pcId > 0 && target.pcId < factory.powerSystem.consumerPool.Length
+                && _clipboard.workEnergyPerTick > 0)
             {
-                long chargePower = _clipboard.workEnergyPerTick;
-                long prefab = WorkEnergyPrefab(factory, target);
-                if (prefab > 0)
-                {
-                    long min = prefab / 2;
-                    long max = prefab * 5;
-                    if (chargePower < min) chargePower = min;
-                    if (chargePower > max) chargePower = max;
-                }
-                factory.powerSystem.consumerPool[target.pcId].workEnergyPerTick = chargePower;
+                // Paste the copied charging power exactly as copied: never clamp it to the prefab range,
+                // so an over-clocked source (e.g. 3GW on a 300MW tower) keeps its exact value on the target.
+                factory.powerSystem.consumerPool[target.pcId].workEnergyPerTick = _clipboard.workEnergyPerTick;
             }
 
             if (target.isStellar)
@@ -735,24 +884,6 @@ namespace ControlPanelPlus
             {
                 return 0;
             }
-        }
-
-        private static long WorkEnergyPrefab(PlanetFactory factory, StationComponent station)
-        {
-            try
-            {
-                EntityData entity = factory.entityPool[station.entityId];
-                ItemProto proto = LDB.items.Select(entity.protoId);
-                if (proto != null && proto.prefabDesc != null)
-                {
-                    return proto.prefabDesc.workEnergyPerTick;
-                }
-            }
-            catch (Exception)
-            {
-                // fall through
-            }
-            return 0;
         }
 
         private static void ApplyPriority(StationComponent target, PlanetFactory factory, PasteResult result)
@@ -840,7 +971,8 @@ namespace ControlPanelPlus
         public static bool Prefix(UIControlPanelObjectEntry __instance)
         {
             if (!Cfg.Enabled.Value) return true;
-            if (!(__instance is UIControlPanelStationEntry) && !(__instance is UIControlPanelAdvancedMinerEntry)) return true;
+            if (!(__instance is UIControlPanelStationEntry) && !(__instance is UIControlPanelAdvancedMinerEntry)
+                && !(__instance is UIControlPanelDispenserEntry)) return true;
             try
             {
                 if (VFInput.control)
@@ -896,6 +1028,24 @@ namespace ControlPanelPlus
             catch (Exception e)
             {
                 CppLog.Error("miner highlight failed: " + e);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(UIControlPanelDispenserEntry), "_OnUpdate")]
+    internal static class DispenserEntryHighlightPatch
+    {
+        [HarmonyPostfix]
+        public static void Postfix(UIControlPanelDispenserEntry __instance)
+        {
+            if (!Cfg.Enabled.Value || StationCopyPaste.MultiCount == 0) return;
+            try
+            {
+                StationCopyPaste.ApplyHighlight(__instance);
+            }
+            catch (Exception e)
+            {
+                CppLog.Error("dispenser highlight failed: " + e);
             }
         }
     }

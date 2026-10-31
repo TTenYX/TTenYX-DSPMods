@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "TTenYX"
 name = "ControlPanelPlus"
-versionNumber = "1.0.0"
+versionNumber = "1.0.1"
 description = "Quality-of-life upgrades for the logistics control panel: expand/collapse, starmap locate, station copy/paste with per-slot gates, filter intersection, remote item transfer, storage shortcuts and astro list sorting."
 websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods"
 containsNsfwContent = false
@@ -23,3 +23,6 @@ target = ""
 [publish]
 repository = "https://thunderstore.io"
 communities = [ "dyson-sphere-program", ]
+
+[publish.categories]
+dyson-sphere-program = [ "logistics", "quality-of-life" ]
