@@ -25,6 +25,7 @@ namespace IconFix
         internal static ConfigEntry<bool> IncludeName;
         internal static ConfigEntry<bool> ShiftClickInsertName;
         internal static ConfigEntry<bool> ShiftClickUpgradeIconInText;
+        internal static ConfigEntry<bool> DebugLog;
         internal static IconFixPlugin Instance { get; private set; }
 
         private Harmony _harmony;
@@ -51,6 +52,12 @@ namespace IconFix
                 true,
                 "When on, Shift+LeftClick on a plain icon inside a text field upgrades it in place to the named version, e.g. \\meik; becomes \\meik-;. Works in blueprint descriptions, names, planet/star memos and marker comments. Ctrl+Click still opens the item details.\n" +
                 "开启后，在文本框中按住 Shift 左键点击不含名称的图标，会原地替换为带名称图标（如 \\meik; 变为 \\meik-;）。适用于蓝图介绍、名称、星球/恒星备注与行星标记备注。Ctrl+点击仍是查看详情。");
+            DebugLog = Config.Bind(
+                "UI",
+                "DebugLog",
+                true,
+                "Print one log line per Shift+Click icon-upgrade attempt to BepInEx/LogOutput.log (for troubleshooting).\n" +
+                "每次 Shift+点击图标升级尝试都会在 BepInEx/LogOutput.log 输出一行日志（用于排查）。");
             _harmony = new Harmony(Guid);
             try
             {

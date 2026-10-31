@@ -68,7 +68,15 @@ namespace IconFix
             return best;
         }
 
-        private static bool CanProcess(PointerEventData e, TextTriggerBounds bounds)
+        private static void DebugLog(string msg)
+        {
+            if (IconFixPlugin.DebugLog != null && IconFixPlugin.DebugLog.Value)
+            {
+                IconFixPlugin.Log.LogInfo("[upgrade] " + msg);
+            }
+        }
+
+        private static bool CanProcess(InputField field, PointerEventData e, TextTriggerBounds bounds)
         {
             if (IconFixPlugin.ShiftClickUpgradeIconInText == null || !IconFixPlugin.ShiftClickUpgradeIconInText.Value)
             {
@@ -76,24 +84,49 @@ namespace IconFix
             }
             if (e == null || e.button != PointerEventData.InputButton.Left)
             {
+                DebugLog($"skip: button={e?.button} field={Describe(field)}");
                 return false;
             }
             if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
             {
+                DebugLog($"skip: no shift field={Describe(field)}");
                 return false;
             }
             if (VFInput.control)
             {
                 // Ctrl+Shift 同按时让原版「查看详情」行为独占，避免两个效果叠加
+                DebugLog($"skip: ctrl held field={Describe(field)}");
                 return false;
             }
-            return bounds.type == 2; // ICON_TYPE：不含文本的图标
+            if (bounds.type != 2)
+            {
+                // ICON_TEXT_TYPE(3) 已带名称，无需升级
+                DebugLog($"skip: bounds.type={bounds.type} iconId={bounds.iconId} index={bounds.index} field={Describe(field)}");
+                return false;
+            }
+            return true;
+        }
+
+        private static string Describe(InputField field)
+        {
+            if (field == null)
+            {
+                return "<null>";
+            }
+            var t = field.GetType().Name;
+            var path = field.gameObject.name;
+            var p = field.transform.parent;
+            for (var i = 0; p != null && i < 3; i++, p = p.parent)
+            {
+                path = p.name + "/" + path;
+            }
+            return $"{t}({path})";
         }
 
         /// <summary>普通输入框（UIInputField / UISmartInputField）的 Shift 升级处理。</summary>
         public static void Handle(InputField field, PointerEventData e, TextTriggerBounds bounds)
         {
-            if (field == null || !CanProcess(e, bounds))
+            if (field == null || !CanProcess(field, e, bounds))
             {
                 return;
             }
@@ -107,6 +140,7 @@ namespace IconFix
             var newText = UpgradeAt(field.text, bounds.index, plainTag, out var caret);
             if (newText == null)
             {
+                DebugLog($"miss: tag={plainTag} index={bounds.index} field={Describe(field)}");
                 return;
             }
 
@@ -115,13 +149,14 @@ namespace IconFix
             field.selectionAnchorPosition = caret;
             field.selectionFocusPosition = caret;
             field.ForceLabelUpdate();
+            DebugLog($"ok: field={Describe(field)} caret={caret}");
             _lastFrame = Time.frameCount;
         }
 
         /// <summary>UISmartInputField 富文本编辑器：替换后还需重算着色。</summary>
         public static void HandleSmart(InputField field, PointerEventData e, TextTriggerBounds bounds)
         {
-            if (field == null || !CanProcess(e, bounds) || _lastFrame == Time.frameCount)
+            if (field == null || !CanProcess(field, e, bounds) || _lastFrame == Time.frameCount)
             {
                 return;
             }
@@ -129,6 +164,7 @@ namespace IconFix
             var newText = UpgradeAt(field.text, bounds.index, plainTag, out var caret);
             if (newText == null)
             {
+                DebugLog($"miss: tag={plainTag} index={bounds.index} field={Describe(field)}");
                 return;
             }
 
@@ -138,13 +174,14 @@ namespace IconFix
             field.selectionFocusPosition = caret;
             field.CalculateColorText();
             field.ForceLabelUpdate();
+            DebugLog($"ok(smart): field={Describe(field)} caret={caret}");
             _lastFrame = Time.frameCount;
         }
 
         /// <summary>行星标记备注（UIMarkerDesc）：替换后同步写回标记存盘并刷新窗口布局。</summary>
         public static void HandleMarker(UIMarkerDesc marker, PointerEventData e, TextTriggerBounds bounds)
         {
-            if (marker == null || marker.marker == null || marker.marker.id == 0 || !CanProcess(e, bounds))
+            if (marker == null || marker.marker == null || marker.marker.id == 0 || !CanProcess(marker.todoInputField, e, bounds))
             {
                 return;
             }
