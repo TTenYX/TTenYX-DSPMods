@@ -380,7 +380,7 @@ namespace BulletTime
             else
             {
                 GameStateManager.ManualPause = false;
-                sliderText.text = $"{(int)value}%";
+                UpdateSliderText(value);
                 if (GameStateManager.Pause && NebulaCompat.IsMultiplayerActive)
                 {
                     NebulaCompat.SendPacket(PauseEvent.Resume);                    
@@ -510,18 +510,6 @@ namespace BulletTime
             }
         }
 
-        // 滑块倍速档：重置加速档，重新应用滑块当前设定值
-        public static void OnKeySliderSpeed()
-        {
-            if (NebulaCompat.IsClient) return; // 客户端不可控制速度
-            if (!GameStateManager.Interactable) return; // 自動存檔時停中不接受切換
-            if (slider == null) return; // 主菜单中 UI 尚未创建
-            ExitPauseIfPaused();
-            FPSController.SetFixUPS(0); // 重置加速档
-            OnSliderChange(slider.value);
-            SetSpeedRatioText();
-        }
-
         // 100% 速度档：滑块归位 100%，重置加速档，恢复标准 1x
         public static void OnKeyFullSpeed()
         {
@@ -532,6 +520,7 @@ namespace BulletTime
             FPSController.SetFixUPS(0);
             GameStateManager.SetSpeedRatio(1f);
             slider.SetValueWithoutNotify(100f);
+            UpdateSliderText(100f); // 同步滑块文字（SetValueWithoutNotify 不触发 onValueChanged）
             SetSpeedRatioText();
         }
 
@@ -552,6 +541,13 @@ namespace BulletTime
         {
             if (slider == null) return;
             slider.SetValueWithoutNotify(Mathf.Clamp((float)(GameStateManager.LastFrameRate / 60.0 * 100.0), 0f, 100f));
+            UpdateSliderText(slider.value);
+        }
+
+        // 滑块位置经 SetValueWithoutNotify 变化时，手动同步滑块上的百分比文字
+        private static void UpdateSliderText(float value)
+        {
+            if (sliderText != null) sliderText.text = $"{(int)value}%";
         }
 
         // （Ctrl+Del 帧数时长功能已按需求移除）

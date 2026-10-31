@@ -33,7 +33,6 @@ namespace BulletTime
         public static ConfigEntry<KeyboardShortcut> KeySpeedDown;
         public static ConfigEntry<KeyCode> KeyPause;
         public static ConfigEntry<KeyCode> KeyStepOneFrame;
-        public static ConfigEntry<KeyboardShortcut> KeySliderSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFullSpeed;
         public static ConfigEntry<KeyboardShortcut> KeyFrameRate;
 
@@ -57,7 +56,6 @@ namespace BulletTime
             KeySpeedDown = Config.Bind("Hotkey", "KeySpeedDown", new KeyboardShortcut(), "Keyboard shortcut for speed down\n减速的热键");
             KeyPause = Config.Bind("Hotkey", "KeyPause", KeyCode.Pause, "Hotkey for toggling special pause mode\n战术暂停(世界停止+画面提示)的热键");
             KeyStepOneFrame = Config.Bind("Hotkey", "KeyStepOneFrame", KeyCode.None, "Hotkey to forward 1 frame in pause mode\n暂停模式下前进1帧的热键");
-            KeySliderSpeed = Config.Bind("Hotkey", "KeySliderSpeed", new KeyboardShortcut(KeyCode.End, KeyCode.LeftControl), "Hotkey for the slider speed preset (reset the speedup track and re-apply the slider value)\n切换到滑块倍速档的热键（重置加速档并重新应用滑块当前设定值）");
             KeyFullSpeed = Config.Bind("Hotkey", "KeyFullSpeed", new KeyboardShortcut(KeyCode.Home, KeyCode.LeftControl), "Hotkey for the 100% speed preset (standard 1x speed)\n切换到 100% 速度档（标准 1 倍速）的热键");
             KeyFrameRate = Config.Bind("Hotkey", "KeyFrameRate", new KeyboardShortcut(KeyCode.Insert, KeyCode.LeftControl), "Hotkey for the frame-rate preset (restore the last frame-rate setting)\n切换到帧速率档的热键（恢复上次帧速率设定值）");
 
@@ -184,11 +182,6 @@ namespace BulletTime
             {
                 Log.Debug("KeyStepOneFrame");
                 IngameUI.OnKeyStepOneFrame();
-            }
-            if (KeySliderSpeed.Value.IsDown())
-            {
-                Log.Debug("KeySliderSpeed");
-                IngameUI.OnKeySliderSpeed();
             }
             if (KeyFullSpeed.Value.IsDown())
             {
