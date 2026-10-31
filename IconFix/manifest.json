@@ -1,0 +1,7 @@
+{
+  "name": "IconFix",
+  "description": "Adds a checkbox (on by default) to the icon picker: when on, picking an icon also inserts its name text, e.g. \\meik-; (icon + name) instead of \\meik; (icon only). 图标选取新增勾选框（默认开启）：开启时选取图标会附带名称文本，如 \\meik-;（图标+名称）；关闭则仅插入图标。",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/IconFix",
+  "dependencies": [ "xiaoye97-BepInEx-5.4.17" ]
+}

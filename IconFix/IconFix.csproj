@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<RootNamespace>IconFix</RootNamespace>
+		<AssemblyName>IconFix</AssemblyName>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<FileAlignment>512</FileAlignment>
+		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<!--
+		  不把 git 修订号编进 AssemblyInformationalVersion：保证任意检出、任意路径
+		  都产出同一个 DLL（SHA256 稳定，便于部署校验）。版本溯源用 git 标签。
+		-->
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+		<PackageId>IconFix</PackageId>
+		<BepInExPluginGuid>TTenYX.DSP.IconFix</BepInExPluginGuid>
+		<Description>Add a checkbox to the icon picker: when on, picking an icon also inserts its name text | 图标选取新增勾选框：开启时选取图标会附带名称文本</Description>
+		<Version>1.0.0</Version>
+		<Authors>TTenYX</Authors>
+		<LangVersion>latest</LangVersion>
+		<!-- 本地离线源优先（仓库根 .work/offline-feed），再回退 BepInEx 官方源 -->
+		<RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)..\..\.work\offline-feed;https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="BepInEx.Core" Version="5.4.21" />
+		<PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
+		<PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
+		<PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" />
+	</ItemGroup>
+</Project>
