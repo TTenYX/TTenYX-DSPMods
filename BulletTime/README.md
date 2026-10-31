@@ -28,7 +28,7 @@ You can also advance the game by a single frame using the `KeyStepOneFrame` hotk
 
 #### 4\. Preset Speed Slots (Hotkeys)
   - **What it does:** Four hotkeys switch between speed presets: `Pause` toggles the tactical pause, `Ctrl+Home` resets to standard 1x speed (100%) and memorizes the current slider value, `Ctrl+End` restores that memorized slider speed, and `Ctrl+Ins` restores the last frame-rate setting. All of them can be changed in the config (`KeyPause` / `KeyFullSpeed` / `KeySliderSpeed` / `KeyFrameRate`).
-  - **Note:** Pressing any non-pause preset key while in tactical pause first releases the pause. The presets are unavailable during the background-autosave freeze, and in multiplayer they are host-only.
+  - **Note:** Pressing any non-pause preset key while in tactical pause first releases the pause. Pressing `Pause` again resumes exactly the speed that was active before the pause (frame-rate presets restore their exact value). The presets are unavailable during the background-autosave freeze, and in multiplayer they are host-only.
 
 #### 5\. Speed Indicator
   - **What it does:** The bottom-right speed indicator shows the actual speed together with the frame speed below the speed buttons (for example `60F/s 1x`); it is hidden while paused.
@@ -135,6 +135,7 @@ After running the game once with the mod installed, a config file will be genera
 
 #### 4\. 预设档位热键
   - **功能介绍：** 四个热键在速度档位之间切换：`Pause` 切换战术暂停，`Ctrl+Home` 恢复标准 1 倍速（100%）并自动记忆当前滑块值，`Ctrl+End` 恢复记忆的滑块值，`Ctrl+Ins` 恢复上次帧速率设定值。所有按键都可在配置文件中修改（`KeyPause` / `KeyFullSpeed` / `KeySliderSpeed` / `KeyFrameRate`）。
+  - **暂停恢复：** 再次按下 `Pause` 解除暂停时，精确回到暂停前的速度——帧速率档恢复精确的帧速率设定值，不退化为滑块等效百分比。
   - **请注意：** 在战术暂停中按下任意非暂停档热键，会先解除暂停再切换档位。后台自动存档时停期间预设档位不可用；联机时预设档位仅主机可用。
 
 #### 5\. 速度指示

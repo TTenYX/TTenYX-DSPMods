@@ -388,6 +388,7 @@ namespace BulletTime
                 ShowStatus("");
             }
             GameStateManager.SetSpeedRatio(value/100f);
+            GameStateManager.FrameRateModeActive = false; // 滑块即离开帧速率模式
 
             SetHotkeyPauseMode(false); //當滑條有任何變化時取消熱鍵時停
             SetSpeedRatioText(); // 右下角实际速度/帧速度随滑块实时更新
@@ -440,9 +441,21 @@ namespace BulletTime
                         NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Pause);
                 }
             }
-            else if (GameStateManager.Interactable) //如果不是在自動存檔中, 回歸滑條設定值
+            else if (GameStateManager.Interactable) //如果不是在自動存檔中, 回歸暫停前的模式
             {
-                OnSliderChange(slider.value);                
+                if (GameStateManager.FrameRateModeActive)
+                {
+                    // 帧速率档暂停：精确回到 FrameRate 的帧速率（滑块 <1% 无法表达整数百分比）
+                    GameStateManager.SetPauseMode(false);
+                    GameStateManager.ManualPause = false;
+                    GameStateManager.ApplyFrameRate(GameStateManager.LastFrameRate);
+                    SyncSliderPosition();
+                }
+                else
+                {
+                    OnSliderChange(slider.value); // 回归滑块设定值
+                }
+                SetSpeedRatioText();
                 if (NebulaCompat.IsMultiplayerActive) // 主機廣播恢復訊息
                     NebulaCompat.SendPlayerActionPacket(EPlayerSpeedAction.Resume);
             }
@@ -525,6 +538,7 @@ namespace BulletTime
             }
             FPSController.SetFixUPS(0);
             GameStateManager.SetSpeedRatio(1f);
+            GameStateManager.FrameRateModeActive = false;
             slider.SetValueWithoutNotify(100f);
             UpdateSliderText(100f); // 同步滑块文字（SetValueWithoutNotify 不触发 onValueChanged）
             SetSpeedRatioText();

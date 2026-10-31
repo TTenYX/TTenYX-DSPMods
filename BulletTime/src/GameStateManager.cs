@@ -18,6 +18,7 @@ namespace BulletTime
         public static bool LockFactory { get; private set; } = false; // Lock all interaction on local planet
         public static float SkipRatio { get; private set; }
         public static double LastFrameRate { get; set; } = 60; // 帧速率档的记忆速度（F/s，运行期更新）
+        public static bool FrameRateModeActive { get; set; } // 帧速率档是否为最后激活的速度模式（暂停恢复时用于精确回归）
         public static float LastSliderSpeed { get; set; } = 100; // 滑块减速模式的记忆速度（百分比，运行期更新）
         public static Vector3 PlayerPosition { get; set; } // Lock player position in hotkey pause
 
@@ -46,6 +47,7 @@ namespace BulletTime
             if (fps < 0.06) fps = 0.06; // 0.001x
             if (fps > 6000.0) fps = 6000.0; // 100x
             LastFrameRate = fps;
+            FrameRateModeActive = true;
             if (BulletTimePlugin.FrameRate != null) BulletTimePlugin.FrameRate.Value = (float)fps; // 回写配置，跨存档保持
             if (fps <= 60.0)
             {
@@ -66,6 +68,7 @@ namespace BulletTime
         // 退出游戏时重置帧速率档状态
         public static void ResetFrameRateState()
         {
+            FrameRateModeActive = false;
             LastFrameRate = BulletTimePlugin.FrameRate != null ? BulletTimePlugin.FrameRate.Value : 60f;
             LastSliderSpeed = BulletTimePlugin.SliderSpeed != null ? BulletTimePlugin.SliderSpeed.Value : 100f;
         }
