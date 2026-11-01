@@ -1,9 +1,0 @@
-﻿文件：6k太阳帆.txt
-  primaryAreaIdx=2 cursorTargetArea=2 cursorOffset=(25,13) dragBox=(50,132)
-  areas=3 buildings=4861
-    area 0: parent=1 tropicAnchor=3 segments=120 anchor=(2,-3) size=30x3
-    area 1: parent=2 tropicAnchor=4 segments=160 anchor=(3,-50) size=40x50
-    area 2: parent=-1 tropicAnchor=0 segments=200 anchor=(0,0) size=50x79
-  建筑 areaIndex 分布：区域0:4861个
-    区域0: y -0.38..131.40, x -0.47..599.48, z -0.00..5.00
-  按声明高度顺序堆叠：区域0: 0..3 | 区域1: 3..53 | 区域2: 53..132（总 132 格）
