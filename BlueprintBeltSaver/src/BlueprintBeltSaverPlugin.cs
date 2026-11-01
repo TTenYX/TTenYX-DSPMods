@@ -1480,11 +1480,19 @@ namespace BlueprintBeltSaver
             double modelMs = 0;
             try
             {
+                // 004.15 门禁反馈重跑循环：拓扑门禁报跨线/引用丢失时，把失败附件的目标窗口
+                // （目标+原始前后邻居，按 source 数组位置传递，Clone 之间对象身份不通）作为
+                // 额外锚点重跑（≤4 轮）。锚点即链边界，窗口内原折线形状原样保留 → 目标跨度
+                // 与基线逐字相同，binder 不再二次重绑（1080 分流器#1971/#1973 实证闭环）。
+                List<int> extraAnchors = null;
+                for (int attempt = 0; ; attempt++)
+                {
                 BlueprintData bp = source.Clone();
-                if (bp == null || bp.buildings == null)
+                if (bp == null || bp.buildings == null || bp.buildings.Length == 0)
                 {
                     // 游戏的 Clone 是 ToBase64String → FromBase64String 往返，失败时返回 null
-                    // 而不是抛异常。拿到空说明原件无法安全序列化往返，直接放弃本次省带。
+                    // 而不是抛异常。拿到空（null 或零建筑）说明原件无法安全序列化往返
+                    // （如 80环带 样本缺头部字段），直接放弃本次省带，保留原件。
                     Log.Warn("原件蓝图序列化往返失败（Clone 返回空）；保留原件。");
                     _status = _text.CloneFailed;
                     hardFailure = true;
@@ -1547,16 +1555,30 @@ namespace BlueprintBeltSaver
                 // → Clone 后 36 线），并非优化器所为；门禁只对账"优化器造成的跨线改写"。
                 // 引用是就地改写的，基线事后不可恢复，必须在此抓取。
                 var preMergeLines = LinesOfBlueprint(preMerge, IsBelt);
-                var preMergeRefs = new Dictionary<int, (int inLine, int outLine)>();
+                // 004.15：基线引用快照必须连**目标对象**一起抓——Optimize 会就地改写
+                // preMerge 的引用，事后读 preMerge[i].inputObj/outputObj 拿到的是改写后的
+                // 新节点；门禁反馈重跑需要的是基线目标本体（锚定窗口用）。
+                var preMergeRefs = new Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)>();
                 for (int i = 0; i < preMerge.Length; i++)
                 {
                     var n = preMerge[i];
                     if (n == null || IsBelt(n)) continue;
-                    int inLine = n.inputObj != null && IsBelt(n.inputObj) && preMergeLines.TryGetValue(n.inputObj, out int li) ? li : -1;
-                    int outLine = n.outputObj != null && IsBelt(n.outputObj) && preMergeLines.TryGetValue(n.outputObj, out int lo) ? lo : -1;
-                    preMergeRefs[i] = (inLine, outLine);
+                    var inT = n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null;
+                    var outT = n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null;
+                    int inLine = inT != null && preMergeLines.TryGetValue(inT, out int li) ? li : -1;
+                    int outLine = outT != null && preMergeLines.TryGetValue(outT, out int lo) ? lo : -1;
+                    preMergeRefs[i] = (inT, outT, inLine, outLine);
                 }
-                bp.buildings = BeltPathOptimizer.Optimize(bp.buildings, IsBelt, b => capForOptimize, meters, out report, _rebindSorterLinks.Value, !usedResample, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
+                // 004.15：带节点的基线引用图同样要快照（T 的引用也会被就地改写，重跑窗口
+                // 需要 T 的"基线邻居"而非现邻居）。
+                var beltBaseRefs = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                foreach (var n in preMerge)
+                {
+                    if (n == null || !IsBelt(n)) continue;
+                    beltBaseRefs[n] = (n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null,
+                                       n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null);
+                }
+                bp.buildings = BeltPathOptimizer.Optimize(bp.buildings, IsBelt, b => capForOptimize, meters, out report, _rebindSorterLinks.Value, !usedResample, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value, extraAnchors);
                 int after = CountBelts(bp);
                 if (!usedResample && snapshot != null)
                 {
@@ -1576,16 +1598,18 @@ namespace BlueprintBeltSaver
                         // 采纳插值后门禁/线感知 binder 必须换用 trial 侧基线（曾因沿用 work 侧
                         // 基线导致对账恒空、游戏内所有蓝图被门禁误拒）。
                         var trialPreMergeLines = LinesOfBlueprint(trialPreMerge, IsBelt);
-                        var trialPreMergeRefs = new Dictionary<int, (int inLine, int outLine)>();
+                        var trialPreMergeRefs = new Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)>();
                         for (int i = 0; i < trialPreMerge.Length; i++)
                         {
                             var n = trialPreMerge[i];
                             if (n == null || IsBelt(n)) continue;
-                            int inLine = n.inputObj != null && IsBelt(n.inputObj) && trialPreMergeLines.TryGetValue(n.inputObj, out int li2) ? li2 : -1;
-                            int outLine = n.outputObj != null && IsBelt(n.outputObj) && trialPreMergeLines.TryGetValue(n.outputObj, out int lo2) ? lo2 : -1;
-                            trialPreMergeRefs[i] = (inLine, outLine);
+                            var inT = n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null;
+                            var outT = n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null;
+                            int inLine = inT != null && trialPreMergeLines.TryGetValue(inT, out int li2) ? li2 : -1;
+                            int outLine = outT != null && trialPreMergeLines.TryGetValue(outT, out int lo2) ? lo2 : -1;
+                            trialPreMergeRefs[i] = (inT, outT, inLine, outLine);
                         }
-                        var trialBuildings = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, b => capForOptimize, meters, out trialReport, _rebindSorterLinks.Value, false, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
+                        var trialBuildings = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, b => capForOptimize, meters, out trialReport, _rebindSorterLinks.Value, false, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value, extraAnchors);
                         int trialAfter = 0;
                         foreach (var building in trialBuildings)
                         {
@@ -1658,6 +1682,13 @@ namespace BlueprintBeltSaver
                 // 线感知 binder（004.12-c）：给 binder 提供"任意结果节点 → 基线线路号"函数——
                 // 幸存节点直查基线；新增（插值）节点经 结果线→基线 映射回溯（幸存者对账）。
                 var resultLinesForBinder = LinesOfBlueprint(bp.buildings, IsBelt);
+                // 004.15：基线目标快照（端点→优化前目标对象），供 binder 识别"原链接保留"。
+                var ownerBaseTargets = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                for (int i = 0; i < preMerge.Length; i++)
+                {
+                    if (preMerge[i] != null && !IsBelt(preMerge[i]) && preMergeRefs.TryGetValue(i, out var pr0))
+                        ownerBaseTargets[preMerge[i]] = (pr0.inT, pr0.outT);
+                }
                 var r2oForBinder = new Dictionary<int, int>();
                 foreach (var kv in resultLinesForBinder)
                 {
@@ -1670,7 +1701,13 @@ namespace BlueprintBeltSaver
                      : preMergeLines.TryGetValue(n, out int pl) ? pl
                      : resultLinesForBinder.TryGetValue(n, out int rl) && r2oForBinder.TryGetValue(rl, out int bl) ? bl
                      : -1;
-                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters, LineOfForBinder);
+                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters, LineOfForBinder,
+                    (o, isInput, cand) =>
+                    {
+                        // 004.15 基线保留：该端在优化前快照中的目标就是 cand（对象同一）→ 原链接保留。
+                        return ownerBaseTargets.TryGetValue(o, out var t) &&
+                            (isInput ? ReferenceEquals(t.inT, cand) : ReferenceEquals(t.outT, cand));
+                    });
                 Log.Info("分拣器校验：" + binderReport);
                 // Full savings are taken first; only then is every inserter judged. If a merged piece no
                 // longer passes through the window the game needs (1.414 m from the inserter body or
@@ -1726,6 +1763,15 @@ namespace BlueprintBeltSaver
                 var topo = VerifyTopology(preMergeLines, preMergeRefs, preMerge, bp.buildings, IsBelt);
                 if (!topo.Ok)
                 {
+                    // 004.15 门禁反馈重跑：跨线重绑/引用丢失可由「锚定目标窗口」修复——用基线
+                    // 快照里的目标本体（preMerge 引用已被就地改写，不能现读）。
+                    if (topo.FailPos >= 0 && attempt < 3 && preMergeRefs.TryGetValue(topo.FailPos, out var failRef))
+                    {
+                        if (extraAnchors == null) extraAnchors = new List<int>();
+                        AddAnchorWindow(preMerge, topo.FailInput ? failRef.inT : failRef.outT, beltBaseRefs, extraAnchors);
+                        Log.Warn($"拓扑门禁第 {attempt + 1} 次拦截（{topo.Reason}），锚定目标窗口后重跑第 {attempt + 2} 轮。");
+                        continue;
+                    }
                     Log.Error($"省带结果拓扑自检不过（{topo.Reason}），已放弃本次省带，保留原件。");
                     _status = _text.TopologyFailed;
                     hardFailure = true;
@@ -1734,6 +1780,7 @@ namespace BlueprintBeltSaver
                 Log.Info($"拓扑自检通过：线路 {topo.LinesBefore} 条不变，分拣器/机器带引用 {topo.Refs} 条全部在原线路。");
                 optimized = bp;
                 return true;
+                } // 004.15 门禁反馈重跑循环
             }
             catch (Exception ex)
             {
@@ -1742,6 +1789,39 @@ namespace BlueprintBeltSaver
                 hardFailure = true;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 004.15 门禁反馈锚点窗口：基线目标本体 + 其**基线**前后邻居（beltBaseRefs 快照——
+        /// preMerge 的引用已被就地改写，现读邻居不可靠）。三者同为 preMerge 数组成员，顺序与
+        /// source 一致，位置直接传给下一轮 Optimize 的 extraAnchorPositions（跨 Clone 对象身份
+        /// 不通，必须按位置传递）。目标与其邻居同时锚成链边界后，原链接逐字保留，跨度与
+        /// 基线一致 → binder 兼容、引用永不跨线。
+        /// </summary>
+        private static void AddAnchorWindow(BlueprintBuilding[] preMerge, BlueprintBuilding target,
+            Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)> beltBaseRefs,
+            List<int> positions)
+        {
+            if (preMerge == null || target == null) return;
+            AddAnchorNode(preMerge, positions, target);
+            if (beltBaseRefs != null && beltBaseRefs.TryGetValue(target, out var baseRefs))
+            {
+                AddAnchorNode(preMerge, positions, baseRefs.inT);
+                AddAnchorNode(preMerge, positions, baseRefs.outT);
+            }
+            else
+            {
+                // 兜底：无基线快照时退回现读邻居（可能已被改写，但不至于比没有强）。
+                AddAnchorNode(preMerge, positions, target.inputObj);
+                AddAnchorNode(preMerge, positions, target.outputObj);
+            }
+        }
+
+        private static void AddAnchorNode(BlueprintBuilding[] preMerge, List<int> positions, BlueprintBuilding n)
+        {
+            if (n == null || !IsBelt(n)) return;
+            int p = Array.IndexOf(preMerge, n);
+            if (p >= 0 && !positions.Contains(p)) positions.Add(p);
         }
 
         /// <summary>
@@ -1779,9 +1859,15 @@ namespace BlueprintBeltSaver
             internal readonly bool Ok;
             internal readonly string Reason;
             internal readonly int LinesBefore, LinesAfter, Refs, AmbiguousRefs;
-            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs, int ambiguousRefs = 0)
+            // 004.15 门禁反馈重跑：FailPos = preMerge 数组中失败附件的位置（顺序与 source 一致），
+            // FailInput = 失败端；仅跨线重绑/引用丢失两类可由「锚定目标窗口重跑」修复，其余 -1。
+            internal readonly int FailPos;
+            internal readonly bool FailInput;
+            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs, int ambiguousRefs = 0,
+                int failPos = -1, bool failInput = false)
             {
                 Ok = ok; Reason = reason; LinesBefore = linesBefore; LinesAfter = linesAfter; Refs = refs; AmbiguousRefs = ambiguousRefs;
+                FailPos = failPos; FailInput = failInput;
             }
         }
 
@@ -1827,7 +1913,8 @@ namespace BlueprintBeltSaver
         }
 
         private static TopoCheck VerifyTopology(Dictionary<BlueprintBuilding, int> preLines,
-            Dictionary<int, (int inLine, int outLine)> preRefs, BlueprintBuilding[] preMerge,
+            Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)> preRefs,
+            BlueprintBuilding[] preMerge,
             BlueprintBuilding[] result, Func<BlueprintBuilding, bool> isBelt)
         {
             if (preMerge == null || result == null || preLines == null || preMerge.Length == 0)
@@ -1878,7 +1965,7 @@ namespace BlueprintBeltSaver
                     refs++;
                     var targetNow = sideIsInput ? cur.inputObj : cur.outputObj;
                     if (targetNow == null || !isBelt(targetNow) || !after.TryGetValue(targetNow, out int rLine))
-                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端带引用丢失", linesBefore, linesAfter, refs);
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端带引用丢失", linesBefore, linesAfter, refs, 0, i, sideIsInput);
                     if (!o2r.TryGetValue(preLine, out var mapped) || mapped != rLine)
                     {
                         // 004.12-d 位置歧义豁免：目标格位在基线中同时存在原线路的节点（数据病态：
@@ -1889,7 +1976,7 @@ namespace BlueprintBeltSaver
                             ambiguousRefs++;
                             continue;
                         }
-                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端被跨线重绑（基线线#{preLine} → 结果线#{rLine}，游戏会把分拣器吸到别的物品条上）", linesBefore, linesAfter, refs);
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端被跨线重绑（基线线#{preLine} → 结果线#{rLine}，游戏会把分拣器吸到别的物品条上）", linesBefore, linesAfter, refs, 0, i, sideIsInput);
                     }
                 }
             }

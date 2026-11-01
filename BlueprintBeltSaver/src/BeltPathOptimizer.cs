@@ -71,7 +71,8 @@ internal static class BeltPathOptimizer
 
     internal static BlueprintBuilding[] Optimize(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt,
         Func<BlueprintBuilding, float> limit, Func<BlueprintBuilding, BlueprintBuilding, double> meters, out Report report,
-        bool rebindAttachments = false, bool gridExact = true, bool pinOverLimitLinks = false, bool projectionRebind = false)
+        bool rebindAttachments = false, bool gridExact = true, bool pinOverLimitLinks = false, bool projectionRebind = false,
+        List<int> extraAnchorPositions = null)
     {
         report = new Report();
         var belts = new HashSet<BlueprintBuilding>(buildings.Where(isBelt));
@@ -94,6 +95,22 @@ internal static class BeltPathOptimizer
             if (belts.Contains(b) && next[b] != null && belts.Contains(next[b])) incoming[next[b]].Add(b);
         var anchors = new HashSet<BlueprintBuilding>(conflicts);
         report.AnchorConflicts = anchors.Count;
+        // 004.15 门禁反馈锚点：上一轮拓扑门禁报跨线/引用丢失的附件目标窗口（目标+原始前后
+        // 邻居）由调用方按 source 数组位置传入——Clone 之间对象身份不通，必须按位置传递。
+        // 锚点即链边界（runs 在锚点之间构建），窗口内原折线形状原样保留，目标跨度与基线
+        // 逐字相同 → binder 兼容、引用永不跨线（1080 分流器#1971 实证闭环）。
+        if (extraAnchorPositions != null)
+        {
+            int extraHit = 0;
+            foreach (int p in extraAnchorPositions)
+            {
+                if (p >= 0 && p < buildings.Length && belts.Contains(buildings[p])) { anchors.Add(buildings[p]); extraHit++; }
+            }
+            if (extraAnchorPositions.Count > 0)
+            {
+                Console.WriteLine($"    [extraAnchors] 请求 {extraAnchorPositions.Count} 个位置 [{string.Join(",", extraAnchorPositions)}]，命中 {extraHit}，请求前锚点 {report.AnchorConflicts}");
+            }
+        }
         // Non-belt buildings (sorters, machines) referencing a belt normally pin that node. With
         // rebindAttachments the reference is re-pointed to the merged segment instead, so the node
         // may be deleted - provided the guards below hold.
@@ -126,6 +143,8 @@ internal static class BeltPathOptimizer
             int anchorMark = anchors.Count;
             // 003.4 语义（回滚 003.5，玩家实测 003.5 更差：喷涂机原料带明显超长）：
             // 机器类（非分拣器，喷涂机等）绑定点原位锚定；分拣器走就近重绑（003.2 起）。
+            // （004.15 曾试验「分流器目标一刀切原位锚定」：+347 锚点只救 5 个端点、省带
+            //   38→22，代价失衡，已回滚——跨线拦截改由门禁反馈重跑按窗口精确锚定。）
             foreach (var attachment in attachments)
             {
                 if (attachment.Target != null && belts.Contains(attachment.Target) && !IsInserter(attachment.Owner))
@@ -654,6 +673,17 @@ internal static class BeltPathOptimizer
                     else if (IsTraced(attachment.Owner) || IsTraced(attachment.Target))
                         Trace($"run {start.index}->{end.index} owner={attachment.Owner.index}(x{attachment.Owner.localOffset_x:F2},y{attachment.Owner.localOffset_y:F2},item{attachment.Owner.itemId}) target={attachment.Target?.index}(x{attachment.Target?.localOffset_x:F2},y{attachment.Target?.localOffset_y:F2}) inPath={(attachment.Target != null && pathIndexMap.ContainsKey(attachment.Target))} path={path.Count}");
                     if (attachment.Target == null || !pathIndexMap.ContainsKey(attachment.Target)) continue;
+                    // 004.15：目标节点仍在替换链中（被锚定/保留为链边界）时直接回指自身——
+                    // 同格位双节点的数据病态下，就近搜索会以 0 距离并列撞上**别线**的同位
+                    // 节点（先到先得），把引用改指到别的物品条（1080 #1971 实证：基线线#40
+                    // → 结果线#36）。回指自身 = 引用不动，交给既有守卫与 binder 校验。
+                    if (replacements.Contains(attachment.Target))
+                    {
+                        if (IsTraced(attachment.Owner) || IsTraced(attachment.Target))
+                            Trace($"  selfbind owner={attachment.Owner.index} target={attachment.Target.index} (目标在替换链中，回指自身)");
+                        pathRebinds.Add((attachment.Owner, attachment.Side, attachment.Target, 0));
+                        continue;
+                    }
                     // 就近强制绑定（003.3）：以旧目标节点 T 的位置为基准，绑定到最近的替换节点，
                     // 沿带偏移归零（--pickaudit 证明蓝图存储偏移恒 0，取货点由游戏投影决定）。
                     double best = double.MaxValue;

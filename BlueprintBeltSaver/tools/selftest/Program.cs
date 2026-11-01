@@ -90,7 +90,7 @@ namespace BBSaver.SelfTest
             var obsType = mod.GetType("BlueprintBeltSaver.BeltSpacingCalibration+Observation");
             var optimizer = mod.GetType("BlueprintBeltSaver.BeltPathOptimizer");
             var optimize = optimizer.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-                .FirstOrDefault(m => m.Name == "Optimize" && m.GetParameters().Length == 9);
+                .FirstOrDefault(m => m.Name == "Optimize" && m.GetParameters().Length >= 9 && m.GetParameters().Length <= 10);
             var resolve = calibration.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
                 .Where(m => m.Name == "Resolve" && m.GetParameters().Length >= 4)
                 .OrderBy(m => m.GetParameters().Length).FirstOrDefault();

@@ -97,6 +97,21 @@ internal static class ExportTool
                 string outName = $"A_{tag}_{name}.txt";
                 try
                 {
+                    // 004.15 门禁反馈重跑（与插件 TryOptimize 同步）：跨线/丢失的附件目标窗口按
+                    // source 数组位置作为 extraAnchorPositions 传入重跑（≤4 轮），锚点即链边界。
+                    List<int> extraAnchors = null;
+                    BlueprintData chosen = null;
+                    BlueprintBuilding[] preChosen = null;
+                    Dictionary<BlueprintBuilding, int> preLinesC = null;
+                    Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)> preRefsC = null;
+                    Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)> beltBaseRefs = null;
+                    InserterBinder.Report binder = null;
+                    (int over, double worst) fin = (0, 0.0);
+                    (bool ok, string reason, int linesB, int linesA, int failPos, bool failInput) topo = default;
+                    string mode = "";
+                    int after = 0;
+                    for (int attempt = 0; ; attempt++)
+                    {
                     var work = source.Clone();
                     var preLinesW = TopoProbe.LinesOf(work.buildings);
                     var preRefsW = TopoProbe.RefLines(work.buildings, preLinesW);
@@ -113,25 +128,33 @@ internal static class ExportTool
                     // 差异仅在头部字段；离线以 Clone 等价替代（游戏内差异由 A/B 对比检出，见判定报告）。
                     string snapshot = work.ToBase64String();
                     var preGrid = work.buildings;
-                    var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, true, true, pinOverLimit, true);
+                    var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, true, true, pinOverLimit, true, extraAnchors);
                     work.buildings = gB;
                     var trial = source.Clone();
                     var preLinesT = TopoProbe.LinesOf(trial.buildings);
                     var preRefsT = TopoProbe.RefLines(trial.buildings, preLinesT);
+                    // 004.15：带节点基线引用图快照（重跑窗口需要 T 的基线邻居，现读引用已被改写）
+                    beltBaseRefs = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                    foreach (var n in trial.buildings)
+                    {
+                        if (n == null || !IsBelt(n)) continue;
+                        beltBaseRefs[n] = (n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null,
+                                           n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null);
+                    }
                     var preTrial = trial.buildings;
-                    var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, true, false, pinOverLimit, true);
+                    var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, true, false, pinOverLimit, true, extraAnchors);
                     trial.buildings = rB;
 
                     int gAfter = work.buildings.Count(IsBelt), rAfter = trial.buildings.Count(IsBelt);
                     var gOver = OverNew(work.buildings, calibration, origSpans);
                     var rOver = OverNew(trial.buildings, calibration, origSpans);
                     bool adoptR = rOver.over == 0 && rAfter < before && (gOver.over > 0 || rAfter < gAfter);
-                    var chosen = adoptR ? trial : work;
-                    var preChosen = adoptR ? preTrial : preGrid;
-                    var preLinesC = adoptR ? preLinesT : preLinesW;
-                    var preRefsC = adoptR ? preRefsT : preRefsW;
-                    int after = chosen.buildings.Count(IsBelt);
-                    string mode = adoptR ? "插值(采纳)" : "格点";
+                    chosen = adoptR ? trial : work;
+                    preChosen = adoptR ? preTrial : preGrid;
+                    preLinesC = adoptR ? preLinesT : preLinesW;
+                    preRefsC = adoptR ? preRefsT : preRefsW;
+                    after = chosen.buildings.Count(IsBelt);
+                    mode = adoptR ? "插值(采纳)" : "格点";
 
                     chosen.CheckBuildingData();
                     var resultLinesForBinder = TopoProbe.LinesOf(chosen.buildings);
@@ -147,9 +170,39 @@ internal static class ExportTool
                          : preLinesC.TryGetValue(n, out int pl) ? pl
                          : resultLinesForBinder.TryGetValue(n, out int rl) && r2oForBinder.TryGetValue(rl, out int bl) ? bl
                          : -1;
-                    var binder = InserterBinder.Repair(chosen.buildings, IsBelt, meters, LineOfForBinder);
-                    var fin = OverNew(chosen.buildings, calibration, origSpans);
-                    var topo = TopoProbe.VerifyTopologyBase(preLinesC, preRefsC, preChosen, chosen.buildings);
+                    var ownerBaseTargets = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                    for (int i = 0; i < preChosen.Length; i++)
+                    {
+                        if (preChosen[i] != null && !IsBelt(preChosen[i]) && preRefsC.TryGetValue(i, out var prB))
+                            ownerBaseTargets[preChosen[i]] = (prB.inT, prB.outT);
+                    }
+                    binder = InserterBinder.Repair(chosen.buildings, IsBelt, meters, LineOfForBinder,
+                        (o, isInput, cand) => ownerBaseTargets.TryGetValue(o, out var t) &&
+                            (isInput ? ReferenceEquals(t.inT, cand) : ReferenceEquals(t.outT, cand)));
+                    fin = OverNew(chosen.buildings, calibration, origSpans);
+                    topo = TopoProbe.VerifyTopologyBase(preLinesC, preRefsC, preChosen, chosen.buildings);
+                    if (!topo.ok && topo.failPos >= 0 && attempt < 3 && preRefsC.TryGetValue(topo.failPos, out var failRef))
+                    {
+                        // 门禁反馈重跑：锚定基线目标窗口（基线目标本体+前后邻居；preChosen 的引用
+                        // 已被就地改写，必须用 RefLines 快照里的目标）。
+                        var failT = topo.failInput ? failRef.inT : failRef.outT;
+                        if (extraAnchors == null) extraAnchors = new List<int>();
+                        void AddAnchor(BlueprintBuilding n)
+                        {
+                            if (n == null || !IsBelt(n)) return;
+                            int p = Array.IndexOf(preChosen, n);
+                            if (p >= 0 && !extraAnchors.Contains(p)) extraAnchors.Add(p);
+                        }
+                        AddAnchor(failT);
+                        if (beltBaseRefs != null && beltBaseRefs.TryGetValue(failT, out var baseRefs))
+                        {
+                            AddAnchor(baseRefs.inT);
+                            AddAnchor(baseRefs.outT);
+                        }
+                        continue;
+                    }
+                    break;
+                    }
                     bool ok = fin.over == 0 && topo.ok;
                     string outFile = "—";
                     if (ok)

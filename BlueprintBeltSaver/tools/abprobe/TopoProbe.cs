@@ -94,25 +94,29 @@ internal static class TopoProbe
         return lineOf;
     }
 
-    internal static Dictionary<int, (int inLine, int outLine)> RefLines(BlueprintBuilding[] buildings,
+    internal static Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)> RefLines(BlueprintBuilding[] buildings,
         Dictionary<BlueprintBuilding, int> lines)
     {
-        var refs = new Dictionary<int, (int, int)>();
+        // 004.15：连目标对象一起抓——Optimize 就地改写引用，事后读不到基线目标本体。
+        var refs = new Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)>();
         for (int i = 0; i < buildings.Length; i++)
         {
             var n = buildings[i];
             if (n == null || IsBelt(n)) continue;
-            int inLine = n.inputObj != null && IsBelt(n.inputObj) && lines.TryGetValue(n.inputObj, out int li) ? li : -1;
-            int outLine = n.outputObj != null && IsBelt(n.outputObj) && lines.TryGetValue(n.outputObj, out int lo) ? lo : -1;
-            refs[i] = (inLine, outLine);
+            var inT = n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null;
+            var outT = n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null;
+            int inLine = inT != null && lines.TryGetValue(inT, out int li) ? li : -1;
+            int outLine = outT != null && lines.TryGetValue(outT, out int lo) ? lo : -1;
+            refs[i] = (inT, outT, inLine, outLine);
         }
         return refs;
     }
 
     // 基线版拓扑门禁：preLines/preRefs = 合并改写引用之前抓取的 Clone 侧线路归属与引用所在线；
     // 只对账"优化器造成的跨线改写"，Clone 自身的端点重吸附（游戏拷贝行为）在基线里豁免。
-    internal static (bool ok, string reason, int linesB, int linesA) VerifyTopologyBase(
-        Dictionary<BlueprintBuilding, int> preLines, Dictionary<int, (int inLine, int outLine)> preRefs,
+    // failPos/failInput：失败附件在 preMerge 中的位置与端别（004.15 门禁反馈重跑用，-1=不可重试）。
+    internal static (bool ok, string reason, int linesB, int linesA, int failPos, bool failInput) VerifyTopologyBase(
+        Dictionary<BlueprintBuilding, int> preLines, Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)> preRefs,
         BlueprintBuilding[] preMerge, BlueprintBuilding[] result)
     {
         var after = LinesOf(result);
@@ -135,12 +139,12 @@ internal static class TopoProbe
             var cur = preMerge[i];
             if (cur == null || !IsBelt(cur) || !preLines.TryGetValue(cur, out int o)) continue;
             if (!after.TryGetValue(cur, out int r) || !resultSet.Contains(cur)) continue;
-            if (o2r.TryGetValue(o, out var r0) && r0 != r) return (false, $"原线#{o} 分裂到结果线 {r0}/{r}（断链）[mapped={mapped}]", linesBefore, linesAfter);
+            if (o2r.TryGetValue(o, out var r0) && r0 != r) return (false, $"原线#{o} 分裂到结果线 {r0}/{r}（断链）[mapped={mapped}]", linesBefore, linesAfter, -1, false);
             o2r[o] = r; mapped++;
-            if (r2o.TryGetValue(r, out var o0) && o0 != o) return (false, $"结果线#{r} 串接了原线 {o0}/{o}（串线）[mapped={mapped}]", linesBefore, linesAfter);
+            if (r2o.TryGetValue(r, out var o0) && o0 != o) return (false, $"结果线#{r} 串接了原线 {o0}/{o}（串线）[mapped={mapped}]", linesBefore, linesAfter, -1, false);
             r2o[r] = o;
         }
-        if (linesBefore != linesAfter) return (false, $"线路数 {linesBefore} → {linesAfter}", linesBefore, linesAfter);
+        if (linesBefore != linesAfter) return (false, $"线路数 {linesBefore} → {linesAfter}", linesBefore, linesAfter, -1, false);
         int sorters = 0;
         for (int i = 0; i < preMerge.Length; i++)
         {
@@ -153,7 +157,7 @@ internal static class TopoProbe
                 sorters++;
                 var targetNow = sideIsInput ? cur.inputObj : cur.outputObj;
                 if (targetNow == null || !IsBelt(targetNow) || !after.ContainsKey(targetNow))
-                    return (false, $"建筑#{cur.index} 的带引用丢失 [mapped={mapped}]", linesBefore, linesAfter);
+                    return (false, $"建筑#{cur.index} 的带引用丢失 [mapped={mapped}]", linesBefore, linesAfter, i, sideIsInput);
                 if (!o2r.TryGetValue(preLine, out var rLine) || rLine != after[targetNow])
                 {
                     // 004.12-d 位置歧义豁免
@@ -169,11 +173,11 @@ internal static class TopoProbe
                     }
                     int preLineOfNow = preCounter != null && preLines.TryGetValue(preCounter, out int pl) ? pl : -1;
                     Console.WriteLine($"    [trace] owner idx={cur.index} item={cur.itemId} side={(sideIsInput ? "in" : "out")} 基线线#{preLine} 结果线#{rLine} 现目标在Clone图的线={preLineOfNow} (新增?{preCounter == null}) 基线目标({(sideIsInput ? preMerge[i].inputObj : preMerge[i].outputObj)?.localOffset_x.ToString("F2")},{(sideIsInput ? preMerge[i].inputObj : preMerge[i].outputObj)?.localOffset_y.ToString("F2")}) 现目标({targetNow.localOffset_x:F2},{targetNow.localOffset_y:F2})");
-                    return (false, $"建筑#{cur.index} 被跨线重绑（基线#{preLine}→结果#{after[targetNow]}）[mapped={mapped}]", linesBefore, linesAfter);
+                    return (false, $"建筑#{cur.index} 被跨线重绑（基线#{preLine}→结果#{after[targetNow]}）[mapped={mapped}]", linesBefore, linesAfter, i, sideIsInput);
                 }
             }
         }
-        return (true, $"OK lines {linesBefore} mapped={mapped} sorterRefs={sorters} ambiguous={ambiguous}", linesBefore, linesAfter);
+        return (true, $"OK lines {linesBefore} mapped={mapped} sorterRefs={sorters} ambiguous={ambiguous}", linesBefore, linesAfter, -1, false);
     }
 
     private static void Main(string[] args)
@@ -263,11 +267,19 @@ internal static class TopoProbe
         var source = new BlueprintData();
         var err = source.FromBase64String(text);
         Console.WriteLine($"load err={err} buildings={source.buildings?.Length} belts={source.buildings.Count(IsBelt)} sorters={source.buildings.Count(x => x.itemId >= 2010 && x.itemId <= 2013)}");
-        var work = source.Clone();
-        Console.WriteLine($"clone objects shared? {ReferenceEquals(source.buildings[0], work.buildings[0])}");
-
         double capO = 2.301172 * 0.98;
         var obs = BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
+        // 004.15 门禁反馈重跑（与插件 TryOptimize 同步）：跨线/丢失的附件目标窗口按 source
+        // 数组位置作为 extraAnchorPositions 传入重跑（≤4 轮），锚点即链边界。
+        List<int> extraAnchors = null;
+        BlueprintData chosen = null;
+        BlueprintBuilding[] preChosen = null;
+        Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)> beltBaseRefs = null;
+        (bool ok, string reason, int linesB, int linesA, int failPos, bool failInput) topo = default;
+        for (int attempt = 0; ; attempt++)
+        {
+        var work = source.Clone();
+        Console.WriteLine($"clone objects shared? {ReferenceEquals(source.buildings[0], work.buildings[0])}");
         var calibration = BeltSpacingCalibration.Resolve(work.areas, work.buildings, IsBelt, obs);
         Func<BlueprintBuilding, BlueprintBuilding, double> meters =
             (a, b) => BeltSpacingCalibration.Distance(a, b, calibration);
@@ -278,10 +290,18 @@ internal static class TopoProbe
         // 准则⑦ 基线：合并改写引用之前抓取 Clone 侧线路归属与非带引用所在线
         var preLinesT = LinesOf(trial.buildings);
         var preRefsT = RefLines(trial.buildings, preLinesT);
-        var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, true, true, pinOverLimit, true);
+        // 004.15：带节点基线引用图快照（重跑窗口需要 T 的基线邻居，现读引用已被改写）
+        beltBaseRefs = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+        foreach (var n in trial.buildings)
+        {
+            if (n == null || !IsBelt(n)) continue;
+            beltBaseRefs[n] = (n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null,
+                               n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null);
+        }
+        var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, true, true, pinOverLimit, true, extraAnchors);
         work.buildings = gB;
         var preTrial = trial.buildings;
-        var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, true, false, pinOverLimit, true);
+        var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, true, false, pinOverLimit, true, extraAnchors);
         trial.buildings = rB;
         int gAfter = work.buildings.Count(IsBelt), rAfter = trial.buildings.Count(IsBelt);
         int before = source.buildings.Count(IsBelt);
@@ -289,8 +309,8 @@ internal static class TopoProbe
         var gOver = OverNew(work.buildings, calibration, origSpans);
         var rOver = OverNew(trial.buildings, calibration, origSpans);
         bool adopt = rOver.over == 0 && rAfter < before && (gOver.over > 0 || rAfter < gAfter);
-        var chosen = adopt ? trial : work;
-        var preChosen = adopt ? preTrial : preGrid;
+        chosen = adopt ? trial : work;
+        preChosen = adopt ? preTrial : preGrid;
         Console.WriteLine($"before={before} grid→{gAfter}(OverNew={gOver.over}) resample→{rAfter}(OverNew={rOver.over}) adoptResample={adopt}");
 
         chosen.CheckBuildingData();
@@ -319,7 +339,15 @@ internal static class TopoProbe
              : preLinesT.TryGetValue(n, out int pl) ? pl
              : resultLinesForBinder.TryGetValue(n, out int rl) && r2oForBinder.TryGetValue(rl, out int bl) ? bl
              : -1;
-        var binder = InserterBinder.Repair(chosen.buildings, IsBelt, meters, LineOfForBinder);
+        var ownerBaseTargets = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+        for (int i = 0; i < preChosen.Length; i++)
+        {
+            if (preChosen[i] != null && !IsBelt(preChosen[i]) && preRefsT.TryGetValue(i, out var prB))
+                ownerBaseTargets[preChosen[i]] = (prB.inT, prB.outT);
+        }
+        var binder = InserterBinder.Repair(chosen.buildings, IsBelt, meters, LineOfForBinder,
+            (o, isInput, cand) => ownerBaseTargets.TryGetValue(o, out var t) &&
+                (isInput ? ReferenceEquals(t.inT, cand) : ReferenceEquals(t.outT, cand)));
         Console.WriteLine($"binder: {binder}");
         // 深度解剖：找失败分拣器（clone idx 1840），追其 output 目标 T 在原件图与结果图中的邻居
         {
@@ -328,29 +356,62 @@ internal static class TopoProbe
                 if (preChosen[i] != null && !IsBelt(preChosen[i]) && preChosen[i].index == 1840) { ownerPos = i; break; }
             if (ownerPos >= 0)
             {
-                var ownerRes = chosen.buildings[ownerPos];
+                // 非带建筑跨优化幸存（对象同一、引用就地改写），直接用 preChosen 侧对象；
+                // chosen.buildings 是压缩重建后的数组，按下标取会错位（曾致 NRE）。
+                var ownerRes = preChosen[ownerPos];
                 var T = ownerRes.outputObj;
                 Console.WriteLine($"    [T] item={T?.itemId} pos=({T?.localOffset_x:F2},{T?.localOffset_y:F2}) afterLine={(T != null && resultLinesForBinder.ContainsKey(T) ? resultLinesForBinder[T].ToString() : "—")}");
                 if (T != null)
                 {
                     Console.WriteLine($"    [T.result邻居] in=({T.inputObj?.localOffset_x:F2},{T.inputObj?.localOffset_y:F2}) after{(T.inputObj != null && resultLinesForBinder.ContainsKey(T.inputObj) ? resultLinesForBinder[T.inputObj].ToString() : "?")} | out=({T.outputObj?.localOffset_x:F2},{T.outputObj?.localOffset_y:F2}) after{(T.outputObj != null && resultLinesForBinder.ContainsKey(T.outputObj) ? resultLinesForBinder[T.outputObj].ToString() : "?")}");
-                }
-                // 原件图里同位置节点（源侧，未被改写）
-                foreach (var ob in source.buildings)
-                {
-                    if (ob == null || !IsBelt(ob)) continue;
-                    if (Math.Abs(ob.localOffset_x - T.localOffset_x) < 1e-4 && Math.Abs(ob.localOffset_y - T.localOffset_y) < 1e-4 && ob.areaIndex == T.areaIndex)
+                    // 原件图里同位置节点（源侧，未被改写）
+                    foreach (var ob in source.buildings)
                     {
-                        Console.WriteLine($"    [原件同位置] item={ob.itemId} in=({ob.inputObj?.localOffset_x:F2},{ob.inputObj?.localOffset_y:F2}) out=({ob.outputObj?.localOffset_x:F2},{ob.outputObj?.localOffset_y:F2})");
+                        if (ob == null || !IsBelt(ob)) continue;
+                        if (Math.Abs(ob.localOffset_x - T.localOffset_x) < 1e-4 && Math.Abs(ob.localOffset_y - T.localOffset_y) < 1e-4 && ob.areaIndex == T.areaIndex)
+                        {
+                            Console.WriteLine($"    [原件同位置] item={ob.itemId} in=({ob.inputObj?.localOffset_x:F2},{ob.inputObj?.localOffset_y:F2}) out=({ob.outputObj?.localOffset_x:F2},{ob.outputObj?.localOffset_y:F2})");
+                        }
                     }
                 }
             }
         }
-        var topo = VerifyTopologyBase(preLinesT, preRefsT, preChosen, chosen.buildings);
+        topo = VerifyTopologyBase(preLinesT, preRefsT, preChosen, chosen.buildings);
         Console.WriteLine($"repG: {repG}");
         Console.WriteLine($"repR: {repR}");
         Console.WriteLine($"IsInserter(2014)={InserterBinder.IsInserterItem(2014)}");
         Console.WriteLine($"topology: ok={topo.ok} lines {topo.linesB}→{topo.linesA} :: {topo.reason}");
+        if (!topo.ok && topo.failPos >= 0 && attempt < 3 && preRefsT.TryGetValue(topo.failPos, out var failRef))
+        {
+            // 004.15 门禁反馈重跑：锚定基线目标窗口（基线目标本体+前后邻居，按位置传下一轮；
+            // preChosen 的引用已被就地改写，必须用 RefLines 快照里的目标）。
+            var failT = topo.failInput ? failRef.inT : failRef.outT;
+            Console.WriteLine($"=== 门禁反馈重跑（第 {attempt + 2} 轮）：锚定目标窗口 failPos={topo.failPos} ===");
+            BeltPathOptimizer.TraceIndex = preChosen[topo.failPos].index;
+            if (failT != null)
+            {
+                int pT = Array.IndexOf(preChosen, failT);
+                var bIn = beltBaseRefs != null && beltBaseRefs.TryGetValue(failT, out var br) ? br.inT : null;
+                var bOut = beltBaseRefs != null && beltBaseRefs.TryGetValue(failT, out var br2) ? br2.outT : null;
+                Console.WriteLine($"    [window] T pos={pT} idx={failT.index} ({failT.localOffset_x:F2},{failT.localOffset_y:F2}) | baseIn={(bIn == null ? "null" : $"{Array.IndexOf(preChosen, bIn)}:({bIn.localOffset_x:F2},{bIn.localOffset_y:F2})")} | baseOut={(bOut == null ? "null" : $"{Array.IndexOf(preChosen, bOut)}:({bOut.localOffset_x:F2},{bOut.localOffset_y:F2})")}");
+            }
+            if (extraAnchors == null) extraAnchors = new List<int>();
+            void AddAnchor(BlueprintBuilding n)
+            {
+                if (n == null || !IsBelt(n)) return;
+                int p = Array.IndexOf(preChosen, n);
+                if (p >= 0 && !extraAnchors.Contains(p)) extraAnchors.Add(p);
+            }
+            AddAnchor(failT);
+            if (beltBaseRefs != null && beltBaseRefs.TryGetValue(failT, out var baseRefs))
+            {
+                AddAnchor(baseRefs.inT);
+                AddAnchor(baseRefs.outT);
+            }
+            continue;
+        }
+        break;
+        } // 004.15 门禁反馈重跑循环
 
         // 阶段追踪：分流器 #238 的 outputObj 在各阶段指向谁（Clone 会重编号 index，按数组位置对齐）
         int pos238 = -1;
