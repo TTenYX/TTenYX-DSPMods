@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +24,7 @@ namespace BlueprintBeltSaver
     {
         public const string Guid = "com.dsp.blueprintbeltsaver";
         public const string Name = "BlueprintBeltSaver";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.4";
 
         private const int MaxBlueprintBuildings = 15000;
         private const int BeltItemIdFirst = 2001;
@@ -1541,6 +1541,21 @@ namespace BlueprintBeltSaver
                 // fallback below needs the untouched blueprint.
                 string snapshot = usedResample ? null : SafeSnapshot(bp);
                 var preMerge = bp.buildings;
+                // 准则⑦ 基线（004.12-c 修正）：在合并改写引用**之前**记录 Clone 侧的线路归属
+                // 与非带建筑引用的所在线。Clone 是游戏自身的拷贝行为——序列化端点重载时按
+                // 位置重新吸附，贴近邻线时会吸附到邻线节点（1080 分流器#238 实证：原件 44 线
+                // → Clone 后 36 线），并非优化器所为；门禁只对账"优化器造成的跨线改写"。
+                // 引用是就地改写的，基线事后不可恢复，必须在此抓取。
+                var preMergeLines = LinesOfBlueprint(preMerge, IsBelt);
+                var preMergeRefs = new Dictionary<int, (int inLine, int outLine)>();
+                for (int i = 0; i < preMerge.Length; i++)
+                {
+                    var n = preMerge[i];
+                    if (n == null || IsBelt(n)) continue;
+                    int inLine = n.inputObj != null && IsBelt(n.inputObj) && preMergeLines.TryGetValue(n.inputObj, out int li) ? li : -1;
+                    int outLine = n.outputObj != null && IsBelt(n.outputObj) && preMergeLines.TryGetValue(n.outputObj, out int lo) ? lo : -1;
+                    preMergeRefs[i] = (inLine, outLine);
+                }
                 bp.buildings = BeltPathOptimizer.Optimize(bp.buildings, IsBelt, b => capForOptimize, meters, out report, _rebindSorterLinks.Value, !usedResample, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
                 int after = CountBelts(bp);
                 if (!usedResample && snapshot != null)
@@ -1667,6 +1682,18 @@ namespace BlueprintBeltSaver
                     hardFailure = true;
                     return false;
                 }
+                // 准则⑦（2026-11-01）：拓扑硬门禁——长带化不得改变传送带拓扑。
+                // 线路条数（带-带连通分量）前后必须一致；不允许分裂（断链）与串线（吸附到
+                // 别的物品条）；分拣器/机器的带引用必须仍指向原线路。任一违反即放弃本次省带。
+                var topo = VerifyTopology(preMergeLines, preMergeRefs, preMerge, bp.buildings, IsBelt);
+                if (!topo.Ok)
+                {
+                    Log.Error($"省带结果拓扑自检不过（{topo.Reason}），已放弃本次省带，保留原件。");
+                    _status = _text.TopologyFailed;
+                    hardFailure = true;
+                    return false;
+                }
+                Log.Info($"拓扑自检通过：线路 {topo.LinesBefore} 条不变，分拣器/机器带引用 {topo.Refs} 条全部在原线路。");
                 optimized = bp;
                 return true;
             }
@@ -1704,6 +1731,113 @@ namespace BlueprintBeltSaver
                 KeptOver = keptOver;
                 WorstAll = worstAll;
             }
+        }
+
+        /// <summary>
+        /// 准则⑦的拓扑自检结果：Ok=false 时 Reason 说明违反项。
+        /// </summary>
+        private readonly struct TopoCheck
+        {
+            internal readonly bool Ok;
+            internal readonly string Reason;
+            internal readonly int LinesBefore, LinesAfter, Refs;
+            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs)
+            {
+                Ok = ok; Reason = reason; LinesBefore = linesBefore; LinesAfter = linesAfter; Refs = refs;
+            }
+        }
+
+        /// <summary>
+        /// 拓扑硬门禁（2026-11-01 准则）：对比优化前后的传送带连接图。
+        /// original = 原件（未被改动）；preMerge = 优化前的深拷贝（顺序与 original 一致，
+        /// 非带建筑的引用会被优化就地改写，用它读"当前"引用）；result = 优化结果。
+        /// 校验：①线路数（连通分量数）一致；②每条原线的幸存节点只落入一条结果线（无分裂），
+        /// 且每条结果线只含一条原线的节点（无串线）；③分拣器/机器的带引用目标仍在原线路。
+        /// </summary>
+        /// <summary>
+        /// 传送带线路归属（带-带连通分量编号），供拓扑门禁抓基线与对账。
+        /// </summary>
+        private static Dictionary<BlueprintBuilding, int> LinesOfBlueprint(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt)
+        {
+            var lineOf = new Dictionary<BlueprintBuilding, int>();
+            if (buildings == null)
+            {
+                return lineOf;
+            }
+            var belts = buildings.Where(isBelt).ToArray();
+            var parent = belts.ToDictionary(x => x, x => x);
+            BlueprintBuilding Find(BlueprintBuilding x)
+            {
+                while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+                return x;
+            }
+            foreach (var b in belts)
+            {
+                if (b.outputObj != null && isBelt(b.outputObj) && parent.ContainsKey(b.outputObj))
+                { var ra = Find(b); var rb = Find(b.outputObj); if (ra != rb) parent[ra] = rb; }
+                if (b.inputObj != null && isBelt(b.inputObj) && parent.ContainsKey(b.inputObj))
+                { var ra = Find(b); var rb = Find(b.inputObj); if (ra != rb) parent[ra] = rb; }
+            }
+            int next = 0; var rootId = new Dictionary<BlueprintBuilding, int>();
+            foreach (var b in belts)
+            {
+                var r = Find(b);
+                if (!rootId.TryGetValue(r, out int id)) id = rootId[r] = next++;
+                lineOf[b] = id;
+            }
+            return lineOf;
+        }
+
+        private static TopoCheck VerifyTopology(Dictionary<BlueprintBuilding, int> preLines,
+            Dictionary<int, (int inLine, int outLine)> preRefs, BlueprintBuilding[] preMerge,
+            BlueprintBuilding[] result, Func<BlueprintBuilding, bool> isBelt)
+        {
+            if (preMerge == null || result == null || preLines == null || preMerge.Length == 0)
+            {
+                return new TopoCheck(false, "输入为空", 0, 0, 0);
+            }
+            var after = LinesOfBlueprint(result, isBelt);
+            int linesBefore = preLines.Values.Distinct().Count();
+            int linesAfter = after.Values.Distinct().Count();
+            // 幸存节点对账：preMerge 与 result 同源（Optimize 就地改写引用、保留对象子集），
+            // 对象身份可直接比较；基线线路 = 合并前抓取的 preLines（Clone 后、改写前）。
+            var resultSet = new HashSet<BlueprintBuilding>(result);
+            var o2r = new Dictionary<int, int>();
+            var r2o = new Dictionary<int, int>();
+            for (int i = 0; i < preMerge.Length; i++)
+            {
+                var cur = preMerge[i];
+                if (cur == null || !isBelt(cur) || !preLines.TryGetValue(cur, out int o)) continue;
+                if (!after.TryGetValue(cur, out int r) || !resultSet.Contains(cur)) continue;
+                if (o2r.TryGetValue(o, out var r0) && r0 != r)
+                    return new TopoCheck(false, $"原线#{o} 分裂到结果线 {r0}/{r}（断链）", linesBefore, linesAfter, 0);
+                o2r[o] = r;
+                if (r2o.TryGetValue(r, out var o0) && o0 != o)
+                    return new TopoCheck(false, $"结果线#{r} 串接了原线 {o0}/{o}（串线）", linesBefore, linesAfter, 0);
+                r2o[r] = o;
+            }
+            if (linesBefore != linesAfter)
+                return new TopoCheck(false, $"线路数 {linesBefore} → {linesAfter}", linesBefore, linesAfter, 0);
+            // 分拣器/机器带引用：与基线（Clone 后、合并前）对账——只拦优化器造成的跨线改写。
+            // Clone 自身的端点重吸附（游戏拷贝行为）在 preRefs 基线里已被豁免。
+            int refs = 0;
+            for (int i = 0; i < preMerge.Length; i++)
+            {
+                var cur = preMerge[i];
+                if (cur == null || isBelt(cur) || !preRefs.TryGetValue(i, out var pr)) continue;
+                foreach (var sideIsInput in new[] { true, false })
+                {
+                    int preLine = sideIsInput ? pr.inLine : pr.outLine;
+                    if (preLine < 0) continue;
+                    refs++;
+                    var targetNow = sideIsInput ? cur.inputObj : cur.outputObj;
+                    if (targetNow == null || !isBelt(targetNow) || !after.TryGetValue(targetNow, out int rLine))
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端带引用丢失", linesBefore, linesAfter, refs);
+                    if (!o2r.TryGetValue(preLine, out var mapped) || mapped != rLine)
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端被跨线重绑（基线线#{preLine} → 结果线#{rLine}，游戏会把分拣器吸到别的物品条上）", linesBefore, linesAfter, refs);
+                }
+            }
+            return new TopoCheck(true, "", linesBefore, linesAfter, refs);
         }
 
         /// <summary>

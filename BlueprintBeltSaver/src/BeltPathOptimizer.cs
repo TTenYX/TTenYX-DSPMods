@@ -78,16 +78,20 @@ internal static class BeltPathOptimizer
         var next = belts.ToDictionary(b => b, b => b.outputObj);
         var conflicts = new HashSet<BlueprintBuilding>();
         // A belt input may encode an edge not present in the predecessor output.
-        foreach (var b in belts)
-            if (b.inputObj != null && belts.Contains(b.inputObj))
+        // 004.13：数组序遍历（先到先得的 next 赢家必须可复现，见下方 incoming 处注释）。
+        foreach (var b in buildings)
+            if (belts.Contains(b) && b.inputObj != null && belts.Contains(b.inputObj))
             {
                 var prev = b.inputObj;
                 if (next[prev] == null) next[prev] = b;
                 else if (next[prev] != b) { conflicts.Add(prev); conflicts.Add(b); }
             }
         var incoming = belts.ToDictionary(b => b, b => new List<BlueprintBuilding>());
-        foreach (var b in belts)
-            if (next[b] != null && belts.Contains(next[b])) incoming[next[b]].Add(b);
+        // 004.13：以下按 buildings 数组序遍历（而非 belts HashSet）。引用哈希随进程变化，
+        // HashSet 迭代序在两次运行间会不同：冲突检测的"先到先得"赢家、环锚点的起点都会
+        // 因此漂移（1080传送带 同配置三次运行 -15/+8/-45 的实测根源），结果不可复现。
+        foreach (var b in buildings)
+            if (belts.Contains(b) && next[b] != null && belts.Contains(next[b])) incoming[next[b]].Add(b);
         var anchors = new HashSet<BlueprintBuilding>(conflicts);
         report.AnchorConflicts = anchors.Count;
         // Non-belt buildings (sorters, machines) referencing a belt normally pin that node. With
@@ -138,8 +142,9 @@ internal static class BeltPathOptimizer
             // ×1.2566 是赤道尺度，高纬度实际米数更大 → 只会多钉不少钉，纬度适应性偏保守安全。
             foreach (var sprayer in buildings.Where(b => b.itemId == 2313))
             {
-                foreach (var t in belts)
+                foreach (var t in buildings)
                 {
+                    if (!belts.Contains(t)) continue;
                     double dx = t.localOffset_x - sprayer.localOffset_x;
                     double dy = t.localOffset_y - sprayer.localOffset_y;
                     double dz = t.localOffset_z - sprayer.localOffset_z;
@@ -160,8 +165,9 @@ internal static class BeltPathOptimizer
                 if (belts.Contains(obs) || IsInserter(obs) || !IsPoleLike(obs)) continue;
                 BlueprintBuilding n1 = null, n2 = null;
                 double d1 = 1.0 * 1.0, d2 = double.MaxValue;
-                foreach (var t in belts)
+                foreach (var t in buildings)
                 {
+                    if (!belts.Contains(t)) continue;
                     double dx = t.localOffset_x - obs.localOffset_x;
                     double dy = t.localOffset_y - obs.localOffset_y;
                     double dz = t.localOffset_z - obs.localOffset_z;
@@ -263,9 +269,9 @@ internal static class BeltPathOptimizer
         int cycleMark = anchors.Count;
         // Smooth cycles need at least two fixed points to retain their extent.
         var visited = new HashSet<BlueprintBuilding>();
-        foreach (var b in belts)
+        foreach (var b in buildings)
         {
-            if (visited.Contains(b)) continue;
+            if (!belts.Contains(b) || visited.Contains(b)) continue;
             var walk = new List<BlueprintBuilding>();
             var local = new Dictionary<BlueprintBuilding,int>();
             var current = b;
@@ -486,6 +492,21 @@ internal static class BeltPathOptimizer
                     }
                     return false;
                 }
+                // 004.13：超上限的原件跨度不可切割。玩家手拉的最长带常为 1.9~2.05 m，优化上限
+                // 调低（如旧配置 1.903912 → 有效 1.866）或高空带半径放大时，这些原件跨度会
+                // 超过 cap。等分插值会给含它们的区域补插值点"把带数补多"（1080传送带 实测
+                // 1640→1674 反增），004.8 采纳规则随即整体拒绝插值结果，最终交付零合并——
+                // 这正是"很多（高空）带未长带化"的直接来源。改为把超上限原件跨度的两端预先
+                // 固定：该跨度按"原件同跨度"口径原样保留（游戏对原件同样接受或拒绝），两侧
+                // 子区域继续正常等分合并，插值结果不再净增带。
+                for (int s = 1; s < path.Count; s++)
+                {
+                    if (cumulative[s] - cumulative[s - 1] > cap)
+                    {
+                        fixedIdx.Add(s - 1);
+                        fixedIdx.Add(s);
+                    }
+                }
                 for (int pass = 0; ; pass++)
                 {
                     var anchors2 = new List<int>{0};
@@ -498,7 +519,9 @@ internal static class BeltPathOptimizer
                         int a = anchors2[ai], b = anchors2[ai + 1];
                         double Lf = cumulative[b] - cumulative[a];
                         if (Lf <= cap) continue; // 区域单跨度可达，无插值点
-                        int k = (int)Math.Ceiling(Lf / cap) - 1;
+                        // 004.13：插值点数不超过被替换的内部原件数（含超上限原件跨度时
+                        // ceil(Lf/cap)-1 可能越过该界 → 补切增带；上方预固定后正常不会触发）。
+                        int k = Math.Min((int)Math.Ceiling(Lf / cap) - 1, b - a - 1);
                         for (int j = 1; j <= k; j++)
                         {
                             double T = cumulative[a] + Lf * j / (k + 1);
@@ -530,7 +553,8 @@ internal static class BeltPathOptimizer
                             double Lf = cumulative[b] - cumulative[a];
                             if (b > a + 1 && Lf > cap)
                             {
-                                int k = (int)Math.Ceiling(Lf / cap) - 1;
+                                int k = Math.Min((int)Math.Ceiling(Lf / cap) - 1, b - a - 1);
+                                if (k >= 1)
                                 for (int j = 1; j <= k; j++)
                                 {
                                     double T = cumulative[a] + Lf * j / (k + 1);
@@ -541,6 +565,12 @@ internal static class BeltPathOptimizer
                                     var node = MakeNode(lo, hi, t, hi);
                                     replacements.Add(node);
                                     newNodes.Add(node);
+                                }
+                                else
+                                {
+                                    // 004.13 兜底：k 被压到 0 时不能丢内部原件（跨度会爆），
+                                    // 原样保留本区域全部节点（等价于本区域不合并）。
+                                    for (int q = a + 1; q < b; q++) replacements.Add(path[q]);
                                 }
                             }
                             if (b < path.Count - 1) replacements.Add(path[b]);
@@ -605,8 +635,20 @@ internal static class BeltPathOptimizer
                 if (!freeMerge) return;
                 foreach (var attachment in attachments)
                 {
-                    // 机器类绑定点已原位锚定（目标节点=保留的路径端点），引用无需改动。
-                    if (!IsInserter(attachment.Owner)) continue;
+                    // 机器类绑定点（分流器/机器等非分拣器）：引用不做就近重绑（连接窗口语义
+                    // 不同，偏移归零重绑只对分拣器成立）。但目标节点若被本次合并删除，引用会
+                    // 悬空 → InserterBinder 就近兜底在密集平行带处会跨线（1080 分流器#238
+                    // 实证：基线 44 线 → 兜底后 36 线，违反准则⑦）。修复：目标被删就走
+                    // 臂长守卫同款 restoreIdx 通道按弧位回插原目标节点，引用原样保留 → 永远同线。
+                    if (!IsInserter(attachment.Owner))
+                    {
+                        if (attachment.Target != null && pathIndexMap.ContainsKey(attachment.Target)
+                            && !replacements.Contains(attachment.Target))
+                        {
+                            restoreIdx.Add(pathIndexMap[attachment.Target]);
+                        }
+                        continue;
+                    }
                     if (TraceIndex.HasValue && attachment.Owner.index == TraceIndex.Value)
                         Trace($"run {start.index}->{end.index} owner={attachment.Owner.index} target={attachment.Target?.index} inPath={(attachment.Target != null && pathIndexMap.ContainsKey(attachment.Target))} path={path.Count}");
                     else if (IsTraced(attachment.Owner) || IsTraced(attachment.Target))
