@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>TopoProbe</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/BeltPathOptimizer.cs" Link="BeltPathOptimizer.cs"/>
+    <Compile Include="../../src/BuildingColliders.cs" Link="BuildingColliders.cs"/>
+    <Compile Include="../../src/BuildingCollision.cs" Link="BuildingCollision.cs"/>
+    <Compile Include="../../src/BeltDistanceMetric.cs" Link="BeltDistanceMetric.cs"/>
+    <Compile Include="../../src/BeltSpacingCalibration.cs" Link="BeltSpacingCalibration.cs"/>
+    <Compile Include="../../src/InserterBinder.cs" Link="InserterBinder.cs"/>
+    <Compile Include="../../src/BeltWindowRepair.cs" Link="BeltWindowRepair.cs"/>
+    <Compile Include="../../src/BeltPathGeometry.cs" Link="BeltPathGeometry.cs"/>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/Assembly-CSharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
