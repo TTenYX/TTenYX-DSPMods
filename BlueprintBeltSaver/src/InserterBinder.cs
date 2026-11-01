@@ -31,16 +31,18 @@ namespace BlueprintBeltSaver
 
         internal sealed class Report
         {
-            internal int Inserters, Ends, EmptyBefore, Rebond, Unresolved, Verified, MachineEnds;
+            internal int Inserters, Ends, EmptyBefore, Rebond, Unresolved, Verified, MachineEnds, SameLinePreferred;
             public override string ToString() =>
-                $"分拣器 {Inserters} 个，端点 {Ends} 个：原有空端 {EmptyBefore}，机器端 {MachineEnds}（不改动），重新绑定 {Rebond}，无可绑定 {Unresolved}，原连接校验通过 {Verified}";
+                $"分拣器 {Inserters} 个，端点 {Ends} 个：原有空端 {EmptyBefore}，机器端 {MachineEnds}（不改动），重新绑定 {Rebond}，无可绑定 {Unresolved}，原连接校验通过 {Verified}"
+                + (SameLinePreferred > 0 ? $"，同线优先 {SameLinePreferred}" : "");
         }
 
         internal static bool IsBeltItem(int itemId) => itemId >= 2001 && itemId <= 2009;
         internal static bool IsInserterItem(int itemId) => itemId > 2010 && itemId < 2020;
 
         internal static Report Repair(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt,
-            Func<BlueprintBuilding, BlueprintBuilding, double> meters)
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters,
+            Func<BlueprintBuilding, int> lineOf = null)
         {
             var report = new Report();
             if (buildings == null)
@@ -67,15 +69,16 @@ namespace BlueprintBeltSaver
                 report.EmptyBefore += (wasEmptyInput ? 1 : 0) + (wasEmptyOutput ? 1 : 0);
 
                 report.Ends += 2;
-                inserter.inputObj = Resolve(inserter, inserter.inputObj, true, belts, all, isBelt, meters, report);
-                inserter.outputObj = Resolve(inserter, inserter.outputObj, false, belts, all, isBelt, meters, report);
+                inserter.inputObj = Resolve(inserter, inserter.inputObj, true, belts, all, isBelt, meters, report, lineOf);
+                inserter.outputObj = Resolve(inserter, inserter.outputObj, false, belts, all, isBelt, meters, report, lineOf);
             }
             return report;
         }
 
         private static BlueprintBuilding Resolve(BlueprintBuilding inserter, BlueprintBuilding current, bool isInput,
             BlueprintBuilding[] belts, HashSet<BlueprintBuilding> all, Func<BlueprintBuilding, bool> isBelt,
-            Func<BlueprintBuilding, BlueprintBuilding, double> meters, Report report)
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters, Report report,
+            Func<BlueprintBuilding, int> lineOf = null)
         {
             if (current != null && all.Contains(current) && !isBelt(current))
             {
@@ -89,8 +92,16 @@ namespace BlueprintBeltSaver
                 return current;
             }
 
+            // 004.12-c 线感知（准则⑦）：重绑优先落在**原目标同一条基线线路**上——密集平行带
+            // 场景下全局最近候选可能是邻线节点（1080 分流器#238 实证：44 线 → 36 线，游戏会把
+            // 分拣器吸到别的物品条）。lineOf 把任意结果节点（幸存/新增）映射回基线线路号；
+            // 无同线候选时才回退全局就近（旧行为）。
+            int wantLine = lineOf != null && current != null ? lineOf(current) : -1;
+
             BlueprintBuilding best = null;
             double bestScore = double.MaxValue;
+            BlueprintBuilding bestSameLine = null;
+            double bestSameLineScore = double.MaxValue;
             foreach (var candidate in belts)
             {
                 if (ReferenceEquals(candidate, current))
@@ -103,6 +114,18 @@ namespace BlueprintBeltSaver
                     bestScore = score;
                     best = candidate;
                 }
+                if (wantLine >= 0 && lineOf != null && lineOf(candidate) == wantLine && score < bestSameLineScore)
+                {
+                    bestSameLineScore = score;
+                    bestSameLine = candidate;
+                }
+            }
+            if (bestSameLine != null)
+            {
+                // 同线候选存在：即使它分数略差也优先（跨线的代价是分拣器吸错物品条，不可接受）。
+                report.Rebond++;
+                report.SameLinePreferred++;
+                return bestSameLine;
             }
             if (best == null)
             {

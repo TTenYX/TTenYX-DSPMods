@@ -1632,7 +1632,22 @@ namespace BlueprintBeltSaver
                 // target (the game nulls the reference and the sorter is dead in game). Every inserter
                 // end is verified here and re-bound when it is empty, dangling or beyond the game's
                 // reach; machine ends are never touched.
-                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters);
+                // 线感知 binder（004.12-c）：给 binder 提供"任意结果节点 → 基线线路号"函数——
+                // 幸存节点直查基线；新增（插值）节点经 结果线→基线 映射回溯（幸存者对账）。
+                var resultLinesForBinder = LinesOfBlueprint(bp.buildings, IsBelt);
+                var r2oForBinder = new Dictionary<int, int>();
+                foreach (var kv in resultLinesForBinder)
+                {
+                    if (!preMergeLines.TryGetValue(kv.Key, out int o)) continue;
+                    if (r2oForBinder.TryGetValue(kv.Value, out var o0) && o0 != o) continue;
+                    r2oForBinder[kv.Value] = o;
+                }
+                int LineOfForBinder(BlueprintBuilding n)
+                    => n == null ? -1
+                     : preMergeLines.TryGetValue(n, out int pl) ? pl
+                     : resultLinesForBinder.TryGetValue(n, out int rl) && r2oForBinder.TryGetValue(rl, out int bl) ? bl
+                     : -1;
+                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters, LineOfForBinder);
                 Log.Info("分拣器校验：" + binderReport);
                 // Full savings are taken first; only then is every inserter judged. If a merged piece no
                 // longer passes through the window the game needs (1.414 m from the inserter body or
