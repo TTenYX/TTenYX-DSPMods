@@ -1,7 +1,7 @@
 # 蓝图长带化（BlueprintBeltSaver）全自动测试流程手册
 
 > 交接文档：任何会话/agent 按本手册可从零复现整套全自动测试与 A/B 对比闭环。
-> 成文：2026-11-01（目标第 4 轮结束时）。配套档案：同目录《长带MOD-全自动测试记录.md》（六轮实验全史）。
+> 成文：2026-11-01（目标第 4 轮结束时）。配套档案：同目录《实验档案-逐轮测试记录.md》（六轮实验全史 + 门禁 saga）。
 
 ## 0. 一页速查（TL;DR）
 
@@ -38,7 +38,7 @@ TopoProbe --semdiff "<A文件>" "<B文件>"                                   # 
 | 测试蓝图（14 张，唯一权威源） | `7.蓝图Blueprints/BlueprintBeltSaver 测试蓝图/` |
 | 导出产物 | `7.蓝图Blueprints/BlueprintBeltSaver 长带化导出/{蓝图A-游戏外,蓝图B-游戏内,AB对比报告.md}` |
 | 测试套件（每版一目录） | `.work/belt-regression/suite-vN-<名>/`（matrix-list + matrix-result + onechains + gap-analysis + compare） |
-| 测试记录（逐轮档案） | `docs/handoff/长带MOD-全自动测试记录.md`（与本手册同目录，随 git 版本化） |
+| 测试记录（逐轮档案） | `docs/handoff/实验档案-逐轮测试记录.md`（与本手册同目录，随 git 版本化） |
 | 历史档案（总纲/计划书/七份专题/测试日志/c1.json） | `docs/handoff/`（本目录，随 git 版本化；`.work/handoff/` 已留迁移指针） |
 | A/B 探针源码 | `tools/abprobe/`（本目录） |
 | 游戏内自测插件源码 | `tools/selftest/`（本目录） |
