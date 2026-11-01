@@ -1755,10 +1755,10 @@ namespace BlueprintBeltSaver
         {
             internal readonly bool Ok;
             internal readonly string Reason;
-            internal readonly int LinesBefore, LinesAfter, Refs;
-            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs)
+            internal readonly int LinesBefore, LinesAfter, Refs, AmbiguousRefs;
+            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs, int ambiguousRefs = 0)
             {
-                Ok = ok; Reason = reason; LinesBefore = linesBefore; LinesAfter = linesAfter; Refs = refs;
+                Ok = ok; Reason = reason; LinesBefore = linesBefore; LinesAfter = linesAfter; Refs = refs; AmbiguousRefs = ambiguousRefs;
             }
         }
 
@@ -1836,6 +1836,14 @@ namespace BlueprintBeltSaver
             // 分拣器/机器带引用：与基线（Clone 后、合并前）对账——只拦优化器造成的跨线改写。
             // Clone 自身的端点重吸附（游戏拷贝行为）在 preRefs 基线里已被豁免。
             int refs = 0;
+            int ambiguousRefs = 0;
+            var posLines = new Dictionary<(long, long), HashSet<int>>();
+            foreach (var kv in preLines)
+            {
+                var key = PosKeyA(kv.Key);
+                if (!posLines.TryGetValue(key, out var set)) set = posLines[key] = new HashSet<int>();
+                set.Add(kv.Value);
+            }
             for (int i = 0; i < preMerge.Length; i++)
             {
                 var cur = preMerge[i];
@@ -1849,10 +1857,38 @@ namespace BlueprintBeltSaver
                     if (targetNow == null || !isBelt(targetNow) || !after.TryGetValue(targetNow, out int rLine))
                         return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端带引用丢失", linesBefore, linesAfter, refs);
                     if (!o2r.TryGetValue(preLine, out var mapped) || mapped != rLine)
+                    {
+                        // 004.12-d 位置歧义豁免：目标格位在基线中同时存在原线路的节点（数据病态：
+                        // 同格位双节点分属两线），游戏自身粘贴解析同样线路不定——"跨线"判定在
+                        // 歧义位置不成立（原蓝图粘贴也一样），计入歧义计数，不判失败。
+                        if (PositionAmbiguous(targetNow, preLine, posLines))
+                        {
+                            ambiguousRefs++;
+                            continue;
+                        }
                         return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端被跨线重绑（基线线#{preLine} → 结果线#{rLine}，游戏会把分拣器吸到别的物品条上）", linesBefore, linesAfter, refs);
+                    }
                 }
             }
-            return new TopoCheck(true, "", linesBefore, linesAfter, refs);
+            return new TopoCheck(true, "", linesBefore, linesAfter, refs, ambiguousRefs);
+        }
+
+        /// <summary>格位键：区域 + 量化坐标（位置歧义判定用）。</summary>
+        private static (long area, long xy) PosKeyA(BlueprintBuilding b)
+        {
+            long area = (long)(b.areaIndex & 0xFF) << 56;
+            long xy = ((long)Math.Round(b.localOffset_x * 8192.0) << 20) ^ (long)Math.Round(b.localOffset_y * 8192.0);
+            return (area, xy);
+        }
+
+        /// <summary>位置歧义：目标格位在基线中同时存在 preLine 线路与其它线路的节点
+        /// （数据病态：同格位双节点分属两线），此时"跨线"判定不成立。</summary>
+        private static bool PositionAmbiguous(BlueprintBuilding target, int preLine,
+            Dictionary<(long, long), HashSet<int>> posLines)
+        {
+            if (target == null) return false;
+            var key = PosKeyA(target);
+            return posLines.TryGetValue(key, out var set) && set.Contains(preLine) && set.Count > 1;
         }
 
         /// <summary>

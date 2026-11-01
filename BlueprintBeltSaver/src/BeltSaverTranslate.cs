@@ -42,6 +42,7 @@
         internal string FailedBody;
         internal string CloneFailed;
         internal string SelfCheckFailed;
+        internal string TopologyFailed;
         internal string RebindEnabled;
         internal string RebindYawSkipped;
         internal string RebindWarning;
@@ -106,6 +107,7 @@
                 text.TooManyBuildings = "优化后建筑数超过 15000 上限，已放弃本次优化。";
                 text.CloneFailed = "原件蓝图无法安全序列化（Clone 返回空），已放弃本次省带。";
                 text.SelfCheckFailed = "省带结果未通过硬上限自检（可能产生「距离太远」），已保留原件。";
+                text.TopologyFailed = "省带结果未通过拓扑自检（线路条数变化或分拣器被跨线重绑，详见日志），已保留原件。";
                 text.FailedTitle = "BlueprintBeltSaver 省带未执行";
                 text.FailedBody = "本次省带的结果未通过安全自检或发生异常，已保留原蓝图（未做任何改动）。\n\n原因：{0}\n\n详细日志见 Player.log 关键字「belt optimization failed」「自检不过」。";
                 text.RebindEnabled = "已重绑分拣器/建筑连接";
@@ -168,6 +170,7 @@
                 text.TooManyBuildings = "The optimized blueprint would exceed the 15000 building limit; keeping the original.";
                 text.CloneFailed = "The original blueprint could not be serialized safely; nothing was changed.";
                 text.SelfCheckFailed = "The merge result failed the hard-limit self-check (it could paste as too far); the original is kept.";
+                text.TopologyFailed = "The merge result failed the topology self-check (line count changed or a sorter was re-bound across lines; see log); the original is kept.";
                 text.FailedTitle = "BlueprintBeltSaver - merge not applied";
                 text.FailedBody = "The merge result failed the safety check or an error occurred, so the original blueprint is kept unchanged.\n\nReason: {0}\n\nSee Player.log for details (keywords: belt optimization failed).";
                 text.RebindEnabled = "Sorter/building links rebound";
