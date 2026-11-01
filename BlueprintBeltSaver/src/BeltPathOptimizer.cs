@@ -29,13 +29,45 @@ internal static class BeltPathOptimizer
     internal sealed class Report
     {
         internal int Runs, ReducedRuns, TooShort, Protected, Invalid, Rebound, AttachmentYawSkipped, OffsetClamped, OverLimitPinned, OverLimitLinks;
+        internal int AnchorConflicts, AnchorAttachments, AnchorSprayers, AnchorObstacles, AnchorStructural, AnchorStations, AnchorCycles, AnchorPin;
+        internal int CollisionBoxHits, KeptOverSpans, GridFallbacks;
         internal readonly List<string> Chains = new List<string> { "start,end,nodes_before,nodes_after,length_m,cap_m,status" };
         public override string ToString() => $"路径 {Runs}，已优化 {ReducedRuns}，无需减少 {TooShort}，固定点 {Protected}，异常连接 {Invalid}，重绑附属连接 {Rebound}，因朝向不一致跳过 {AttachmentYawSkipped}，修正越界偏移 {OffsetClamped}" +
-            (OverLimitLinks > 0 ? $"，超限存储连接 {OverLimitLinks} 条（固定其邻域 {OverLimitPinned} 点）" : "");
+            (OverLimitLinks > 0 ? $"，超限存储连接 {OverLimitLinks} 条（固定其邻域 {OverLimitPinned} 点）" : "") +
+            (BeltPathOptimizer.Verbose ? $"；[锚点构成] 结构{AnchorConflicts} 绑定{AnchorAttachments} 喷涂{AnchorSprayers} 障碍{AnchorObstacles} 转折{AnchorStructural} 站台{AnchorStations} 环{AnchorCycles} 超限{AnchorPin}；碰撞盒命中 {CollisionBoxHits}；格点回退 {GridFallbacks} 链；原件对越限豁免 {KeptOverSpans} 段" : "");
     }
     internal static BlueprintBuilding[] Optimize(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt,
         Func<BlueprintBuilding, float> limit) => Optimize(buildings, isBelt, limit,
             (a,b) => GridDistance(a,b) * 1.2566370614359173, out _);
+
+    /// <summary>诊断开关（离线校验台用，游戏内恒为 null）：只跟踪该 index 的建筑。</summary>
+    internal static int? TraceIndex = null;
+    /// <summary>诊断开关：只跟踪该坐标（±0.05 格）的建筑。</summary>
+    internal static float? TraceX = null;
+    internal static float? TraceY = null;
+    private static bool IsTraced(BlueprintBuilding b)
+        => b != null && ((TraceIndex.HasValue && b.index == TraceIndex.Value)
+            || (TraceX.HasValue && TraceY.HasValue
+                && Math.Abs(b.localOffset_x - TraceX.Value) < 0.05f
+                && Math.Abs(b.localOffset_y - TraceY.Value) < 0.05f));
+    /// <summary>诊断开关（离线校验台用，游戏内恒为 false）：打印逐链拒绝明细。</summary>
+    internal static bool Verbose = false;
+    /// <summary>"这一段可以拉直"的余弦阈值（默认 1°）。离线实验可调大，评估曲率锚点的代价。</summary>
+    internal static double SmoothCosThreshold = Math.Cos(Math.PI / 180.0);
+    private static void VerboseLine(string message)
+    {
+        if (Verbose)
+        {
+            Console.WriteLine(message);
+        }
+    }
+    private static void Trace(string message)
+    {
+        if (TraceIndex.HasValue || TraceX.HasValue)
+        {
+            Console.WriteLine("    [trace] " + message);
+        }
+    }
 
     internal static BlueprintBuilding[] Optimize(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt,
         Func<BlueprintBuilding, float> limit, Func<BlueprintBuilding, BlueprintBuilding, double> meters, out Report report,
@@ -57,6 +89,7 @@ internal static class BeltPathOptimizer
         foreach (var b in belts)
             if (next[b] != null && belts.Contains(next[b])) incoming[next[b]].Add(b);
         var anchors = new HashSet<BlueprintBuilding>(conflicts);
+        report.AnchorConflicts = anchors.Count;
         // Non-belt buildings (sorters, machines) referencing a belt normally pin that node. With
         // rebindAttachments the reference is re-pointed to the merged segment instead, so the node
         // may be deleted - provided the guards below hold.
@@ -86,14 +119,68 @@ internal static class BeltPathOptimizer
         bool freeMerge = projectionRebind && rebindAttachments;
         if (freeMerge)
         {
-            // 忽略分拣器与机器：不做任何绑定点锚定。
+            int anchorMark = anchors.Count;
+            // 003.4 语义（回滚 003.5，玩家实测 003.5 更差：喷涂机原料带明显超长）：
+            // 机器类（非分拣器，喷涂机等）绑定点原位锚定；分拣器走就近重绑（003.2 起）。
+            foreach (var attachment in attachments)
+            {
+                if (attachment.Target != null && belts.Contains(attachment.Target) && !IsInserter(attachment.Owner))
+                    anchors.Add(attachment.Target);
+            }
+            report.AnchorAttachments = anchors.Count - anchorMark;
+            anchorMark = anchors.Count;
+            // 喷涂机连接是纯几何重建（反编译铁证：PlanetFactory.cs:6046-6048——粘贴后在与喷涂点
+            // sqrMagnitude<1f（1 米窗口）且距喷涂线<0.3f 的"带节点实体"上建立连接，蓝图不存引用）。
+            // 喷涂机有 cargo/inc 两个连接位（addonAreaColPoses[0]/[1]，SpraycoaterComponent.cs:171/185），
+            // 增产剂口偏离喷涂机中心——v3.6.5 的 1 格半径保住了货物带、丢了增产剂带（玩家实测）。
+            // 现按玩家指示放宽到 **1.6 格 ≈ 2.0 m**（口子偏移 + 1 m 窗口 + 余量）：窗口内全部带节点
+            // 钉为锚点（= 原料带与增产剂带中喷涂机判定节点均不做长带化，作为固定点）。GridDistance
+            // ×1.2566 是赤道尺度，高纬度实际米数更大 → 只会多钉不少钉，纬度适应性偏保守安全。
+            foreach (var sprayer in buildings.Where(b => b.itemId == 2313))
+            {
+                foreach (var t in belts)
+                {
+                    double dx = t.localOffset_x - sprayer.localOffset_x;
+                    double dy = t.localOffset_y - sprayer.localOffset_y;
+                    double dz = t.localOffset_z - sprayer.localOffset_z;
+                    if (dx * dx + dy * dy + dz * dz <= 1.6 * 1.6) anchors.Add(t);
+                }
+            }
+            report.AnchorSprayers = anchors.Count - anchorMark;
+            anchorMark = anchors.Count;
+            // 准则⑤前置（玩家《带上分拣器优化版》思路，2026-10-18）：把"压在带线上的**杆类**
+            // 障碍"（电线杆 2201 / 无线输电塔 2202 / 卫星配电站 2203，最近带节点 ≤1.0 格）最近的
+            // **两个**带节点钉为锚点——合并自动在障碍两侧断开，杆下原状段整体保留，两侧子链
+            // 独立最优合并（同结构 玩家版 8→6 省2 vs 003.8 8→8 省0）。
+            // 004.10 修正：原实现对**所有**非带非分拣建筑都锚（每台机器附近 2 个节点），
+            // C1 一张图就白钉 199 个锚点、6k 钉 497 个，把链路切得过碎。机器类碰撞由后面的
+            // "节点球回插"守卫兜底（新节点比原图任何节点更贴近障碍才回插），不需要侧翼锚定。
+            foreach (var obs in buildings)
+            {
+                if (belts.Contains(obs) || IsInserter(obs) || !IsPoleLike(obs)) continue;
+                BlueprintBuilding n1 = null, n2 = null;
+                double d1 = 1.0 * 1.0, d2 = double.MaxValue;
+                foreach (var t in belts)
+                {
+                    double dx = t.localOffset_x - obs.localOffset_x;
+                    double dy = t.localOffset_y - obs.localOffset_y;
+                    double dz = t.localOffset_z - obs.localOffset_z;
+                    double dd = dx * dx + dy * dy + dz * dz;                    if (dd < d1) { n2 = n1; d2 = d1; n1 = t; d1 = dd; }
+                    else if (dd < d2) { n2 = t; d2 = dd; }
+                }
+                if (n1 != null) anchors.Add(n1);
+                if (n2 != null) anchors.Add(n2);
+            }
+            report.AnchorObstacles = anchors.Count - anchorMark;
         }
         else if (rebindAttachments)
         {
+            int mark = anchors.Count;
             foreach (var attachment in attachments)
             {
                 if (attachment.Target != null && belts.Contains(attachment.Target)) anchors.Add(attachment.Target);
             }
+            report.AnchorAttachments = anchors.Count - mark;
         }
         else
         {
@@ -112,6 +199,7 @@ internal static class BeltPathOptimizer
         // around such a link would take away the only anchors that rebuild can use, so the link and its
         // immediate neighbours are pinned. With a correct length model this fires zero times on the
         // blueprints measured here - it is a defence in depth, not the fix for the equator problem.
+        int pinMark = anchors.Count;
         if (pinOverLimitLinks)
         {
             double overLimit = MaximumMeters * 1.05;
@@ -141,6 +229,8 @@ internal static class BeltPathOptimizer
                 report.OverLimitPinned += pinned;
             }
         }
+        report.AnchorPin = anchors.Count - pinMark;
+        int structuralMark = anchors.Count;
         foreach (var b in belts)
         {
             var n = next[b];
@@ -153,6 +243,8 @@ internal static class BeltPathOptimizer
             if (!Compatible(prev,b)) anchors.Add(prev);
             if (!Compatible(b,n)) anchors.Add(n);
         }
+        report.AnchorStructural = anchors.Count - structuralMark;
+        int stationMark = anchors.Count;
         var stationBelts = belts.Where(b =>
             (b.inputObj != null && b.inputObj.itemId >= 2103 && b.inputObj.itemId <= 2105)
             || (b.outputObj != null && b.outputObj.itemId >= 2103 && b.outputObj.itemId <= 2105)).ToList();
@@ -167,6 +259,8 @@ internal static class BeltPathOptimizer
             if (next[node] != null && belts.Contains(next[node])) anchors.Add(next[node]);
             foreach (var previous in incoming[node]) anchors.Add(previous);
         }
+        report.AnchorStations = anchors.Count - stationMark;
+        int cycleMark = anchors.Count;
         // Smooth cycles need at least two fixed points to retain their extent.
         var visited = new HashSet<BlueprintBuilding>();
         foreach (var b in belts)
@@ -186,13 +280,40 @@ internal static class BeltPathOptimizer
             }
             foreach (var node in walk) visited.Add(node);
         }
+        report.AnchorCycles = anchors.Count - cycleMark;
         report.Protected = anchors.Count; report.Invalid = conflicts.Count;
+        var rep = report; // 004.12：局部函数不能捕获 out 参数，用本地别名转发（引用同一对象）
         var retained = new HashSet<BlueprintBuilding>(buildings);
         var added = new List<BlueprintBuilding>();
         var pending = new Dictionary<BlueprintBuilding,BlueprintBuilding>();
         var inputPending = new Dictionary<BlueprintBuilding,BlueprintBuilding>();
         // 落点投影重绑清单：跨路径收集，路径循环结束后统一应用（见循环尾部的 rebinds.Add）。
         var rebinds = new List<(BlueprintBuilding owner, AttachmentSide side, BlueprintBuilding node, int offset)>();
+        // 004.11：所有非带非分拣建筑的 Build 碰撞盒预计算（每建筑每盒一次，run 循环内只做盒测试）。
+        // 旧实现的"0.8 格中心距离"对 3×3 制造台这类大建筑严重偏小：原线段中点可能落进机器
+        // 碰撞盒、粘贴时该节点被游戏跳过 → 断带。现在用 F9 导出的真实 Build 碰撞盒判定。
+        var collisionObstacles = buildings.Where(b => !belts.Contains(b) && !IsInserter(b)).ToList();
+        var obstacleBoxMap = new Dictionary<BlueprintBuilding, List<BuildingCollision.WorldBox>>();
+        foreach (var o in collisionObstacles)
+        {
+            var list = new List<BuildingCollision.WorldBox>();
+            if (!BuildingCollision.TryGetWorldBoxes(o, list))
+            {
+                continue;
+            }
+            // 自适应豁免：若**原件**已有带节点落进这个建筑的碰撞盒（喷涂机/物流站/分流器等
+            // 与带天然重叠的装置），说明游戏允许这种摆放，盒测试会误杀；该建筑退回旧口径。
+            // 制造台/熔炉等"原件从不重叠"的建筑才启用真实盒判定（玩家 C1 断带正是制造台）。
+            bool originalViolates = false;
+            foreach (var n in belts)
+            {
+                if (BuildingCollision.Hits(n, list)) { originalViolates = true; break; }
+            }
+            if (!originalViolates)
+            {
+                obstacleBoxMap[o] = list;
+            }
+        }
         foreach (var start in buildings.Where(anchors.Contains))
         {
             var path = new List<BlueprintBuilding>{start};
@@ -215,9 +336,22 @@ internal static class BeltPathOptimizer
             double cap = Math.Min(MaximumMeters, path.Min(b => (double)limit(b)));
             if (double.IsNaN(cap) || double.IsInfinity(cap) || cap < MinimumMeters || double.IsNaN(length) || length < MinimumMeters)
             { report.Invalid++; continue; }
+            // 004.12：本链的路径索引与实际模式标志。chainGrid 在插值链碰撞失败回退格点后置 true，
+            // 后续（重绑重算/守卫/跨度校验/提交端的 retained 收尾）都按格点语义处理。
+            var pathIndexMap = new Dictionary<BlueprintBuilding, int>();
+            for (int i = 0; i < path.Count; i++) pathIndexMap[path[i]] = i;
+            bool chainGrid = gridExact;
             var replacements = new List<BlueprintBuilding>{start};
+            int rebindBase = rebinds.Count;
+            int addedBase = added.Count;
+            var removedThisRun = new List<BlueprintBuilding>();
             List<int> kept = null;
+            int spans = 0;
             bool createdNodes = false;
+            var nearKeep = new HashSet<int>(); // 004.3 就近顶替保留集（插值点 <0.5 格贴原始节点时保原节点）
+            // 004.12：定段固定的原件段端点集合（碰撞/阈值命中的弧位所在段两端）+ 本链插值节点集。
+            var fixedIdx = new HashSet<int>();
+            var newNodes = new HashSet<BlueprintBuilding>();
             if (gridExact)
             {
                 // Keep a SUBSET of the original nodes instead of inventing interpolated positions.
@@ -271,81 +405,215 @@ internal static class BeltPathOptimizer
             }
             else
             {
-                // 贪心切割（插值，003.2）：按上限逐段切割，切点留 1 mm 余量——插值坐标 4 位
-                // 舍入后实测段长会略超切点间距，贴着 cap 切会被 valid 检查整条拒绝
-                //（实测 10 节点直链复现）。
-                bool unfit = false;
-                int bracket = 0;
-                double cutArc = 0.0;
-                while (true)
+                // 等分插值（004.12 重构为「定段固定 + 分区等分」，替代「整体等分 + 事后回填对」）：
+                // 旧实现先整体等分、再把撞障碍的插值点用原始段对回填——回填在等分点之间切出
+                // 0.1~0.3 m 亚最小碎片段（1080 实测 64 条链因此整链 distance_rejected），回填对
+                // 共享端点时直接 collision_unresolvable 整链放弃（65.6 实测 139 条链零收益）。
+                // 新实现两阶段：
+                //  ① 定段：对每个候选插值弧位预判障碍冲突（真实碰撞盒 / 无盒 0.8 格回退 /
+                //     节点球阈值 R_o-0.05——守卫 v3 同款判据提前到构造期），命中的弧位所在
+                //     原件段 (lo,hi) 两端固定；
+                //  ② 分区等分：固定点把链切成若干区域，每区域独立等分插值——区域跨度数 =
+                //     ceil(Lf/cap)，每段 ∈ (cap/2, cap]，跨度校验构造性通过；固定段本身是
+                //     原件相邻对（KeptOver 口径豁免）。碰撞失败与碎片跨度从结构上消失。
+                // tier 继承（004.1）：插值节点继承本 run 被删内部节点的多数 tier。
+                int majItem = -1; int majCnt = -1;
                 {
-                    double cutLimit = Math.Min(cutArc + cap - 0.001, length);
-                    if (cutLimit >= length - 1e-9) break;
-                    int k = bracket;
-                    while (k < path.Count - 1 && cumulative[k + 1] <= cutLimit) k++;
-                    double delta = cumulative[k + 1] - cumulative[k];
-                    double tCut = delta < 1e-9 ? 0 : (cutLimit - cumulative[k]) / delta;
-                    // Metadata (yaw/tilt/pitch/model) comes from an INTERIOR node, never from a run
-                    // endpoint: a run's first/last node is frequently a diagonal corner belt.
-                    int sourceIndex = path.Count >= 3 ? Math.Min(Math.Max(k + 1, 1), path.Count - 2) : k;
-                    var node = Copy(path[sourceIndex]);
-                    node.localOffset_x = Round(path[k].localOffset_x + (path[k + 1].localOffset_x - path[k].localOffset_x) * tCut);
-                    node.localOffset_y = Round(path[k].localOffset_y + (path[k + 1].localOffset_y - path[k].localOffset_y) * tCut);
-                    node.localOffset_z = Round(path[k].localOffset_z + (path[k + 1].localOffset_z - path[k].localOffset_z) * tCut);
-                    node.localOffset_x2 = node.localOffset_x; node.localOffset_y2 = node.localOffset_y; node.localOffset_z2 = node.localOffset_z;
-                    replacements.Add(node);
-                    cutArc = cutLimit;
-                    bracket = k;
-                }
-                if (unfit)
-                {
-                    report.Invalid++;
-                    report.Chains.Add(Row(start,end,path.Count,path.Count,length,cap,"unfit"));
-                    continue;
-                }
-                replacements.Add(end);
-                createdNodes = true;
-            }
-            bool valid=true;
-            for(int i=1;i<replacements.Count;i++)
-            {
-                double distance=meters(replacements[i-1],replacements[i]);
-                if(distance<MinimumMeters || distance>cap+0.0002 || distance>MaximumMeters) { valid=false; break; }
-            }
-            if(!valid)
-            {
-                report.Invalid++;
-                report.Chains.Add(Row(start,end,path.Count,path.Count,length,cap,"distance_rejected"));
-                var dbg = new System.Text.StringBuilder("    [distance_rejected] span=");
-                for(int i=0;i<replacements.Count;i++)
-                {
-                    if(i>0)
+                    var tierCount = new Dictionary<int,int>();
+                    for (int k = 1; k < path.Count - 1; k++)
                     {
-                        double d=meters(replacements[i-1],replacements[i]);
-                        dbg.Append(d.ToString("F4")).Append(' ');
+                        int it = path[k].itemId;
+                        tierCount.TryGetValue(it, out int c);
+                        tierCount[it] = c + 1;
                     }
-                    dbg.Append('[').Append(replacements[i].localOffset_x.ToString("F3")).Append(']');
+                    foreach (var kv in tierCount) if (kv.Value > majCnt) { majCnt = kv.Value; majItem = kv.Key; }
                 }
-                Console.WriteLine(dbg.ToString());
-                continue;
+                BlueprintBuilding MakeNode(int loIdx, int hiIdx, double t, int srcJ)
+                {
+                    // 元数据（yaw/tilt/pitch/model）取自内部节点，绝不取 run 端点（端点常是对角带）。
+                    int sourceIndex = path.Count >= 3 ? Math.Min(Math.Max(srcJ, 1), path.Count - 2) : srcJ - 1;
+                    var node = Copy(path[sourceIndex]);
+                    if (majItem > 0) node.itemId = (short)majItem;
+                    node.localOffset_x=Round(path[loIdx].localOffset_x+(path[hiIdx].localOffset_x-path[loIdx].localOffset_x)*t);
+                    node.localOffset_y=Round(path[loIdx].localOffset_y+(path[hiIdx].localOffset_y-path[loIdx].localOffset_y)*t);
+                    node.localOffset_z=Round(path[loIdx].localOffset_z+(path[hiIdx].localOffset_z-path[loIdx].localOffset_z)*t);
+                    node.localOffset_x2=node.localOffset_x; node.localOffset_y2=node.localOffset_y; node.localOffset_z2=node.localOffset_z;
+                    return node;
+                }
+                // 障碍判定数据：真实盒（有碰撞盒的非分拣建筑）/ 0.8 格回退（无盒者）/
+                // 节点球阈值（全部非带建筑：插值点不得比任何原始节点更贴近障碍，守卫 v3 口径）。
+                var boxObstacles = new List<(BlueprintBuilding o, List<BuildingCollision.WorldBox> boxes)>();
+                var fallbackObstacles = new List<BlueprintBuilding>();
+                foreach (var o in collisionObstacles)
+                {
+                    if (obstacleBoxMap.TryGetValue(o, out var oBoxes)) boxObstacles.Add((o, oBoxes));
+                    else fallbackObstacles.Add(o);
+                }
+                var thresholdList = new List<(BlueprintBuilding o, double th)>();
+                foreach (var bld in buildings)
+                {
+                    if (belts.Contains(bld)) continue;
+                    double m = double.MaxValue;
+                    for (int s = 0; s < path.Count; s++)
+                    {
+                        double ex = path[s].localOffset_x - bld.localOffset_x;
+                        double ey = path[s].localOffset_y - bld.localOffset_y;
+                        double ez = path[s].localOffset_z - bld.localOffset_z;
+                        double d = Math.Sqrt(ex * ex + ey * ey + ez * ez);
+                        if (d < m) m = d;
+                    }
+                    thresholdList.Add((bld, m - 0.05));
+                }
+                bool Violates(BlueprintBuilding node)
+                {
+                    foreach (var tv in thresholdList)
+                    {
+                        double dx = node.localOffset_x - tv.o.localOffset_x;
+                        double dy = node.localOffset_y - tv.o.localOffset_y;
+                        double dz = node.localOffset_z - tv.o.localOffset_z;
+                        if (Math.Sqrt(dx * dx + dy * dy + dz * dz) < tv.th) return true;
+                    }
+                    foreach (var bo in boxObstacles)
+                    {
+                        if (BuildingCollision.Hits(node, bo.boxes)) { rep.CollisionBoxHits++; return true; }
+                    }
+                    foreach (var o in fallbackObstacles)
+                    {
+                        double dx = o.localOffset_x - node.localOffset_x;
+                        double dy = o.localOffset_y - node.localOffset_y;
+                        double dz = o.localOffset_z - node.localOffset_z;
+                        if (dx * dx + dy * dy + dz * dz <= 0.8 * 0.8) return true;
+                    }
+                    return false;
+                }
+                for (int pass = 0; ; pass++)
+                {
+                    var anchors2 = new List<int>{0};
+                    foreach (int fi in fixedIdx) if (fi > 0 && fi < path.Count - 1) anchors2.Add(fi);
+                    anchors2.Sort();
+                    anchors2.Add(path.Count - 1);
+                    bool changed = false;
+                    for (int ai = 0; ai + 1 < anchors2.Count; ai++)
+                    {
+                        int a = anchors2[ai], b = anchors2[ai + 1];
+                        double Lf = cumulative[b] - cumulative[a];
+                        if (Lf <= cap) continue; // 区域单跨度可达，无插值点
+                        int k = (int)Math.Ceiling(Lf / cap) - 1;
+                        for (int j = 1; j <= k; j++)
+                        {
+                            double T = cumulative[a] + Lf * j / (k + 1);
+                            int lo = a; while (lo < b && cumulative[lo + 1] < T) lo++;
+                            int hi = lo + 1;
+                            double delta = cumulative[hi] - cumulative[lo];
+                            double t = delta < 1e-9 ? 0 : (T - cumulative[lo]) / delta;
+                            if (Violates(MakeNode(lo, hi, t, hi)))
+                            {
+                                // 命中：固定该弧位所在原件段两端（已固定过的段不重复触发）。
+                                changed |= fixedIdx.Add(lo);
+                                changed |= fixedIdx.Add(hi);
+                            }
+                        }
+                    }
+                    if (!changed || pass >= 8)
+                    {
+                        // 收敛（或迭代上限）：按最终固定点布局构造替换链。
+                        if (changed)
+                        {
+                            anchors2 = new List<int>{0};
+                            foreach (int fi in fixedIdx) if (fi > 0 && fi < path.Count - 1) anchors2.Add(fi);
+                            anchors2.Sort();
+                            anchors2.Add(path.Count - 1);
+                        }
+                        for (int ai = 0; ai + 1 < anchors2.Count; ai++)
+                        {
+                            int a = anchors2[ai], b = anchors2[ai + 1];
+                            double Lf = cumulative[b] - cumulative[a];
+                            if (b > a + 1 && Lf > cap)
+                            {
+                                int k = (int)Math.Ceiling(Lf / cap) - 1;
+                                for (int j = 1; j <= k; j++)
+                                {
+                                    double T = cumulative[a] + Lf * j / (k + 1);
+                                    int lo = a; while (lo < b && cumulative[lo + 1] < T) lo++;
+                                    int hi = lo + 1;
+                                    double delta = cumulative[hi] - cumulative[lo];
+                                    double t = delta < 1e-9 ? 0 : (T - cumulative[lo]) / delta;
+                                    var node = MakeNode(lo, hi, t, hi);
+                                    replacements.Add(node);
+                                    newNodes.Add(node);
+                                }
+                            }
+                            if (b < path.Count - 1) replacements.Add(path[b]);
+                        }
+                        replacements.Add(end);
+                        spans = replacements.Count - 1;
+                        createdNodes = true;
+                        break;
+                    }
+                }
             }
+            // 004.12：旧的「整体等分 + 撞障碍回填原始对」已并入上面 else 分支的
+            // 「定段固定 + 分区等分」构造期判定（回填曾产生亚最小碎片段与共享端点整链放弃）。
+            // 004.12 碰撞失败兜底（不再整链放弃）：回退格点保点模式重建本链替换集——全部沿用
+            // 原始节点位置（原图可粘贴 = 位置天然合法，碰撞守卫对原始节点不适用），跨度由与
+            // 格点分支完全相同的贪心（含尾段保护）保证 ≤ cap。收益不及插值，但远好于整链放弃
+            // （基线矩阵：collision_unresolvable 链合计持有 ~2000 节点，全部零收益）。
+            bool TryGridFallback()
+            {
+                if (chainGrid) return false;
+                var fbKept = new List<int>();
+                int cursor = 0;
+                while (cursor < path.Count - 1)
+                {
+                    int reach = -1;
+                    for (int j = cursor + 1; j < path.Count; j++)
+                    {
+                        if (meters(path[cursor], path[j]) > cap) break;
+                        reach = j;
+                    }
+                    if (reach < 0) return false; // 原件单步越限：格点同样无解（与 pre_existing_over_cap 同口径）
+                    if (reach < path.Count - 1 && reach > cursor + 1 && (length - cumulative[reach]) < MinimumMeters) reach--;
+                    fbKept.Add(reach);
+                    cursor = reach;
+                }
+                if (fbKept.Count >= path.Count - 2) return false; // 格点也省不出节点，放弃是诚实的
+                replacements.Clear();
+                replacements.Add(start);
+                foreach (int index in fbKept) replacements.Add(path[index]);
+                replacements.Add(end);
+                kept = fbKept;
+                spans = 0; createdNodes = false;
+                nearKeep.Clear(); fixedIdx.Clear(); newNodes.Clear();
+                chainGrid = true;
+                rep.GridFallbacks++;
+                return true;
+            }
+            // （004.12 已删除旧的「撞障碍回填原始对」循环：其判定与修复已并入 else 分支的
+            //  构造期定段；这里不再有 collision_unresolvable 的产生源。）
             // 002→004 落点投影重绑（玩家方案）：合并**完全忽略分拣器**（不再原位锚定、不再
             // 弧长覆盖重指），合并后按"分拣器取货点坐标 → 就近带节点 + 偏移重锚定"重新接上。
             // 取货点弧位 = 旧段中心 - 存储偏移×0.06（符号约定由原图统计得出：397:0 / 128:4，
             // offset 正方向 = 指向段首/上游）。
-            var pathRebinds = new List<(BlueprintBuilding owner, AttachmentSide side, BlueprintBuilding node, int offset)>();
-            if (freeMerge)
+            // 004.12：重绑计算抽成可重跑的局部函数——碰撞失败回退格点后，需按新替换集重算
+            // 重绑与臂长守卫回插，再走守卫与跨度校验；提交到全局 rebinds 的时机不变（链全过才提交）。
+            List<(BlueprintBuilding owner, AttachmentSide side, BlueprintBuilding node, int offset)> pathRebinds;
+            SortedSet<int> restoreIdx;
+            void BuildRebinds()
             {
-                var pathIndex = new Dictionary<BlueprintBuilding, int>();
-                for (int i = 0; i < path.Count; i++) pathIndex[path[i]] = i;
+                pathRebinds = new List<(BlueprintBuilding, AttachmentSide, BlueprintBuilding, int)>();
+                restoreIdx = new SortedSet<int>();
+                if (!freeMerge) return;
                 foreach (var attachment in attachments)
                 {
-                    if (attachment.Target == null || !pathIndex.TryGetValue(attachment.Target, out _)) continue;
-                    // 就近强制绑定（003.3）：以**旧目标节点 T 的位置**为基准（T 必在分拣器要绑
-                    // 的那条带上；用分拣器中心做基准会在"一进一出双带"场景跨带错绑），绑定到
-                    // 最近的替换节点，沿带偏移归零。依据：原图审计（--pickaudit）证明蓝图存储
-                    // 偏移恒为 0（1080 图 443/443 全 0），取货点由游戏按分拣器位置向带路径投影
-                    // 决定——写入任何非零偏移都会把取货点人为挪离分拣器（003.1 失效的直接原因）。
+                    // 机器类绑定点已原位锚定（目标节点=保留的路径端点），引用无需改动。
+                    if (!IsInserter(attachment.Owner)) continue;
+                    if (TraceIndex.HasValue && attachment.Owner.index == TraceIndex.Value)
+                        Trace($"run {start.index}->{end.index} owner={attachment.Owner.index} target={attachment.Target?.index} inPath={(attachment.Target != null && pathIndexMap.ContainsKey(attachment.Target))} path={path.Count}");
+                    else if (IsTraced(attachment.Owner) || IsTraced(attachment.Target))
+                        Trace($"run {start.index}->{end.index} owner={attachment.Owner.index}(x{attachment.Owner.localOffset_x:F2},y{attachment.Owner.localOffset_y:F2},item{attachment.Owner.itemId}) target={attachment.Target?.index}(x{attachment.Target?.localOffset_x:F2},y{attachment.Target?.localOffset_y:F2}) inPath={(attachment.Target != null && pathIndexMap.ContainsKey(attachment.Target))} path={path.Count}");
+                    if (attachment.Target == null || !pathIndexMap.ContainsKey(attachment.Target)) continue;
+                    // 就近强制绑定（003.3）：以旧目标节点 T 的位置为基准，绑定到最近的替换节点，
+                    // 沿带偏移归零（--pickaudit 证明蓝图存储偏移恒 0，取货点由游戏投影决定）。
                     double best = double.MaxValue;
                     BlueprintBuilding bestNode = null;
                     foreach (var r in replacements)
@@ -357,27 +625,274 @@ internal static class BeltPathOptimizer
                         if (d2 < best) { best = d2; bestNode = r; }
                     }
                     if (bestNode == null) continue;
+                    // 003.6 臂长守卫（玩家带2实测 5 处失效的根因）：合并删点后"最近替换节点"
+                    // 可能比原目标离分拣器远得多（带2跨度 1.5 格 × 1.6~2.1 m/格，实测重绑目标
+                    // 达 2.7~6.0 m，而 2 格分拣器臂长仅 ~2.5 m → 游戏拒连 → 输入/输出端失效）。
+                    // 新目标一旦比原目标更远 0.6 m 以上，就放弃重绑：把原目标节点回插进链、
+                    // 引用原样保留（原几何在游戏里验证过，天然可达）。
+                    double oldDist = meters(attachment.Owner, attachment.Target);
+                    double newDist = meters(attachment.Owner, bestNode);
+                    if (IsTraced(attachment.Owner) || IsTraced(attachment.Target))
+                        Trace($"  arm owner={attachment.Owner.index} old={oldDist:F3} new={newDist:F3} best=x{bestNode.localOffset_x:F2},y{bestNode.localOffset_y:F2},idx{bestNode.index} {(newDist > oldDist + 0.6 ? "RESTORE" : "REBIND")}");
+                    if (newDist > oldDist + 0.6)
+                    {
+                        restoreIdx.Add(pathIndexMap[attachment.Target]);
+                        continue;
+                    }
                     pathRebinds.Add((attachment.Owner, attachment.Side, bestNode, 0));
                 }
             }
+            BuildRebinds();
+            // 注意：pathRebinds 必须等本链通过全部校验（碰撞回插 → 跨度复核 → 悬空自检）后
+            // 才提交到全局 rebinds。004.5 之前在这里就 AddRange，导致被 distance_rejected /
+            // collision_unresolvable 放弃的链仍把分拣器改指到一条**不会进入结果**的替换节点
+            // → 终检悬空（C1绿糖@72° 分拣器 → 插值节点，实测复现）。
+            // 003.6 v2（§3.20a 撤销重做）：把"臂长守卫"保下的原目标节点按**弧位**回插进替换链。
+            // 003.6 的括位搜索只认原始节点，插值模式（插件双模式取优会采纳插值试验）链序错乱
+            // → 粘贴大面积 TooFar。v2：对每个替换节点求弧位——原始节点查 cumulative，插值节点
+            // 投影到原折线取弧长——与回插节点一起按弧位整体排序，对两种模式都单调。
+            // 004.12：弧位回插 + 碰撞守卫整体抽成可重跑局部函数（格点回退后按新替换集重跑）。
+            bool RunRestoreAndGuard()
+            {
+            if (restoreIdx.Count > 0)
+            {
+                var pathIndexOf = new Dictionary<BlueprintBuilding, int>();
+                for (int i = 0; i < path.Count; i++) pathIndexOf[path[i]] = i;
+                double ArcOf(BlueprintBuilding n)
+                {
+                    if (pathIndexOf.TryGetValue(n, out int ri)) return cumulative[ri];
+                    double best = double.MaxValue, bestArc = 0;
+                    for (int s = 1; s < path.Count; s++)
+                    {
+                        double ax = path[s-1].localOffset_x, ay = path[s-1].localOffset_y;
+                        double bx = path[s].localOffset_x, by = path[s].localOffset_y;
+                        double dx = bx - ax, dy = by - ay;
+                        double len2 = dx * dx + dy * dy;
+                        double t = len2 < 1e-12 ? 0 : ((n.localOffset_x - ax) * dx + (n.localOffset_y - ay) * dy) / len2;
+                        t = Math.Max(0.0, Math.Min(1.0, t));
+                        double ex = ax + dx * t - n.localOffset_x, ey = ay + dy * t - n.localOffset_y;
+                        double d = ex * ex + ey * ey;
+                        if (d < best) { best = d; bestArc = cumulative[s-1] + t * (cumulative[s] - cumulative[s-1]); }
+                    }
+                    return bestArc;
+                }
+                var items = new List<(double arc, BlueprintBuilding node)>(replacements.Count + restoreIdx.Count);
+                foreach (var r in replacements) items.Add((ArcOf(r), r));
+                foreach (int k in restoreIdx) items.Add((cumulative[k], path[k]));
+                items.Sort((a, b) => a.arc.CompareTo(b.arc));
+                replacements.Clear();
+                foreach (var it in items) replacements.Add(it.node);
+            }
+            // 准则⑤碰撞守卫 v2（可燃冰实测漏洞修复）：003.8 只查"两端都是原始节点"的跨度，
+            // 插值模式（双模式取优会采纳插值试验）的插值端点跨度全部漏检 → 弦线压杆。v2：
+            // 迭代 [回插→全跨度扫描] 直到无违例：违例跨度回插其弧位区间内离障碍最近的原始
+            // 节点（插值端点的弧位由投影求出）；无可回插 → 整链放弃合并。原始相邻对（原状）
+            // 豁免；阈值 0.6 赤道格。
+            var obstacleSet = new List<BlueprintBuilding>();
+            foreach (var bld in buildings) if (!belts.Contains(bld)) obstacleSet.Add(bld);
+            if (obstacleSet.Count > 0)
+            {
+                var pathIndexOf = new Dictionary<BlueprintBuilding, int>();
+                for (int i = 0; i < path.Count; i++) pathIndexOf[path[i]] = i;
+                // 每杆动态阈值（贴线杆教训：固定 0.6 会把"与原状同样贴近"的跨度也判违规）：
+                // R_o = 原始折线离该杆的最近距离 − 0.05 → 只拦比原状更近的跨度。
+                var thresholds = new Dictionary<BlueprintBuilding, double>();
+                foreach (var o in obstacleSet)
+                {
+                    // 节点球模型（源码 2179 行：带粘贴碰撞=节点球 r0.23@上浮0.2，非跨度）：
+                    // 阈值 = 原始路径**节点**到该障碍的最近 3D 距离（原图节点全部合法）。
+                    double m = double.MaxValue;
+                    for (int s = 0; s < path.Count; s++)
+                    {
+                        double ex = path[s].localOffset_x - o.localOffset_x;
+                        double ey = path[s].localOffset_y - o.localOffset_y;
+                        double ez = path[s].localOffset_z - o.localOffset_z;
+                        double d = Math.Sqrt(ex * ex + ey * ey + ez * ez);
+                        if (d < m) m = d;
+                    }
+                    thresholds[o] = m - 0.05;
+                }
+                double ArcOf(BlueprintBuilding n)
+                {
+                    if (pathIndexOf.TryGetValue(n, out int ri)) return cumulative[ri];
+                    double best = double.MaxValue, bestArc = 0;
+                    for (int s = 1; s < path.Count; s++)
+                    {
+                        double ax = path[s-1].localOffset_x, ay = path[s-1].localOffset_y;
+                        double bx = path[s].localOffset_x, by = path[s].localOffset_y;
+                        double dx = bx - ax, dy = by - ay;
+                        double len2 = dx * dx + dy * dy;
+                        double t = len2 < 1e-12 ? 0 : ((n.localOffset_x - ax) * dx + (n.localOffset_y - ay) * dy) / len2;
+                        t = Math.Max(0.0, Math.Min(1.0, t));
+                        double ex = ax + dx * t - n.localOffset_x, ey = ay + dy * t - n.localOffset_y;
+                        if (ex * ex + ey * ey < best) { best = ex * ex + ey * ey; bestArc = cumulative[s-1] + t * (cumulative[s] - cumulative[s-1]); }
+                    }
+                    return bestArc;
+                }
+                bool failed = false;
+                for (int iter = 0; iter < 12 && !failed; iter++)
+                {
+                    if (restoreIdx.Count > 0)
+                    {
+                        var repSet = new HashSet<BlueprintBuilding>(replacements);
+                        var items = new List<(double arc, BlueprintBuilding node)>(replacements.Count + restoreIdx.Count);
+                        foreach (var r in replacements) items.Add((ArcOf(r), r));
+                        foreach (int k in restoreIdx) if (!repSet.Contains(path[k])) items.Add((cumulative[k], path[k]));
+                        items.Sort((a, b) => a.arc.CompareTo(b.arc));
+                        replacements.Clear();
+                        foreach (var it in items) replacements.Add(it.node);
+                    }
+                    bool restoredAny = false;
+                    var repSet2 = new HashSet<BlueprintBuilding>(replacements);
+                    for (int i = 1; i < replacements.Count && !failed; i++)
+                    {
+                        var r = replacements[i];
+                        if (pathIndexOf.ContainsKey(r)) continue; // 原始节点=原图合法位置
+                        foreach (var o in obstacleSet)
+                        {
+                            double ex = r.localOffset_x - o.localOffset_x;
+                            double ey = r.localOffset_y - o.localOffset_y;
+                            double ez = r.localOffset_z - o.localOffset_z;
+                            if (Math.Sqrt(ex * ex + ey * ey + ez * ez) >= thresholds[o]) continue;
+                            // 该插值节点比原图任何节点都更贴近障碍 → 回插原节点恢复原状密度
+                            int bestK = -1; double bestD = double.MaxValue;
+                            for (int k = 1; k < path.Count - 1; k++)
+                            {
+                                // 过滤口径必须是"已在替换链/已回插"，不是 pathIndexOf（它包含全部原始节点）
+                                if (repSet2.Contains(path[k]) || restoreIdx.Contains(k)) continue;
+                                double ddx = path[k].localOffset_x - o.localOffset_x, ddy = path[k].localOffset_y - o.localOffset_y, ddz = path[k].localOffset_z - o.localOffset_z;
+                                double dd = ddx * ddx + ddy * ddy + ddz * ddz;
+                                if (dd < bestD) { bestD = dd; bestK = k; }
+                            }
+                            if (bestK < 0) { failed = true; break; }
+                            restoreIdx.Add(bestK);
+                            repSet2.Add(path[bestK]);
+                            restoredAny = true;
+                            break;
+                        }
+                    }
+                    if (!restoredAny) break;
+                }
+                if (failed) return false;
+            }
+            return true;
+            }
+            if (!RunRestoreAndGuard())
+            {
+                // 004.12：守卫失败不再整链放弃——回退格点保点（全原始节点，守卫对原始节点
+                // 不适用、必然通过），重算重绑与守卫后继续走跨度校验；格点也救不了才放弃。
+                bool guardRecovered = TryGridFallback();
+                if (guardRecovered) { BuildRebinds(); guardRecovered = RunRestoreAndGuard(); }
+                if (!guardRecovered)
+                {
+                    report.Invalid++;
+                    report.Chains.Add(Row(start,end,path.Count,path.Count,length,cap,"collision_unresolvable"));
+                    continue;
+                }
+            }
+            // 跨度校验必须在回插之后（守卫 v2 教训：回插产生的跨度此前未被校验，刺笋@72°
+            // 格点模式漏出 3 条越限链节——违反基准准则①）。
+            // 004.12 两点强化：
+            //  ① 原件相邻对豁免——跨度两端是 path 中相邻的两个原始节点时，该跨度在原件里
+            //     逐字存在（碰撞回填/格点保点产物），游戏对原件同样接受或拒绝它，按"原件
+            //     同跨度越限(KeptOver)"口径豁免（与离线矩阵 BuildSpanIndex 判定一致），只
+            //     记账不拒绝；越上限的计入 KeptOverSpans。
+            //  ② 校验失败先试格点回退（重建替换集 + 重算重绑 + 重跑守卫）再复检，不行才拒绝。
+            bool SpansValid()
+            {
+                for(int i=1;i<replacements.Count;i++)
+                {
+                    double distance=meters(replacements[i-1],replacements[i]);
+                    if(pathIndexMap.TryGetValue(replacements[i-1], out int pa) && pathIndexMap.TryGetValue(replacements[i], out int pb) && pb==pa+1)
+                    {
+                        if(distance>MaximumMeters) rep.KeptOverSpans++;
+                        continue;
+                    }
+                    if(distance<MinimumMeters || distance>cap+0.0002 || distance>MaximumMeters) return false;
+                }
+                return true;
+            }
+            if(!SpansValid())
+            {
+                bool spanRecovered = false;
+                if (!chainGrid && TryGridFallback())
+                {
+                    BuildRebinds();
+                    if (RunRestoreAndGuard()) spanRecovered = SpansValid();
+                }
+                if(!spanRecovered)
+                {
+                    report.Invalid++;
+                    report.Chains.Add(Row(start,end,path.Count,path.Count,length,cap,"distance_rejected"));
+                    var dbg = new System.Text.StringBuilder("    [distance_rejected] span=");
+                    for(int i=0;i<replacements.Count;i++)
+                    {
+                        if(i>0)
+                        {
+                            double d=meters(replacements[i-1],replacements[i]);
+                            dbg.Append(d.ToString("F4")).Append(' ');
+                        }
+                        dbg.Append('[').Append(replacements[i].localOffset_x.ToString("F3")).Append(']');
+                    }
+                    VerboseLine(dbg.ToString());
+                    continue;
+                }
+            }
+            // 本链确认交付：现在才提交重绑（见上面"链通过全部校验后才提交"的说明）。
             foreach (var rb in pathRebinds) rebinds.Add(rb);
-            report.ReducedRuns++; report.Chains.Add(Row(start,end,path.Count,replacements.Count,length,cap,gridExact?"optimized":"optimized_resampled"));
+            report.ReducedRuns++; report.Chains.Add(Row(start,end,path.Count,replacements.Count,length,cap,gridExact?"optimized":(chainGrid?"optimized_grid_fallback":"optimized_resampled")));
             if (createdNodes)
             {
-                added.AddRange(replacements.Skip(1).Take(replacements.Count-2));
+                added.AddRange(replacements.Skip(1).Take(replacements.Count-2).Where(n => newNodes.Contains(n)));
             }
             for(int i=0;i<replacements.Count-1;i++) pending[replacements[i]]=replacements[i+1];
             for(int i=1;i<replacements.Count;i++)
                 if(i<replacements.Count-1 || (end.inputObj!=null && path.Contains(end.inputObj))) inputPending[replacements[i]]=replacements[i-1];
-            if (gridExact)
+            if (chainGrid)
             {
                 // Surviving nodes are the original objects, so only the dropped ones leave the set.
                 var keptSet = new HashSet<int>(kept);
-                for(int i=1;i<path.Count-1;i++) if(!keptSet.Contains(i)) retained.Remove(path[i]);
+                for(int i=1;i<path.Count-1;i++) if(!keptSet.Contains(i) && !restoreIdx.Contains(i)) { retained.Remove(path[i]); removedThisRun.Add(path[i]); }
             }
             else
             {
-                for(int i=1;i<path.Count-1;i++) retained.Remove(path[i]);
+                for(int i=1;i<path.Count-1;i++)
+                    if(!fixedIdx.Contains(i) && !restoreIdx.Contains(i) && !nearKeep.Contains(i))
+                    {
+                        if (TraceIndex.HasValue || TraceX.HasValue)
+                        {
+                            foreach (var a in attachments)
+                                if (ReferenceEquals(a.Target, path[i]) && (IsTraced(a.Owner) || IsTraced(path[i])))
+                                    Trace($"REMOVE target of owner {a.Owner.index} (item{a.Owner.itemId}) node {path[i].index} in run {start.index}->{end.index} i={i}/{path.Count} restore={restoreIdx.Count}");
+                        }
+                        retained.Remove(path[i]); removedThisRun.Add(path[i]);
+                    }
+                // 004.4 每链自检（可燃冰@68° 悬空异常零星复现）：链的任何 pending 目标若不在
+                // retained 内，回滚本链全部改动（恢复被删节点、撤销 pending/rebinds），只丢这一
+                // 链的收益——绝不让整图优化因一条链报废。
+                bool runOk = true;
+                // 合法目标集 = retained ∪ added（插值节点在 added，不在 retained——
+                // 只查 retained 会把一切含插值的链误回滚 = 全图无法长带化）。
+                var okSet = new HashSet<BlueprintBuilding>(retained);
+                foreach (var a in added) okSet.Add(a);
+                foreach (var n in replacements)
+                {
+                    if (pending.TryGetValue(n, out var pv) && !okSet.Contains(pv)) { runOk = false; break; }
+                    if (inputPending.TryGetValue(n, out var iv) && !okSet.Contains(iv)) { runOk = false; break; }
+                }
+                if (!runOk)
+                {
+                    foreach (var n in removedThisRun) retained.Add(n);
+                    foreach (var n in replacements) { pending.Remove(n); inputPending.Remove(n); }
+                    if (rebinds.Count > rebindBase) rebinds.RemoveRange(rebindBase, rebinds.Count - rebindBase);
+                    // 本链插值节点已追加进全局 added（带原节点陈旧引用）——必须一并撤除，
+                    // 否则孤儿节点进结果即悬空（可燃冰@68° 10 条问题链的共同根因）。
+                    if (added.Count > addedBase) added.RemoveRange(addedBase, added.Count - addedBase);
+                    report.Invalid++;
+                    report.Chains.Add(Row(start,end,path.Count,path.Count,length,cap,"dangling_guard"));
+                    VerboseLine("    [dangling_guard] 本链回滚保图 " + start.localOffset_x.ToString("F2"));
+                    continue;
+                }
             }
         }
         foreach(var pair in pending) { pair.Key.outputObj=pair.Value; pair.Key.outputFromSlot=0; pair.Key.outputToSlot=1; pair.Key.outputOffset=0; }
@@ -429,7 +944,20 @@ internal static class BeltPathOptimizer
         {
             var b=result[i]; b.index=i;
             if((b.inputObj!=null && !resultSet.Contains(b.inputObj)) || (b.outputObj!=null && !resultSet.Contains(b.outputObj)))
+            {
+                // 悬空探针：打印违规者与目标的归属（retained/added/已删）。正常路径不应触发；
+                // 触发即说明有引用指向了不在结果里的对象，必须让上层放弃本次省带（fail-soft）。
+                string Side(BlueprintBuilding r)
+                {
+                    if (r == null) return "null";
+                    string where = retained.Contains(r) ? "retained" : added.Contains(r) ? "added" : "REMOVED";
+                    return $"x={r.localOffset_x:F3},y={r.localOffset_y:F3},z={r.localOffset_z:F3},item{r.itemId},{where}";
+                }
+                Console.WriteLine($"    [悬空探针] {b.index} item{b.itemId} 本体 x={b.localOffset_x:F3},y={b.localOffset_y:F3},z={b.localOffset_z:F3}");
+                if (b.inputObj != null && !resultSet.Contains(b.inputObj)) Console.WriteLine($"        输入端 → {Side(b.inputObj)}（悬空）");
+                if (b.outputObj != null && !resultSet.Contains(b.outputObj)) Console.WriteLine($"        输出端 → {Side(b.outputObj)}（悬空）");
                 throw new InvalidOperationException("Belt optimization left a dangling blueprint reference.");
+            }
         }
         return result;
     }
@@ -489,6 +1017,12 @@ internal static class BeltPathOptimizer
     }
     private static bool Compatible(BlueprintBuilding a,BlueprintBuilding b)=>a.areaIndex==b.areaIndex && a.itemId==b.itemId && a.modelIndex==b.modelIndex;
 
+    /// <summary>杆类小障碍（电线杆/无线输电塔/卫星配电站）：只有它们需要"侧翼锚定"把杆下段原样保留。</summary>
+    private static bool IsPoleLike(BlueprintBuilding b) => b.itemId >= 2201 && b.itemId <= 2203;
+
+    /// <summary>分拣器判定（与 InserterBinder 一致）：itemId 2011~2019。</summary>
+    private static bool IsInserter(BlueprintBuilding b)=>b.itemId > 2010 && b.itemId < 2020;
+
     /// <summary>
     /// Fixes the belt piece an inserter/machine attaches to: the node itself plus the neighbours that
     /// shape the local path, so a merge cannot move that geometry away from the inserter.
@@ -546,7 +1080,7 @@ internal static class BeltPathOptimizer
         double length=GridDistance(a,b)*GridDistance(b,c);
         // Numerical noise and gently curved geodesics are resampled along their
         // original polyline; sharp turns and slope transitions remain anchors.
-        return length>1e-8 && (ax*bx+ay*by+az*bz)/length>Math.Cos(Math.PI/180.0);
+        return length>1e-8 && (ax*bx+ay*by+az*bz)/length>SmoothCosThreshold;
     }
     private static float Round(double value)=>(float)Math.Round(value,4);
     private static BlueprintBuilding Copy(BlueprintBuilding b)=>new BlueprintBuilding
