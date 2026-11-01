@@ -21,7 +21,8 @@
 | `参考/游戏纬度带表-校验.md` | 游戏自身纬度带表（PlanetGrid.DetermineLongitudeSegmentCount）实测校验数据 |
 | `归档/跨带分类清单-v2旧模型对照.md` | v2 旧模型产物，已被 v3 取代，仅作对照 |
 | `归档/离线回归表-跨带省带.md` | v3 时代 `--regress` 回归输出存档 |
-| `logs/`（11 份） | 历史版本测试运行日志（baseline-v364…v367-test3） |
+| `归档/分支进度同步-BlueprintBeltSaver.md` | 历史分支接续提示（已过时，留档） |
+| `logs/`（12 份） | 历史版本测试运行日志（baseline-v364…v367-test3） |
 | `data/c1.json` | C1 蓝图 JSON 样本（审计工具输入样本） |
 
 ## 已删除（git 历史可恢复）
