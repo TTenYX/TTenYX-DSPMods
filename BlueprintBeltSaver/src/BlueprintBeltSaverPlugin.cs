@@ -1571,6 +1571,20 @@ namespace BlueprintBeltSaver
                     {
                         BeltPathOptimizer.Report trialReport;
                         var trialPreMerge = trial.buildings;
+                        // 004.12-d：trial 分支的基线必须单独抓取——trial 与 work 是两套对象
+                        // （CreateNew 独立解析），基线线路表按对象身份键控，跨分支不通用；
+                        // 采纳插值后门禁/线感知 binder 必须换用 trial 侧基线（曾因沿用 work 侧
+                        // 基线导致对账恒空、游戏内所有蓝图被门禁误拒）。
+                        var trialPreMergeLines = LinesOfBlueprint(trialPreMerge, IsBelt);
+                        var trialPreMergeRefs = new Dictionary<int, (int inLine, int outLine)>();
+                        for (int i = 0; i < trialPreMerge.Length; i++)
+                        {
+                            var n = trialPreMerge[i];
+                            if (n == null || IsBelt(n)) continue;
+                            int inLine = n.inputObj != null && IsBelt(n.inputObj) && trialPreMergeLines.TryGetValue(n.inputObj, out int li2) ? li2 : -1;
+                            int outLine = n.outputObj != null && IsBelt(n.outputObj) && trialPreMergeLines.TryGetValue(n.outputObj, out int lo2) ? lo2 : -1;
+                            trialPreMergeRefs[i] = (inLine, outLine);
+                        }
                         var trialBuildings = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, b => capForOptimize, meters, out trialReport, _rebindSorterLinks.Value, false, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
                         int trialAfter = 0;
                         foreach (var building in trialBuildings)
@@ -1600,8 +1614,17 @@ namespace BlueprintBeltSaver
                             Log.Info($"插值模式更优：{before} → {trialAfter}（保点模式 → {after}），采用插值结果（最坏新链节 {trialCheck.Worst:F4} m；原件同跨度越限 {trialCheck.KeptOver} 条保持原状）。");
                             trial.buildings = trialBuildings;
                             trial.CheckBuildingData();
-                            bp = trial;
+                            // 004.12-d：trial 是 CreateNew 产物（私有构造不调 Reset，缺头部字段），
+                            // 直接作为结果会让后续 Clone/导出序列化失败（本轮游戏内实测：优化成功
+                            // 但导出 Clone 返回空）。把结果搬回**头部完整的 source 底板**再交付。
+                            var rebuilt = source.Clone();
+                            rebuilt.buildings = trialBuildings;
+                            rebuilt.CheckBuildingData();
+                            bp = rebuilt;
                             preMerge = trialPreMerge;
+                            // 基线同步切换到 trial 分支（对象身份按分支键控，见上方抓取注释）。
+                            preMergeLines = trialPreMergeLines;
+                            preMergeRefs = trialPreMergeRefs;
                             after = trialAfter;
                             report = trialReport;
                             usedResample = true;
