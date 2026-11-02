@@ -116,11 +116,12 @@ internal static class ExportTool
                     var preLinesW = TopoProbe.LinesOf(work.buildings);
                     var preRefsW = TopoProbe.RefLines(work.buildings, preLinesW);
 
-                    double capO = 2.301172 * 0.98;
+                    double capO = 2.301172 * 0.98 * CrossLatitudeSafety.BandMargin;
                     var obs = BeltSpacingCalibration.Observation.FromYaw(latDeg * Math.PI / 180.0, 0f);
                     var calibration = BeltSpacingCalibration.Resolve(work.areas, work.buildings, IsBelt, obs);
+                    // 004.16 跨纬度安全（与插件默认配置同步）：静态导出文件必须任意纬度可贴。
                     Func<BlueprintBuilding, BlueprintBuilding, double> meters =
-                        (a, b) => BeltSpacingCalibration.Distance(a, b, calibration);
+                        CrossLatitudeSafety.Wrap(work.areas, work.buildings, IsBelt, obs, calibration, true);
                     bool pinOverLimit = calibration.MultiBand;
 
                     // 插件 trial 原文用 CreateNew(快照)，但 CreateNew 离线不可用（SecurityException）。

@@ -190,11 +190,11 @@ internal static class TopoProbe
             Console.WriteLine("src=" + Fingerprint(bsource.buildings));
             var bwork = bsource.Clone();
             Console.WriteLine("clone=" + Fingerprint(bwork.buildings));
-            double bcapO = 2.301172 * 0.98;
+            double bcapO = 2.301172 * 0.98 * CrossLatitudeSafety.BandMargin;
             var bobs = BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
             var bcal = BeltSpacingCalibration.Resolve(bwork.areas, bwork.buildings, IsBelt, bobs);
             Func<BlueprintBuilding, BlueprintBuilding, double> bmeters =
-                (a, b) => BeltSpacingCalibration.Distance(a, b, bcal);
+                CrossLatitudeSafety.Wrap(bwork.areas, bwork.buildings, IsBelt, bobs, bcal, true);
             bool bpin = bcal.MultiBand;
             var bgB = BeltPathOptimizer.Optimize(bwork.buildings, IsBelt, _ => (float)bcapO, bmeters, out _, true, true, bpin, true);
             Console.WriteLine($"grid({bgB.Count(IsBelt)})=" + Fingerprint(bgB));
@@ -267,7 +267,7 @@ internal static class TopoProbe
         var source = new BlueprintData();
         var err = source.FromBase64String(text);
         Console.WriteLine($"load err={err} buildings={source.buildings?.Length} belts={source.buildings.Count(IsBelt)} sorters={source.buildings.Count(x => x.itemId >= 2010 && x.itemId <= 2013)}");
-        double capO = 2.301172 * 0.98;
+        double capO = 2.301172 * 0.98 * CrossLatitudeSafety.BandMargin;
         var obs = BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
         // 004.15 门禁反馈重跑（与插件 TryOptimize 同步）：跨线/丢失的附件目标窗口按 source
         // 数组位置作为 extraAnchorPositions 传入重跑（≤4 轮），锚点即链边界。
@@ -281,8 +281,9 @@ internal static class TopoProbe
         var work = source.Clone();
         Console.WriteLine($"clone objects shared? {ReferenceEquals(source.buildings[0], work.buildings[0])}");
         var calibration = BeltSpacingCalibration.Resolve(work.areas, work.buildings, IsBelt, obs);
+        // 004.16 跨纬度安全（与插件默认配置同步）：距离取纬度带内最坏。
         Func<BlueprintBuilding, BlueprintBuilding, double> meters =
-            (a, b) => BeltSpacingCalibration.Distance(a, b, calibration);
+            CrossLatitudeSafety.Wrap(work.areas, work.buildings, IsBelt, obs, calibration, true);
         bool pinOverLimit = calibration.MultiBand;
 
         var trial = source.Clone();
