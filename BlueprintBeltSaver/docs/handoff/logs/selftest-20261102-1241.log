@@ -1,0 +1,169 @@
+BBSaver SelfTest  2026-11-02 12:41:56
+game = ok
+blueprintDir = X:\戴森球计划\【MOD】修改仓库\7.蓝图Blueprints\BlueprintBeltSaver 测试蓝图
+PASS mod-assembly-loaded  :: C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\plugins\BlueprintBeltSaver\BlueprintBeltSaver.dll
+PASS reflection-ready  :: optimize=True resolve=True fromYaw=True distance=True
+PASS B-plugin-ready  :: plugin=True tryOptimize=True
+      bisect:1080传送带+360分拣器 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1080传送带+360分拣器  :: TryOptimize ok=True；summary=传送带总数：0 → 1602（省 -1602）
+
+\csd3-;: 0 → 1602（省 -1602）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 496 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 508
+已重绑分拣器/建筑连接: 543, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1080传送带+360分拣器  :: belts 1640 → 1602，已保存 B_lib_1080传送带+360分拣器.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（低效）v1.1 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1440太阳帆（低效）v1.1  :: TryOptimize ok=True；summary=传送带总数：0 → 1353（省 -1353）
+
+\csd2-;: 0 → 1331（省 -1331）
+\csd3-;: 0 → 22（省 -22）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 462 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 444
+已重绑分拣器/建筑连接: 375, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（低效）v1.1  :: belts 1856 → 1353，已保存 B_lib_1440太阳帆（低效）v1.1.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（高效） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1440太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 896（省 -896）
+
+\csd1-;: 0 → 896（省 -896）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 395, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（高效）  :: belts 1159 → 896，已保存 B_lib_1440太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:16.4小火箭 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:16.4小火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 1695（省 -1695）
+
+\csd3-;: 0 → 1695（省 -1695）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 312 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 295, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:16.4小火箭  :: belts 2307 → 1695，已保存 B_lib_16.4小火箭.txt（模式 plugin-TryOptimize）
+      bisect:2880太阳帆（高效） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:2880太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 896（省 -896）
+
+\csd3-;: 0 → 896（省 -896）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 395, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:2880太阳帆（高效）  :: belts 1159 → 896，已保存 B_lib_2880太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:37.5小火箭 （需求氘棒） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:37.5小火箭 （需求氘棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 1857（省 -1857）
+
+\csd3-;: 0 → 1857（省 -1857）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 616 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 627
+已重绑分拣器/建筑连接: 664, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:37.5小火箭 （需求氘棒）  :: belts 1893 → 1857，已保存 B_lib_37.5小火箭 （需求氘棒）.txt（模式 plugin-TryOptimize）
+      bisect:65.6低效火箭 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:65.6低效火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 4194（省 -4194）
+
+\csd3-;: 0 → 4194（省 -4194）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1253 个，原有空端 0，重新绑定 1，无可绑定 0，原连接通过 1271
+已重绑分拣器/建筑连接: 1713, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:65.6低效火箭  :: belts 5010 → 4194，已保存 B_lib_65.6低效火箭.txt（模式 plugin-TryOptimize）
+      bisect:6k太阳帆 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:6k太阳帆  :: TryOptimize ok=True；summary=传送带总数：0 → 2542（省 -2542）
+
+\csd3-;: 0 → 2542（省 -2542）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1173 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 1181
+已重绑分拣器/建筑连接: 1421, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:6k太阳帆  :: belts 3175 → 2542，已保存 B_lib_6k太阳帆.txt（模式 plugin-TryOptimize）
+      bisect:80环带 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:80环带  :: TryOptimize ok=True；summary=传送带总数：0 → 48（省 -48）
+
+\csd3-;: 0 → 48（省 -48）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 0 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 0
+已重绑分拣器/建筑连接: 0, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:80环带  :: belts 80 → 48，已保存 B_lib_80环带.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（刺笋） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:B.150紫糖（刺笋）  :: TryOptimize ok=True；summary=传送带总数：0 → 915（省 -915）
+
+\csd1-;: 0 → 764（省 -764）
+\csd2-;: 0 → 104（省 -104）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 310 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 319, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（刺笋）  :: belts 1097 → 915，已保存 B_lib_B.150紫糖（刺笋）.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（可燃冰） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:B.150紫糖（可燃冰）  :: TryOptimize ok=True；summary=传送带总数：0 → 1040（省 -1040）
+
+\csd1-;: 0 → 909（省 -909）
+\csd2-;: 0 → 84（省 -84）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 332 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 338
+已重绑分拣器/建筑连接: 344, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（可燃冰）  :: belts 1240 → 1040，已保存 B_lib_B.150紫糖（可燃冰）.txt（模式 plugin-TryOptimize）
+      bisect:C1.150绿糖 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:C1.150绿糖  :: TryOptimize ok=True；summary=传送带总数：0 → 1752（省 -1752）
+
+\csd1-;: 0 → 1555（省 -1555）
+\csd2-;: 0 → 147（省 -147）
+\csd3-;: 0 → 50（省 -50）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 488 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 496
+已重绑分拣器/建筑连接: 514, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C1.150绿糖  :: belts 2163 → 1752，已保存 B_lib_C1.150绿糖.txt（模式 plugin-TryOptimize）
+      bisect:C2-60-120-240反物质燃料棒（黑棒） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:C2-60-120-240反物质燃料棒（黑棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 783（省 -783）
+
+\csd3-;: 0 → 783（省 -783）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 223 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 223
+已重绑分拣器/建筑连接: 206, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C2-60-120-240反物质燃料棒（黑棒）  :: belts 1000 → 783，已保存 B_lib_C2-60-120-240反物质燃料棒（黑棒）.txt（模式 plugin-TryOptimize）
+      bisect:长带测试图01 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:长带测试图01  :: TryOptimize ok=True；summary=传送带总数：0 → 269（省 -269）
+
+\csd3-;: 0 → 269（省 -269）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 17 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 34
+已重绑分拣器/建筑连接: 25, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:长带测试图01  :: belts 432 → 269，已保存 B_lib_长带测试图01.txt（模式 plugin-TryOptimize）
+PASS e2e-in-game-done  :: 全部蓝图B已生成（或记录拒绝原因）；离线蓝图A已由 --export 生成，随后逐字节对比
+SUMMARY PASS=32 FAIL=0
