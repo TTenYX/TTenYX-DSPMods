@@ -54,6 +54,8 @@ internal static class BeltPathOptimizer
     internal static bool Verbose = false;
     /// <summary>"这一段可以拉直"的余弦阈值（默认 1°）。离线实验可调大，评估曲率锚点的代价。</summary>
     internal static double SmoothCosThreshold = Math.Cos(Math.PI / 180.0);
+    /// <summary>喷涂机周边钉锚窗口（格，默认 1.6）。离线实验可调，评估喷涂锚点的代价；游戏内恒为默认值。</summary>
+    internal static double SprayerWindowGrids = 1.6;
     private static void VerboseLine(string message)
     {
         if (Verbose)
@@ -151,7 +153,30 @@ internal static class BeltPathOptimizer
                     anchors.Add(attachment.Target);
             }
             report.AnchorAttachments = anchors.Count - anchorMark;
-            anchorMark = anchors.Count;
+        }
+        else if (rebindAttachments)
+        {
+            int mark = anchors.Count;
+            foreach (var attachment in attachments)
+            {
+                if (attachment.Target != null && belts.Contains(attachment.Target)) anchors.Add(attachment.Target);
+            }
+            report.AnchorAttachments = anchors.Count - mark;
+        }
+        else
+        {
+            foreach (var b in buildings.Where(b => !belts.Contains(b)))
+            {
+                if (b.inputObj != null && belts.Contains(b.inputObj)) AnchorPiece(b.inputObj, next, belts, anchors);
+                if (b.outputObj != null && belts.Contains(b.outputObj)) AnchorPiece(b.outputObj, next, belts, anchors);
+            }
+        }
+        // 004.17：附加机窗口与杆类侧翼锚定移出 freeMerge 分支——它们保护的是**喷涂机/监测器/炮塔的
+        // 几何接带**与**杆下原状段**，与分拣器重绑策略无关。旧结构只在 freeMerge（两个分拣器开关都开，
+        // 非出厂默认）时生效：出厂默认配置下喷涂机周边带节点照删不误（离线实测 37.5小火箭/黑棒 货物口
+        // 脱带、1440低效 增产剂口脱带，准则③）。现在三种分拣器策略一律先钉窗口。
+        {
+            int anchorMark = anchors.Count;
             // 喷涂机连接是纯几何重建（反编译铁证：PlanetFactory.cs:6046-6048——粘贴后在与喷涂点
             // sqrMagnitude<1f（1 米窗口）且距喷涂线<0.3f 的"带节点实体"上建立连接，蓝图不存引用）。
             // 喷涂机有 cargo/inc 两个连接位（addonAreaColPoses[0]/[1]，SpraycoaterComponent.cs:171/185），
@@ -159,7 +184,10 @@ internal static class BeltPathOptimizer
             // 现按玩家指示放宽到 **1.6 格 ≈ 2.0 m**（口子偏移 + 1 m 窗口 + 余量）：窗口内全部带节点
             // 钉为锚点（= 原料带与增产剂带中喷涂机判定节点均不做长带化，作为固定点）。GridDistance
             // ×1.2566 是赤道尺度，高纬度实际米数更大 → 只会多钉不少钉，纬度适应性偏保守安全。
-            foreach (var sprayer in buildings.Where(b => b.itemId == 2313))
+            // 004.17：同一规则扩展到全部"带上附加机"（addonType=Belt：流速监测器 2030、带供弹炮塔
+            // 3001/3003/3004/3005/3006/3010）——它们与喷涂机同一套连接逻辑（PlanetFactory.cs:6023-6072，
+            // 连接位在建筑原点），此前完全没有保护，合并删掉其下带节点会让监测器/炮塔静默脱带（准则④）。
+            foreach (var sprayer in buildings.Where(b => IsBeltAddon(b.itemId)))
             {
                 foreach (var t in buildings)
                 {
@@ -167,7 +195,7 @@ internal static class BeltPathOptimizer
                     double dx = t.localOffset_x - sprayer.localOffset_x;
                     double dy = t.localOffset_y - sprayer.localOffset_y;
                     double dz = t.localOffset_z - sprayer.localOffset_z;
-                    if (dx * dx + dy * dy + dz * dz <= 1.6 * 1.6) anchors.Add(t);
+                    if (dx * dx + dy * dy + dz * dz <= SprayerWindowGrids * SprayerWindowGrids) anchors.Add(t);
                 }
             }
             report.AnchorSprayers = anchors.Count - anchorMark;
@@ -197,23 +225,6 @@ internal static class BeltPathOptimizer
                 if (n2 != null) anchors.Add(n2);
             }
             report.AnchorObstacles = anchors.Count - anchorMark;
-        }
-        else if (rebindAttachments)
-        {
-            int mark = anchors.Count;
-            foreach (var attachment in attachments)
-            {
-                if (attachment.Target != null && belts.Contains(attachment.Target)) anchors.Add(attachment.Target);
-            }
-            report.AnchorAttachments = anchors.Count - mark;
-        }
-        else
-        {
-            foreach (var b in buildings.Where(b => !belts.Contains(b)))
-            {
-                if (b.inputObj != null && belts.Contains(b.inputObj)) AnchorPiece(b.inputObj, next, belts, anchors);
-                if (b.outputObj != null && belts.Contains(b.outputObj)) AnchorPiece(b.outputObj, next, belts, anchors);
-            }
         }
 
         // Iron rule guard (A), restricted to blueprints that span more than one latitude band.
@@ -1091,6 +1102,16 @@ internal static class BeltPathOptimizer
 
     /// <summary>杆类小障碍（电线杆/无线输电塔/卫星配电站）：只有它们需要"侧翼锚定"把杆下段原样保留。</summary>
     private static bool IsPoleLike(BlueprintBuilding b) => b.itemId >= 2201 && b.itemId <= 2203;
+
+    /// <summary>
+    /// 004.17 带上附加机（PrefabDesc.addonType == EAddonType.Belt，游戏内 addon-dump 实测清单）：
+    /// 喷涂机 2313、流速监测器 2030、炮塔 3001/3003/3004/3005/3006/3010。粘贴建成后按连接位 1 m 窗口
+    /// 就近接带（蓝图不存引用），其窗口内带节点必须原样保留。用静态清单而非运行时 LDB 查询，
+    /// 保证游戏内与离线复刻（A/B 对比）同口径。
+    /// </summary>
+    internal static bool IsBeltAddon(int itemId)
+        => itemId == 2313 || itemId == 2030 || itemId == 3001 || itemId == 3003 || itemId == 3004
+           || itemId == 3005 || itemId == 3006 || itemId == 3010;
 
     /// <summary>分拣器判定（与 InserterBinder 一致）：itemId 2011~2019。</summary>
     private static bool IsInserter(BlueprintBuilding b)=>b.itemId > 2010 && b.itemId < 2020;

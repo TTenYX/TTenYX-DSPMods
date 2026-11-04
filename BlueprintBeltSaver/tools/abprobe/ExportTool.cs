@@ -12,6 +12,10 @@ using BlueprintBeltSaver;
 internal static class ExportTool
 {
     private static bool IsBelt(BlueprintBuilding n) => n.itemId >= 2001 && n.itemId <= 2009;
+    // 004.17：插件配置复刻（默认与 TEST profile 一致：RebindSorterLinks=true、SorterForceRebind=true）。
+    // BBS_REBIND=0 / BBS_FORCEREBIND=0 可切到插件出厂默认（两者 false）路径做对照。
+    private static readonly bool Rebind = Environment.GetEnvironmentVariable("BBS_REBIND") != "0";
+    private static readonly bool ForceRebind = Environment.GetEnvironmentVariable("BBS_FORCEREBIND") != "0";
     private const double PlanetRadius = 200.0;               // 典型星球半径（表面格单位）
     private const double GridsPerDegree = Math.PI * PlanetRadius / 180.0; // ≈3.4907 格/纬度
     private const double LatMargin = 2.0;                    // 铺设边距（度）
@@ -35,15 +39,16 @@ internal static class ExportTool
         return spans;
     }
 
-    private static (int over, double worst) OverNew(BlueprintBuilding[] buildings, BeltSpacingCalibration.Result model,
+    private static (int over, double worst) OverNew(BlueprintBuilding[] buildings, Func<BlueprintBuilding, BlueprintBuilding, double> meters,
         HashSet<(long, long)> origSpans)
     {
+        // 004.17：与插件 VerifyHardLimit 同口径——距离用 meters（全合法粘贴姿态包络）。
         var set = new HashSet<BlueprintBuilding>(buildings);
         int over = 0; double worst = 0;
         foreach (var b in buildings)
         {
             if (b == null || !IsBelt(b) || b.outputObj == null || !IsBelt(b.outputObj) || !set.Contains(b.outputObj)) continue;
-            double d = BeltSpacingCalibration.Distance(b, b.outputObj, model);
+            double d = meters(b, b.outputObj);
             if (double.IsNaN(d) || double.IsInfinity(d)) continue;
             bool pre = origSpans.Contains((SpanSideKey(b), SpanSideKey(b.outputObj)));
             if (d > BeltPathOptimizer.MaximumMeters) { if (!pre) { over++; if (d > worst) worst = d; } }
@@ -60,8 +65,8 @@ internal static class ExportTool
         Directory.CreateDirectory(outDir);
 
         var rows = new List<string>();
-        rows.Add("| 蓝图 | 纬度° | 带数 | 导出 | 采纳模式 | 省 | OverNew(最坏m) | KeptOver | 拓扑 | binder重绑 | 判定 | 文件 |");
-        rows.Add("|---|---|---|---|---|---|---|---|---|---|---|---|");
+        rows.Add("| 蓝图 | 纬度° | 带数 | 导出 | 采纳模式 | 省 | OverNew(最坏m) | 闸门姿态/越限新 | KeptOver | 拓扑 | binder重绑 | 判定 | 文件 |");
+        rows.Add("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
 
         foreach (var file in Directory.GetFiles(bpDir, "*.txt").OrderBy(f => f, StringComparer.Ordinal))
         {
@@ -70,7 +75,7 @@ internal static class ExportTool
             var source = new BlueprintData();
             if (source.FromBase64String(text) != BlueprintDataIOError.OK || source.buildings == null)
             {
-                rows.Add($"| {name} | — | — | — | — | — | — | — | — | — | FAIL(加载) | — |");
+                rows.Add($"| {name} | — | — | — | — | — | — | — | — | — | — | FAIL(加载) | — |");
                 continue;
             }
 
@@ -107,21 +112,24 @@ internal static class ExportTool
                     Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)> beltBaseRefs = null;
                     InserterBinder.Report binder = null;
                     (int over, double worst) fin = (0, 0.0);
+                    PasteEnvelope.GateResult gate = default;
                     (bool ok, string reason, int linesB, int linesA, int failPos, bool failInput) topo = default;
                     string mode = "";
                     int after = 0;
+                    PasteEnvelope envelope = null;
                     for (int attempt = 0; ; attempt++)
                     {
                     var work = source.Clone();
                     var preLinesW = TopoProbe.LinesOf(work.buildings);
                     var preRefsW = TopoProbe.RefLines(work.buildings, preLinesW);
 
-                    double capO = 2.301172 * 0.98 * CrossLatitudeSafety.BandMargin;
+                    // 004.17：BandMargin 退役（包络无采样缝隙），余量只剩 SafetyMargin 0.98（与插件同步）。
+                    double capO = 2.301172 * 0.98;
                     var obs = BeltSpacingCalibration.Observation.FromYaw(latDeg * Math.PI / 180.0, 0f);
                     var calibration = BeltSpacingCalibration.Resolve(work.areas, work.buildings, IsBelt, obs);
-                    // 004.16 跨纬度安全（与插件默认配置同步）：静态导出文件必须任意纬度可贴。
-                    Func<BlueprintBuilding, BlueprintBuilding, double> meters =
-                        CrossLatitudeSafety.Wrap(work.areas, work.buildings, IsBelt, obs, calibration, true);
+                    // 004.17 跨纬度安全 = 全合法粘贴姿态包络（与插件默认配置同步，首轮 Clone 上建一次）。
+                    if (envelope == null) envelope = CrossLatitudeSafety.Envelope(work.areas, work.primaryAreaIdx, work.buildings, IsBelt);
+                    Func<BlueprintBuilding, BlueprintBuilding, double> meters = CrossLatitudeSafety.Wrap(envelope, obs, true);
                     bool pinOverLimit = calibration.MultiBand;
 
                     // 插件 trial 原文用 CreateNew(快照)，但 CreateNew 离线不可用（SecurityException）。
@@ -129,7 +137,7 @@ internal static class ExportTool
                     // 差异仅在头部字段；离线以 Clone 等价替代（游戏内差异由 A/B 对比检出，见判定报告）。
                     string snapshot = work.ToBase64String();
                     var preGrid = work.buildings;
-                    var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, true, true, pinOverLimit, true, extraAnchors);
+                    var gB = BeltPathOptimizer.Optimize(work.buildings, IsBelt, _ => (float)capO, meters, out var repG, Rebind, true, pinOverLimit, Rebind && ForceRebind, extraAnchors);
                     work.buildings = gB;
                     var trial = source.Clone();
                     var preLinesT = TopoProbe.LinesOf(trial.buildings);
@@ -143,12 +151,12 @@ internal static class ExportTool
                                            n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null);
                     }
                     var preTrial = trial.buildings;
-                    var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, true, false, pinOverLimit, true, extraAnchors);
+                    var rB = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, _ => (float)capO, meters, out var repR, Rebind, false, pinOverLimit, Rebind && ForceRebind, extraAnchors);
                     trial.buildings = rB;
 
                     int gAfter = work.buildings.Count(IsBelt), rAfter = trial.buildings.Count(IsBelt);
-                    var gOver = OverNew(work.buildings, calibration, origSpans);
-                    var rOver = OverNew(trial.buildings, calibration, origSpans);
+                    var gOver = OverNew(work.buildings, meters, origSpans);
+                    var rOver = OverNew(trial.buildings, meters, origSpans);
                     bool adoptR = rOver.over == 0 && rAfter < before && (gOver.over > 0 || rAfter < gAfter);
                     chosen = adoptR ? trial : work;
                     preChosen = adoptR ? preTrial : preGrid;
@@ -180,7 +188,9 @@ internal static class ExportTool
                     binder = InserterBinder.Repair(chosen.buildings, IsBelt, meters, LineOfForBinder,
                         (o, isInput, cand) => ownerBaseTargets.TryGetValue(o, out var t) &&
                             (isInput ? ReferenceEquals(t.inT, cand) : ReferenceEquals(t.outT, cand)));
-                    fin = OverNew(chosen.buildings, calibration, origSpans);
+                    fin = OverNew(chosen.buildings, meters, origSpans);
+                    // 004.17 精确闸门（与插件同步）：保护集全部粘贴姿态逐个展开、游戏 float 同式判定。
+                    gate = envelope.Gate(chosen.buildings, IsBelt, (a, b) => origSpans.Contains((SpanSideKey(a), SpanSideKey(b))));
                     topo = TopoProbe.VerifyTopologyBase(preLinesC, preRefsC, preChosen, chosen.buildings);
                     if (!topo.ok && topo.failPos >= 0 && attempt < 3 && preRefsC.TryGetValue(topo.failPos, out var failRef))
                     {
@@ -204,7 +214,7 @@ internal static class ExportTool
                     }
                     break;
                     }
-                    bool ok = fin.over == 0 && topo.ok;
+                    bool ok = fin.over == 0 && gate.Over == 0 && topo.ok;
                     string outFile = "—";
                     if (ok)
                     {
@@ -220,15 +230,15 @@ internal static class ExportTool
                             outFile = outName;
                         }
                     }
-                    rows.Add($"| {name} | {(lat < 0 ? "库(赤道)" : lat.ToString("0.#"))} | {before} | {(ok ? "是" : "否")} | {mode} | {before - after} | {fin.over}({fin.worst:F3}) | {topo.ok}拓扑{topo.linesB} | {binder} | {(ok ? "PASS" : "FAIL")} | {outFile} |");
+                    rows.Add($"| {name} | {(lat < 0 ? "库(赤道)" : lat.ToString("0.#"))} | {before} | {(ok ? "是" : "否")} | {mode} | {before - after} | {fin.over}({fin.worst:F3}) | {gate.Frames}/{gate.Over}({gate.Worst:F3}) | {topo.ok}拓扑{topo.linesB} | {binder} | {(ok ? "PASS" : "FAIL")} | {outFile} |");
                 }
                 catch (Exception ex)
                 {
-                    rows.Add($"| {name} | {(lat < 0 ? "库(赤道)" : lat.ToString("0.#"))} | {before} | — | — | — | — | — | — | — | FAIL({ex.GetType().Name}) | — |");
+                    rows.Add($"| {name} | {(lat < 0 ? "库(赤道)" : lat.ToString("0.#"))} | {before} | — | — | — | — | — | — | — | — | FAIL({ex.GetType().Name}) | — |");
                 }
             }
 
-            rows.Add($"| {name} footprint | x={dx:0.#}格 y={dy:0.#}格 ≈{dLat:0.0}° | 可放置中心纬度 |‖{Math.Max(0, halfBand):0.#}°| 以内 | | | | | | | |");
+            rows.Add($"| {name} footprint | x={dx:0.#}格 y={dy:0.#}格 ≈{dLat:0.0}° | 可放置中心纬度 |‖{Math.Max(0, halfBand):0.#}°| 以内 | | | | | | | | |");
         }
 
         File.WriteAllLines(Path.Combine(outDir, "判定报告.md"), rows, new UTF8Encoding(false));

@@ -13,6 +13,7 @@
     <Compile Include="../../src/BeltDistanceMetric.cs" Link="BeltDistanceMetric.cs"/>
     <Compile Include="../../src/BeltSpacingCalibration.cs" Link="BeltSpacingCalibration.cs"/>
     <Compile Include="../../src/CrossLatitudeSafety.cs" Link="CrossLatitudeSafety.cs"/>
+    <Compile Include="../../src/PasteEnvelope.cs" Link="PasteEnvelope.cs"/>
     <Compile Include="../../src/InserterBinder.cs" Link="InserterBinder.cs"/>
     <Compile Include="../../src/BeltWindowRepair.cs" Link="BeltWindowRepair.cs"/>
     <Compile Include="../../src/BeltPathGeometry.cs" Link="BeltPathGeometry.cs"/>

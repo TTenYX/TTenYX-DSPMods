@@ -1,0 +1,170 @@
+BBSaver SelfTest  2026-11-04 23:02:20
+game = ok
+blueprintDir = X:\戴森球计划\【MOD】修改仓库\7.蓝图Blueprints\BlueprintBeltSaver 测试蓝图
+      addon-dump: 19 行 → addon-dump.txt
+PASS mod-assembly-loaded  :: C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\plugins\BlueprintBeltSaver\BlueprintBeltSaver.dll
+PASS reflection-ready  :: optimize=True resolve=True fromYaw=True distance=True
+PASS B-plugin-ready  :: plugin=True tryOptimize=True
+      bisect:1080传送带+360分拣器 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1080传送带+360分拣器  :: TryOptimize ok=True；summary=传送带总数：0 → 1612（省 -1612）
+
+\csd3-;: 0 → 1612（省 -1612）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 496 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 508
+已重绑分拣器/建筑连接: 543, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1080传送带+360分拣器  :: belts 1640 → 1612，已保存 B_lib_1080传送带+360分拣器.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（低效）v1.1 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1440太阳帆（低效）v1.1  :: TryOptimize ok=True；summary=传送带总数：0 → 1383（省 -1383）
+
+\csd2-;: 0 → 1361（省 -1361）
+\csd3-;: 0 → 22（省 -22）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 462 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 444
+已重绑分拣器/建筑连接: 388, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（低效）v1.1  :: belts 1856 → 1383，已保存 B_lib_1440太阳帆（低效）v1.1.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（高效） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:1440太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 898（省 -898）
+
+\csd1-;: 0 → 898（省 -898）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 397, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（高效）  :: belts 1159 → 898，已保存 B_lib_1440太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:16.4小火箭 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:16.4小火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 1732（省 -1732）
+
+\csd3-;: 0 → 1732（省 -1732）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 312 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 299, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:16.4小火箭  :: belts 2307 → 1732，已保存 B_lib_16.4小火箭.txt（模式 plugin-TryOptimize）
+      bisect:2880太阳帆（高效） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:2880太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 898（省 -898）
+
+\csd3-;: 0 → 898（省 -898）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 397, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:2880太阳帆（高效）  :: belts 1159 → 898，已保存 B_lib_2880太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:37.5小火箭 （需求氘棒） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:37.5小火箭 （需求氘棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 1866（省 -1866）
+
+\csd3-;: 0 → 1866（省 -1866）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 616 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 627
+已重绑分拣器/建筑连接: 666, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:37.5小火箭 （需求氘棒）  :: belts 1893 → 1866，已保存 B_lib_37.5小火箭 （需求氘棒）.txt（模式 plugin-TryOptimize）
+      bisect:65.6低效火箭 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:65.6低效火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 4146（省 -4146）
+
+\csd3-;: 0 → 4146（省 -4146）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1253 个，原有空端 0，重新绑定 1，无可绑定 0，原连接通过 1271
+已重绑分拣器/建筑连接: 1714, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:65.6低效火箭  :: belts 5010 → 4146，已保存 B_lib_65.6低效火箭.txt（模式 plugin-TryOptimize）
+      bisect:6k太阳帆 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:6k太阳帆  :: TryOptimize ok=True；summary=传送带总数：0 → 2741（省 -2741）
+
+\csd3-;: 0 → 2741（省 -2741）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1173 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 1181
+已重绑分拣器/建筑连接: 1486, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:6k太阳帆  :: belts 3175 → 2741，已保存 B_lib_6k太阳帆.txt（模式 plugin-TryOptimize）
+      bisect:80环带 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:80环带  :: TryOptimize ok=True；summary=传送带总数：0 → 52（省 -52）
+
+\csd3-;: 0 → 52（省 -52）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 0 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 0
+已重绑分拣器/建筑连接: 0, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:80环带  :: belts 80 → 52，已保存 B_lib_80环带.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（刺笋） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:B.150紫糖（刺笋）  :: TryOptimize ok=True；summary=传送带总数：0 → 932（省 -932）
+
+\csd1-;: 0 → 781（省 -781）
+\csd2-;: 0 → 104（省 -104）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 310 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 321, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（刺笋）  :: belts 1097 → 932，已保存 B_lib_B.150紫糖（刺笋）.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（可燃冰） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:B.150紫糖（可燃冰）  :: TryOptimize ok=True；summary=传送带总数：0 → 1054（省 -1054）
+
+\csd1-;: 0 → 923（省 -923）
+\csd2-;: 0 → 84（省 -84）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 332 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 338
+已重绑分拣器/建筑连接: 345, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（可燃冰）  :: belts 1240 → 1054，已保存 B_lib_B.150紫糖（可燃冰）.txt（模式 plugin-TryOptimize）
+      bisect:C1.150绿糖 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:C1.150绿糖  :: TryOptimize ok=True；summary=传送带总数：0 → 1769（省 -1769）
+
+\csd1-;: 0 → 1565（省 -1565）
+\csd2-;: 0 → 151（省 -151）
+\csd3-;: 0 → 53（省 -53）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 488 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 496
+已重绑分拣器/建筑连接: 517, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C1.150绿糖  :: belts 2163 → 1769，已保存 B_lib_C1.150绿糖.txt（模式 plugin-TryOptimize）
+      bisect:C2-60-120-240反物质燃料棒（黑棒） 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:C2-60-120-240反物质燃料棒（黑棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 796（省 -796）
+
+\csd3-;: 0 → 796（省 -796）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 223 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 223
+已重绑分拣器/建筑连接: 204, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C2-60-120-240反物质燃料棒（黑棒）  :: belts 1000 → 796，已保存 B_lib_C2-60-120-240反物质燃料棒（黑棒）.txt（模式 plugin-TryOptimize）
+      bisect:长带测试图01 异常 TargetParameterCountException: Number of parameters specified does not match the expected number.
+PASS B:长带测试图01  :: TryOptimize ok=True；summary=传送带总数：0 → 300（省 -300）
+
+\csd3-;: 0 → 300（省 -300）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 17 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 34
+已重绑分拣器/建筑连接: 21, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:长带测试图01  :: belts 432 → 300，已保存 B_lib_长带测试图01.txt（模式 plugin-TryOptimize）
+PASS e2e-in-game-done  :: 全部蓝图B已生成（或记录拒绝原因）；离线蓝图A已由 --export 生成，随后逐字节对比
+SUMMARY PASS=32 FAIL=0

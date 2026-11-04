@@ -182,6 +182,8 @@ internal static class TopoProbe
 
     private static void Main(string[] args)
     {
+        // 004.17：输出统一 UTF-8（重定向到文件后可直接读；GBK 控制台回显会乱码，见手册坑 #8）
+        Console.OutputEncoding = new System.Text.UTF8Encoding(false);
         if (args.Length > 0 && args[0] == "--bisect")
         {
             string btext = File.ReadAllText(args[1]).Trim();
@@ -260,6 +262,39 @@ internal static class TopoProbe
         if (args.Length > 0 && args[0] == "--export")
         {
             ExportTool.Run(args);
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--dims")
+        {
+            // 004.17：区域/建筑范围/合法粘贴姿态概览（游戏 GenerateAreaGratBoxByBPData 判定）
+            var dimFiles = Directory.Exists(args[1])
+                ? Directory.GetFiles(args[1], "*.txt").OrderBy(x => x, StringComparer.Ordinal).ToArray()
+                : new[] { args[1] };
+            foreach (var f in dimFiles) PasteAudit.Dims(f, Console.Out);
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--pasteaudit")
+        {
+            // 004.17：游戏同式 × 全合法粘贴姿态的断链审计（准则①/⑧ 地面真值）
+            Environment.ExitCode = PasteAudit.Run(args);
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--gap")
+        {
+            // 004.17：省带缺口分析（锚点构成 + 逐链状态 + 相对理论下限的缺口）
+            GapAnalysis.Run(args);
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--anchorwhy")
+        {
+            // 004.17：结构锚点归因（分叉/合流、等级不同、转折角度分档、元数据）
+            AnchorWhy.Run(args);
+            return;
+        }
+        if (args.Length > 0 && args[0] == "--addons")
+        {
+            // 004.17：附加机（喷涂机/流速监测器/炮塔）连接口普查：产物是否保住原件的接带节点
+            AddonCensus.Run(args);
             return;
         }
         string file = args[0];

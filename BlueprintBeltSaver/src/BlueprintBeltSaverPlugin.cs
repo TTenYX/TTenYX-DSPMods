@@ -133,7 +133,7 @@ namespace BlueprintBeltSaver
             _gridExactMerging = Config.Bind("Belt", "GridExactMerging", true, "默认开启（推荐）。合并时只保留原有传送带节点，不生成插值坐标：粘贴时不会因网格换算而变长，跨纬度带与高空传送带都安全。关闭后改为按弧长均匀插值新节点（省得更多，但新节点不在格点上，跨纬度/高空粘贴时可能被算得更长而报「距离太远」）。");
             _sorterForceRebind = Config.Bind("Belt", "SorterForceRebind", false, "默认关闭（实验，需与 RebindSorterLinks 同时开启）。三件套：① 合并完全忽略分拣器自由重布线；② 合并后按每个分拣器的取货点坐标把引用强制重绑到覆盖它的新带节点，并按新段中心重锚定沿带偏移（取货点世界坐标保持不动）；③ 重排建造顺序——带节点全部排到分拣器之前，修复「分拣器先于目标带被建造导致链接失效」。开启后请先在粘贴预览逐个确认分拣器正常再保存。");
             _modelAtPlayerPosition = Config.Bind("Belt", "ModelAtPlayerPosition", false, "省带建模纬度（库内点省带时）：默认关闭 = 按赤道建模（跨纬度粘贴兼容性最好）；勾选 = 按机甲当前位置建模（弹窗数量即脚下粘贴的最终数量）。粘贴模式下的位置重算不受此项影响，始终按实际粘贴位置。");
-            _crossLatitudeSafety = Config.Bind("Belt", "CrossLatitudeSafety", true, "跨纬度结构安全（强烈推荐保持开启）：省带/门禁按纬度带内最坏网格缩放校验每条链节，长带化产物在任意纬度粘贴都不会出现「距离太远」断链，蓝图结构完整性不再依赖粘贴纬度。代价是放弃单纬度最优的一部分省带量。关闭后按单一建模纬度省带（省得更多，但存库换纬度再贴或使用静态导出文件时可能部分断开）。| Cross-latitude structural safety (strongly recommended): every link is validated against the worst grid scaling within the latitude band, so merged blueprints never break when pasted at any latitude. Cost: some savings vs single-latitude optimum. Disable to optimize for one latitude only (more savings, but re-saved/exported blueprints may partially break at other latitudes).");
+            _crossLatitudeSafety = Config.Bind("Belt", "CrossLatitudeSafety", true, "跨纬度结构安全（强烈推荐保持开启）：按游戏允许的全部粘贴姿态（任意纬度、任意朝向）逐条校验链节，长带化产物在任何位置粘贴都不会出现「距离太远」断链。关闭后只按本次建模位置省带（省得略多，但换纬度/旋转粘贴或使用存库、导出的蓝图时可能部分断开）。| Cross-latitude structural safety (strongly recommended): every link is validated against all paste poses the game allows (any latitude, any rotation), so merged blueprints never break wherever they are pasted. Disable to optimize for the modeled position only (slightly more savings, but pasting at another latitude/rotation or reusing saved/exported blueprints may partially break).");
             _uiFontSize = Config.Bind("UI", "FontSize", 21f, "设置窗口字号（14~28）。窗口右下角可拖动调整大小，位置与大小会保存在配置里。");
             _uiWindowW = Config.Bind("UI", "WindowWidth", 680f, "设置窗口宽度（px）。");
             _uiWindowH = Config.Bind("UI", "WindowHeight", 900f, "设置窗口高度（px）。");
@@ -1186,8 +1186,16 @@ namespace BlueprintBeltSaver
                 // ② 增量复核：当前位置下现有结果还合格吗？只看"新造跨度"——原件里就有的超限跨度，
                 //    游戏对原件同样拒绝，不是省带造成的，不该触发重算（否则原件本身带断损段的蓝图
                 //    会在每次位置变化时白白重算一次并永远失败）。
-                var live = BeltSpacingCalibration.Resolve(target.areas, target.buildings, IsBelt, observation);
-                var liveMeters = CrossLatitudeSafety.Wrap(target.areas, target.buildings, IsBelt, observation, live, _crossLatitudeSafety.Value);
+                // 004.17：按**真实粘贴姿态**（光标纬度格 + 偏航象限）逐点同式复核（PasteEnvelope 单姿态
+                //    参考系，与 RefreshBuildPreview 同式）；游戏本身拒绝的姿态（跨回归线等）不复核。
+                //    004.17 起省带结果默认对全部合法姿态安全，这里主要兜住旧版本产物与关闭跨纬度安全的场景。
+                var liveFrame = PasteEnvelope.FrameFor(target.areas, target.primaryAreaIdx, observation.Value, out bool liveLegal);
+                if (liveFrame == null || !liveLegal)
+                {
+                    Log.Info($"粘贴位置变化（{key}）：游戏不允许该姿态（跨回归线/空间不足/分段比例），不做复核。");
+                    return;
+                }
+                Func<BlueprintBuilding, BlueprintBuilding, double> liveMeters = (a, b) => PasteEnvelope.DistanceAt(liveFrame, a, b);
                 var check = VerifyHardLimit(target.buildings, liveMeters, _originalSpans);
                 if (check.Over == 0)
                 {
@@ -1488,6 +1496,7 @@ namespace BlueprintBeltSaver
                 // 额外锚点重跑（≤4 轮）。锚点即链边界，窗口内原折线形状原样保留 → 目标跨度
                 // 与基线逐字相同，binder 不再二次重绑（1080 分流器#1971/#1973 实证闭环）。
                 List<int> extraAnchors = null;
+                PasteEnvelope envelope = null;
                 for (int attempt = 0; ; attempt++)
                 {
                 BlueprintData bp = source.Clone();
@@ -1521,7 +1530,8 @@ namespace BlueprintBeltSaver
                 // 安全余量：模型已经与游戏逐点同式（误差只来自 float 与浮点累积），
                 // 因此余量只需要吸收"顶点被 float 截断 + 游戏端浮点累积"这一点点，取 15% 太浪费，
                 // 0.98 对应约 2% 余量（硬上限 2.3022 m 处约 4.6 cm），实测足以覆盖全部蓝图。
-                float capForOptimize = cap * SafetyMargin * (float)(_crossLatitudeSafety.Value ? CrossLatitudeSafety.BandMargin : 1.0);
+                // 004.17：跨纬度安全改为全合法粘贴姿态包络（无采样缝隙），BandMargin 退役。
+                float capForOptimize = cap * SafetyMargin;
                 bool usedResample = !_gridExactMerging.Value;
                 // Iron rule guard: on a blueprint that spans several latitude bands, pin the neighbourhood
                 // of any stored link the model judges over the hard limit, so a chain the game has to
@@ -1531,6 +1541,12 @@ namespace BlueprintBeltSaver
                 // 粘贴位置拿不到时（蓝图库、尚未进入放置状态）由模型自己在合法纬度里按"实测省带量"
                 // 挑一个默认值（MeasureSavingsAt 就是那个试算回调），并在位置到手后重算。
                 var observation = ReadPasteObservation();
+                if (!observation.HasValue && _crossLatitudeSafety.Value)
+                {
+                    // 004.17：跨纬度安全开启时距离取全合法姿态包络，与观测纬度无关；不必再为
+                    // "挑默认纬度"跑三次试算合并（MeasureSavingsAt），间距模型只用于日志/跨带标记。
+                    observation = BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
+                }
                 bool searchLogged = false;
                 var calibration = BeltSpacingCalibration.Resolve(bp.areas, bp.buildings, IsBelt, observation,
                     (latDeg, stride) =>
@@ -1544,10 +1560,26 @@ namespace BlueprintBeltSaver
                     });
                 modelMs = watch.Elapsed.TotalMilliseconds;
                 Log.Info("间距模型：" + calibration);
-                // 004.16 跨纬度结构安全：距离函数取"纬度带内最坏"（默认开），长带化产物在
-                // 任意纬度粘贴都不断链；关闭时退回单一建模纬度（旧行为）。
+                // 004.17 跨纬度结构安全 = 全合法粘贴姿态包络（默认开）：游戏判定合法的全部粘贴姿态
+                // （偏航 × 光标纬度格）中、原件能干净粘贴的那些姿态上取最坏距离，几何与
+                // RefreshBuildPreview 逐字同式 → 长带化产物在任意纬度、任意朝向粘贴都不断链。
+                // 包络只取决于合并前的几何，门禁反馈重跑各轮共用一份（首轮 Clone 上建）。
+                if (envelope == null)
+                {
+                    envelope = CrossLatitudeSafety.Envelope(bp.areas, bp.primaryAreaIdx, bp.buildings, IsBelt);
+                    Log.Info("粘贴包络：" + envelope);
+                }
+                // 关闭时退回单姿态精确模型（本次观测姿态，非法时吸附到最近的合法姿态）。
                 Func<BlueprintBuilding, BlueprintBuilding, double> meters =
-                    CrossLatitudeSafety.Wrap(bp.areas, bp.buildings, IsBelt, observation, calibration, _crossLatitudeSafety.Value);
+                    CrossLatitudeSafety.Wrap(envelope, observation, _crossLatitudeSafety.Value);
+                // 原件最坏链节（与门禁同一距离口径；合并会就地改写引用，必须在 Optimize 之前量）。
+                double originalWorst = 0.0;
+                foreach (var n in bp.buildings)
+                {
+                    if (n == null || !IsBelt(n) || n.outputObj == null || !IsBelt(n.outputObj)) continue;
+                    double d = meters(n, n.outputObj);
+                    if (!double.IsNaN(d) && !double.IsInfinity(d) && d > originalWorst) originalWorst = d;
+                }
                 BeltPathOptimizer.Report report;
                 bool pinOverLimit = calibration.MultiBand;
                 // Snapshot before the first run: the optimizer rewires links in place, and the
@@ -1753,7 +1785,7 @@ namespace BlueprintBeltSaver
                 double mergeMs = beforeCheckMs - modelMs;
                 Log.Info($"省带耗时：{watch.Elapsed.TotalMilliseconds:F1} ms（模型 {modelMs:F1} ms / 合并 {mergeMs:F1} ms / 校验 {checkMs:F1} ms）；" +
                     $"模型下最坏新链节 {check.Worst:F4} m，越限新链节 {check.Over} 条（上限 {BeltPathOptimizer.MaximumMeters:F4} m），" +
-                    $"原件同跨度越限 {check.KeptOver} 条，原件最坏链节 {calibration.LongestOriginalLink:F4} m");
+                    $"原件同跨度越限 {check.KeptOver} 条，原件最坏链节 {originalWorst:F4} m");
                 if (check.Over > 0)
                 {
                     // 自检没过：不交付一个会因省带新增「距离太远」的蓝图。
@@ -1761,6 +1793,24 @@ namespace BlueprintBeltSaver
                     _status = _text.SelfCheckFailed;
                     hardFailure = true;
                     return false;
+                }
+                if (_crossLatitudeSafety.Value)
+                {
+                    // 004.17 精确闸门（准则①/⑧ 的最终复核）：保护集全部粘贴姿态逐个展开，按游戏
+                    // float 公式算 lpos、用 sqrMagnitude 判定（不走包络的解析化简）。任一新造跨度在任一
+                    // 姿态越限即放弃本次省带——包络与闸门是两条独立计算路径，互为校验。
+                    var gateSpans = originalSpans;
+                    var gate = envelope.Gate(bp.buildings, IsBelt,
+                        (a, b) => gateSpans != null && gateSpans.Contains((SpanSideKey(a), SpanSideKey(b))));
+                    Log.Info($"粘贴姿态闸门：{gate.Frames} 个姿态逐个复核，最坏新链节 {gate.Worst:F4} m，越限新链节 {gate.Over} 条" +
+                        (gate.KeptOver > 0 ? $"，原件同跨度越限 {gate.KeptOver} 条（游戏对原件同样拒绝）" : ""));
+                    if (gate.Over > 0)
+                    {
+                        Log.Error($"省带结果未通过粘贴姿态闸门（越限新链节 {gate.Over} 条；首例 {gate.First}），已放弃本次省带，保留原件。");
+                        _status = _text.SelfCheckFailed;
+                        hardFailure = true;
+                        return false;
+                    }
                 }
                 // 准则⑦（2026-11-01）：拓扑硬门禁——长带化不得改变传送带拓扑。
                 // 线路条数（带-带连通分量）前后必须一致；不允许分裂（断链）与串线（吸附到
@@ -2032,7 +2082,7 @@ namespace BlueprintBeltSaver
                 {
                     continue;
                 }
-                // 004.16：meters 已按配置包装为"纬度带内最坏距离"（跨纬度安全）。
+                // 004.17：meters 已按配置包装为"全合法粘贴姿态包络"（跨纬度安全）或单姿态精确模型。
                 double distance = meters(building, building.outputObj);
                 if (double.IsNaN(distance) || double.IsInfinity(distance))
                 {

@@ -82,6 +82,7 @@ namespace BBSaver.SelfTest
 
         private void RunAll()
         {
+            DumpAddonPrefabs();
             Assembly mod = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "BlueprintBeltSaver");
             Record("mod-assembly-loaded", mod != null, mod == null ? "未找到" : mod.Location);
@@ -212,6 +213,46 @@ namespace BBSaver.SelfTest
                     : "Clone 返回空（游戏拒绝序列化）");
             }
             Record("e2e-in-game-done", true, "全部蓝图B已生成（或记录拒绝原因）；离线蓝图A已由 --export 生成，随后逐字节对比");
+        }
+
+        /// <summary>
+        /// 004.17：附加类建筑（喷涂机 2313 等 addonType=Belt）的连接位预制数据导出——
+        /// addonAreaPoses / addonAreaColPoses / addonAreaSize 只存在于游戏资源里（离线不可得），
+        /// 供"喷涂机按两个连接位精确钉锚"的后续评估使用。写 addon-dump.txt，异常不影响自测。
+        /// </summary>
+        private void DumpAddonPrefabs()
+        {
+            try
+            {
+                var outLines = new List<string> { "addon prefab dump " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") };
+                var items = LDB.items != null ? LDB.items.dataArray : null;
+                if (items == null) { outLines.Add("LDB.items 不可用"); }
+                else
+                {
+                    foreach (var item in items)
+                    {
+                        if (item == null || item.prefabDesc == null) continue;
+                        var d = item.prefabDesc;
+                        if (d.addonType == EAddonType.None && (d.addonAreaPoses == null || d.addonAreaPoses.Length == 0)) continue;
+                        outLines.Add($"item {item.ID} {item.name} model={item.ModelIndex} addonType={d.addonType} areas={(d.addonAreaPoses?.Length ?? 0)} isBelt={d.isBelt}");
+                        for (int i = 0; i < (d.addonAreaPoses?.Length ?? 0); i++)
+                        {
+                            var p = d.addonAreaPoses[i];
+                            var c = d.addonAreaColPoses != null && i < d.addonAreaColPoses.Length ? d.addonAreaColPoses[i] : default(Pose);
+                            var s = d.addonAreaSize != null && i < d.addonAreaSize.Length ? d.addonAreaSize[i] : Vector3.zero;
+                            outLines.Add($"  [{i}] pose.pos=({p.position.x:R},{p.position.y:R},{p.position.z:R}) pose.rot=({p.rotation.x:R},{p.rotation.y:R},{p.rotation.z:R},{p.rotation.w:R})" +
+                                $" col.pos=({c.position.x:R},{c.position.y:R},{c.position.z:R}) col.rot=({c.rotation.x:R},{c.rotation.y:R},{c.rotation.z:R},{c.rotation.w:R}) col.fwd=({c.forward.x:R},{c.forward.y:R},{c.forward.z:R})" +
+                                $" size=({s.x:R},{s.y:R},{s.z:R})");
+                        }
+                    }
+                }
+                File.WriteAllLines(Path.Combine(Dir, "addon-dump.txt"), outLines, new UTF8Encoding(false));
+                Info("addon-dump: " + (outLines.Count - 1) + " 行 → addon-dump.txt");
+            }
+            catch (Exception ex)
+            {
+                Info("addon-dump 异常（不影响自测）：" + ex.GetType().Name + "：" + ex.Message);
+            }
         }
 
         /// <summary>拓扑判定：线路数一致、无分裂/串线、分拣器引用不跨线不丢失。</summary>
