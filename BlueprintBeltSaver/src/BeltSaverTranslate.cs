@@ -24,6 +24,32 @@
         internal string CapFromBlueprint;
         internal string Disabled;
         internal string OptimizeButton;
+        internal string RestoreButton;
+        internal string RestoreConfirmTitle;
+        internal string RestoreCancelled;
+        internal string RestoreNoBelts;
+        internal string RestoreApplyDone;
+        internal string RestoreTotalLine;
+        internal string RestoreRunLine;
+        internal string RestoreMode;
+        internal string RestoreNoChange;
+        internal string RestoreNotAppliedPreview;
+        internal string RestoreFailedTitle;
+        internal string RestoreFailedBody;
+        internal string RestoreUnknownFailure;
+        internal string RestoreApplyFailed;
+        internal string RestoreConfirmFailed;
+        internal string RestoreSection;
+        internal string RestoreQuantizeHeight;
+        internal string RestoreQuantizeHeightDesc;
+        internal string RestoreStrictGrid;
+        internal string RestoreStrictGridDesc;
+        internal string RestoreProtectedNodes;
+        internal string RestoreProtectionDetails;
+        internal string RestoreProtectionReport;
+        internal string RestoreProtectionReportFailed;
+        internal string PendingSourceChanged;
+        internal string RestorePendingSourceChanged;
         internal string ConfirmTitle;
         internal string Confirm;
         internal string Cancel;
@@ -65,10 +91,32 @@
         internal string ModelAtPlayerPositionDesc;
         internal string UiFontSizeLabel;
 
+        private bool _chinese;
+
+        internal string RestoreFailureReason(string reason)
+        {
+            switch (reason)
+            {
+                case "invalid-blueprint": return _chinese ? "蓝图为空或缺少区域数据。" : "The blueprint is empty or has no area data.";
+                case "building-limit": return _chinese ? "复原后的建筑数会超过 15000 上限。" : "The restored blueprint would exceed the 15000 building limit.";
+                case "invalid-buildings": return _chinese ? "蓝图建筑数据无效，无法安全处理。" : "The blueprint contains invalid building data.";
+                case "nonfinite-coordinate": return _chinese ? "蓝图包含无效坐标，无法安全处理。" : "The blueprint contains non-finite coordinates.";
+                case "dangling-reference": return _chinese ? "蓝图存在指向缺失建筑的连接，无法安全处理。" : "The blueprint contains dangling building references.";
+                case "clone-failed": return _chinese ? "原蓝图无法安全序列化复制。" : "The original blueprint could not be cloned through serialization safely.";
+                case "no-legal-placement": return _chinese ? "未找到游戏允许的粘贴姿态，无法完成安全检查。" : "No game-legal paste pose was found for the safety check.";
+                case "topology-failed": return _chinese ? "复原结果未通过拓扑或连接检查。" : "The restored result failed the topology or connection check.";
+                case "distance-failed": return _chinese ? "复原结果未通过传送带间距检查。" : "The restored result failed the belt-distance check.";
+                case "serialize-failed": return _chinese ? "复原结果无法安全序列化，未应用。" : "The restored result could not be serialized safely.";
+                case "strict-grid-conflict": return _chinese ? "严格网格要求与安全保护冲突：仍有非整数 X/Y 或未量化高度的传送带节点，整体未应用。保留点见下方。" : "Strict grid conflicts with safety protection: some belt nodes still have non-integer X/Y or non-quantized heights. Nothing was applied; protected nodes are listed below.";
+                default:
+                    return _chinese ? "无法安全复原该蓝图，请查看日志。" : "This blueprint could not be restored safely; see the log.";
+            }
+        }
+
         internal static BeltSaverTranslate Create(bool chinese)
         {
             bool zh = chinese;
-            var text = new BeltSaverTranslate();
+            var text = new BeltSaverTranslate { _chinese = chinese };
             if (zh)
             {
                 text.Title = "蓝图省带 BlueprintBeltSaver";
@@ -91,6 +139,32 @@
                 text.CapFromBlueprint = "来源：蓝图合并上限（本 MOD）";
                 text.Disabled = "本 MOD 已在配置中禁用（General/Enabled = false）。";
                 text.OptimizeButton = "省带";
+                text.RestoreButton = "复原";
+                text.RestoreConfirmTitle = "BlueprintBeltSaver 蓝图网格复原";
+                text.RestoreCancelled = "已取消复原，蓝图未作改动。";
+                text.RestoreNoBelts = "该蓝图没有可复原的传送带。";
+                text.RestoreApplyDone = "复原完成：已刷新蓝图窗口、写入剪贴板，传送带 {0} 个节点。";
+                text.RestoreTotalLine = "传送带节点：{0} → {1}（新增 {2}，移除 {3}）";
+                text.RestoreRunLine = "已复原区段：{0}；受保护区段：{1}；未调整区段：{2}。";
+                text.RestoreMode = "按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。\n这不是原蓝图备份还原，不能找回未知原蓝图。";
+                text.RestoreNoChange = "没有可安全调整的网格节点。确认后仍会清除本 MOD 的优化标记，停止此前的自动重算。";
+                text.RestoreNotAppliedPreview = "以下为未应用的复原试算结果，当前蓝图保持原样：";
+                text.RestoreFailedTitle = "BlueprintBeltSaver 复原未执行";
+                text.RestoreFailedBody = "本次复原未通过安全检查或发生异常，已保留原蓝图（未做任何改动）。\n\n原因：{0}\n\n详细日志见 Player.log，关键字「belt grid restoration failed」。";
+                text.RestoreUnknownFailure = "无法安全复原该蓝图，请查看日志。";
+                text.RestoreApplyFailed = "应用复原结果失败，请查看日志。";
+                text.RestoreConfirmFailed = "无法显示复原确认弹窗，蓝图未作改动。请查看日志。";
+                text.RestoreSection = "—— 网格复原 ——";
+                text.RestoreQuantizeHeight = "复原高度量化（0.5 的倍数）";
+                text.RestoreQuantizeHeightDesc = "开启：复原后的传送带高度仅允许 0.5 的倍数。关闭：保留原高度，仍检查传送带间距。无法安全调整的连接点、坡道等保留；严格网格开启时有不符合项则整体不应用。";
+                text.RestoreStrictGrid = "严格网格复原（不符合时整体不应用）";
+                text.RestoreStrictGridDesc = "关闭：只复原安全部分，并列出保留点。开启：全部传送带节点 X/Y 必须是整数，高度按上项检查，否则整体不应用。拓扑、连接、带距与碰撞安全检查始终执行。";
+                text.RestoreProtectedNodes = "仍未符合网格要求的保留节点：{0}。";
+                text.RestoreProtectionDetails = "保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：";
+                text.RestoreProtectionReport = "完整保留点报告：{0}";
+                text.RestoreProtectionReportFailed = "完整保留点报告无法写入，详见日志；上述保留点仅显示前 12 个。";
+                text.PendingSourceChanged = "确认期间蓝图已切换、修改或本 MOD 已禁用，本次省带未应用。请重新点击省带。";
+                text.RestorePendingSourceChanged = "确认期间蓝图已切换、修改，复原设置已变化或本 MOD 已禁用，本次复原未应用。请重新点击复原。";
                 text.ConfirmTitle = "BlueprintBeltSaver 蓝图长带化";
                 text.Confirm = "确定";
                 text.Cancel = "取消";
@@ -154,6 +228,32 @@
                 text.CapFromBlueprint = "source: blueprint merge cap (this mod)";
                 text.Disabled = "This mod is disabled (General/Enabled = false).";
                 text.OptimizeButton = "Save Belts";
+                text.RestoreButton = "Restore";
+                text.RestoreConfirmTitle = "BlueprintBeltSaver - Grid Restoration";
+                text.RestoreCancelled = "Restoration cancelled; the blueprint is unchanged.";
+                text.RestoreNoBelts = "This blueprint has no belts to restore.";
+                text.RestoreApplyDone = "Restored: blueprint window refreshed, clipboard updated, {0} belt nodes.";
+                text.RestoreTotalLine = "Belt nodes: {0} → {1} (added {2}, removed {3})";
+                text.RestoreRunLine = "Restored runs: {0}; protected runs: {1}; unaffected runs: {2}.";
+                text.RestoreMode = "Restore one-grid nodes along the current belt route. Connection points, curves, slopes and parts that cannot be adjusted safely are kept. Safety checks always run regardless of merge settings.\nThis is not a blueprint backup restore and cannot recover an unknown original blueprint.";
+                text.RestoreNoChange = "No grid nodes can be adjusted safely. Confirming still clears this mod's optimization marker and stops its previous automatic re-optimization.";
+                text.RestoreNotAppliedPreview = "The following restoration preview was NOT applied; the current blueprint is unchanged:";
+                text.RestoreFailedTitle = "BlueprintBeltSaver - restoration not applied";
+                text.RestoreFailedBody = "Restoration failed a safety check or an error occurred; the original blueprint is kept unchanged.\n\nReason: {0}\n\nSee Player.log for details (keyword: belt grid restoration failed).";
+                text.RestoreUnknownFailure = "This blueprint could not be restored safely; see the log.";
+                text.RestoreApplyFailed = "Applying the restoration failed; see the log.";
+                text.RestoreConfirmFailed = "The restoration confirmation dialog could not be shown; the blueprint is unchanged. See the log.";
+                text.RestoreSection = "—— Grid Restoration ——";
+                text.RestoreQuantizeHeight = "Quantize restored heights (multiples of 0.5)";
+                text.RestoreQuantizeHeightDesc = "ON: restored belt heights must be multiples of 0.5. OFF: preserve original heights while still checking belt spacing. Unsafe connection/slope adjustments are kept; strict grid rejects the result if any node remains noncompliant.";
+                text.RestoreStrictGrid = "Strict grid restoration (reject any noncompliance)";
+                text.RestoreStrictGridDesc = "OFF: restore safe portions and list protected nodes. ON: every belt node must have integer X/Y coordinates; heights follow the option above, otherwise nothing is applied. Topology, connection, spacing and collision safety checks always run.";
+                text.RestoreProtectedNodes = "Protected nodes still outside the grid requirements: {0}.";
+                text.RestoreProtectionDetails = "Protected node details (up to 12; index, area, X/Y/height):";
+                text.RestoreProtectionReport = "Complete protected-node report: {0}";
+                text.RestoreProtectionReportFailed = "Could not write the complete protected-node report; see the log. Only the first 12 points are shown above.";
+                text.PendingSourceChanged = "The blueprint changed or switched, or this mod was disabled during confirmation. The merge was not applied; click Save Belts again.";
+                text.RestorePendingSourceChanged = "The blueprint changed or switched, restoration options changed, or this mod was disabled during confirmation. Restoration was not applied; click Restore again.";
                 text.ConfirmTitle = "BlueprintBeltSaver - Long Belt Conversion";
                 text.Confirm = "OK";
                 text.Cancel = "Cancel";

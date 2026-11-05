@@ -19,7 +19,7 @@ namespace BBSaver.SelfTest
     //   离线半边（蓝图A）与逐节点 diff 由离线校验台 --exportbp / --bpdiff 完成。
     [BepInPlugin("com.dsp.bbsaver.selftest", "BBSaver.SelfTest", "0.3")]
     [BepInDependency("com.dsp.blueprintbeltsaver", BepInDependency.DependencyFlags.SoftDependency)]
-    public class SelfTestPlugin : BaseUnityPlugin
+    public partial class SelfTestPlugin : BaseUnityPlugin
     {
         private static readonly string BlueprintDir =
             @"X:\戴森球计划\【MOD】修改仓库\7.蓝图Blueprints\BlueprintBeltSaver 测试蓝图";
@@ -159,12 +159,12 @@ namespace BBSaver.SelfTest
                     else if (mbProp != null) multiBand = (bool)mbProp.GetValue(model);
                     var gArgs = new object[] { workB.buildings, new Func<global::BlueprintBuilding, bool>(IsBelt),
                         new Func<global::BlueprintBuilding, float>(b => (float)CapOpt), meters, null, true, true, multiBand, true };
-                    var gRes = (global::BlueprintBuilding[])optimize.Invoke(null, gArgs);
+                    var gRes = (global::BlueprintBuilding[])InvokePadded(optimize, gArgs);
                     workB.buildings = gRes;
                     string fpGrid = Fingerprint(gRes);
                     var rArgs = new object[] { trialB.buildings, new Func<global::BlueprintBuilding, bool>(IsBelt),
                         new Func<global::BlueprintBuilding, float>(b => (float)CapOpt), meters, null, true, false, multiBand, true };
-                    var rRes = (global::BlueprintBuilding[])optimize.Invoke(null, rArgs);
+                    var rRes = (global::BlueprintBuilding[])InvokePadded(optimize, rArgs);
                     trialB.buildings = rRes;
                     string fpTrial = Fingerprint(rRes);
                     int gN = gRes.Count(IsBelt), rN = rRes.Count(IsBelt);
@@ -213,6 +213,7 @@ namespace BBSaver.SelfTest
                     : "Clone 返回空（游戏拒绝序列化）");
             }
             Record("e2e-in-game-done", true, "全部蓝图B已生成（或记录拒绝原因）；离线蓝图A已由 --export 生成，随后逐字节对比");
+            RunRestoreTests(mod, pluginInstance);
         }
 
         /// <summary>

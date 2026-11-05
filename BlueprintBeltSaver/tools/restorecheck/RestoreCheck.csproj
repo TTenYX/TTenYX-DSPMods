@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RestoreCheck</AssemblyName>
+    <GameManaged Condition="'$(GameManaged)' == ''">D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed</GameManaged>
+    <BepInExCore Condition="'$(BepInExCore)' == ''">$(APPDATA)/r2modmanPlus-local/DysonSphereProgram/profiles/TEST/BepInEx/core</BepInExCore>
+    <ModDll Condition="'$(ModDll)' == ''">$(MSBuildThisFileDirectory)../../bin/Release/netstandard2.1/BlueprintBeltSaver.dll</ModDll>
+  </PropertyGroup>
+  <!-- No linked src, ProjectReference, selftest or abprobe dependency:
+       the internal production engine is invoked only through the built MOD DLL. -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(GameManaged)/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="BlueprintBeltSaver"><HintPath>$(ModDll)</HintPath><Private>true</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)/BepInEx.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCore)/0Harmony.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

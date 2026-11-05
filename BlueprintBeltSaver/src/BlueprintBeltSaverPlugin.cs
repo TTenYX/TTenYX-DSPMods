@@ -49,6 +49,8 @@ namespace BlueprintBeltSaver
         private ConfigEntry<bool> _crossLatitudeSafety;
         private string _stateBlueprintKey = "";
         private ConfigEntry<bool> _gridExactMerging;
+        private ConfigEntry<bool> _restoreQuantizeHeight;
+        private ConfigEntry<bool> _restoreStrictGrid;
 
         private Harmony _harmony;
         private static FieldInfo _longerBeltsDistanceField;
@@ -87,6 +89,11 @@ namespace BlueprintBeltSaver
         private GameObject _optimizeButton;
         private Text _optimizeButtonText;
         private Button _optimizeButtonButton;
+        private GameObject _restoreButton;
+        private Text _restoreButtonText;
+        private Button _restoreButtonButton;
+        private readonly Vector3[] _buttonWorldCorners = new Vector3[4];
+        private const float RestoreButtonGapPixels = 10f;
         private UIButton _anchoredAddFieldBtn;
         private bool _anchoredUnderAddField;
         private float _nextButtonTry;
@@ -96,6 +103,12 @@ namespace BlueprintBeltSaver
         private string _lastInjectWarning = "";
 
         private BlueprintData _pendingBlueprint;
+        private BlueprintData _pendingSourceBlueprint;
+        private BlueprintBuilding[] _pendingSourceBuildings;
+        private UIBlueprintInspector _pendingInspector;
+        private bool _pendingRestore;
+        private bool _pendingRestoreQuantizeHeight;
+        private bool _pendingRestoreStrictGrid;
         private string _pendingSummary = "";
         private float _pendingCap;
 
@@ -134,6 +147,8 @@ namespace BlueprintBeltSaver
             _sorterForceRebind = Config.Bind("Belt", "SorterForceRebind", false, "默认关闭（实验，需与 RebindSorterLinks 同时开启）。三件套：① 合并完全忽略分拣器自由重布线；② 合并后按每个分拣器的取货点坐标把引用强制重绑到覆盖它的新带节点，并按新段中心重锚定沿带偏移（取货点世界坐标保持不动）；③ 重排建造顺序——带节点全部排到分拣器之前，修复「分拣器先于目标带被建造导致链接失效」。开启后请先在粘贴预览逐个确认分拣器正常再保存。");
             _modelAtPlayerPosition = Config.Bind("Belt", "ModelAtPlayerPosition", false, "省带建模纬度（库内点省带时）：默认关闭 = 按赤道建模（跨纬度粘贴兼容性最好）；勾选 = 按机甲当前位置建模（弹窗数量即脚下粘贴的最终数量）。粘贴模式下的位置重算不受此项影响，始终按实际粘贴位置。");
             _crossLatitudeSafety = Config.Bind("Belt", "CrossLatitudeSafety", true, "跨纬度结构安全（强烈推荐保持开启）：按游戏允许的全部粘贴姿态（任意纬度、任意朝向）逐条校验链节，长带化产物在任何位置粘贴都不会出现「距离太远」断链。关闭后只按本次建模位置省带（省得略多，但换纬度/旋转粘贴或使用存库、导出的蓝图时可能部分断开）。| Cross-latitude structural safety (strongly recommended): every link is validated against all paste poses the game allows (any latitude, any rotation), so merged blueprints never break wherever they are pasted. Disable to optimize for the modeled position only (slightly more savings, but pasting at another latitude/rotation or reusing saved/exported blueprints may partially break).");
+            _restoreQuantizeHeight = Config.Bind("Belt", "RestoreQuantizeHeight", true, "复原高度量化（默认开启）：复原后的传送带高度仅允许 0.5 的倍数；关闭时保留原高度，但带距安全检查仍执行。连接点、坡道等无法安全量化的部分保留；严格网格开启时存在不符合项则整体不应用。 / Restore height quantization (default ON): restored belt heights must be multiples of 0.5; OFF preserves original heights but still enforces belt-distance safety. Unsafe connection/slope adjustments are kept; strict grid rejects the whole result if any node remains noncompliant.");
+            _restoreStrictGrid = Config.Bind("Belt", "RestoreStrictGrid", false, "严格网格复原（默认关闭）：关闭时只复原可安全调整的部分，并列出保留点；开启时要求所有传送带节点 X/Y 坐标均为整数，高度按 RestoreQuantizeHeight 检查，否则整体不应用。无论是否开启，拓扑、连接、带距与碰撞安全检查均不可关闭。 / Strict grid restoration (default OFF): OFF restores safe portions and reports protected nodes; ON requires integer X/Y coordinates for every belt node and checks heights according to RestoreQuantizeHeight, otherwise nothing is applied. Topology, connection, belt-distance and collision safety cannot be disabled.");
             _uiFontSize = Config.Bind("UI", "FontSize", 21f, "设置窗口字号（14~28）。窗口右下角可拖动调整大小，位置与大小会保存在配置里。");
             _uiWindowW = Config.Bind("UI", "WindowWidth", 680f, "设置窗口宽度（px）。");
             _uiWindowH = Config.Bind("UI", "WindowHeight", 900f, "设置窗口高度（px）。");
@@ -205,6 +220,8 @@ namespace BlueprintBeltSaver
 
         private void OnDestroy()
         {
+            ClearPending();
+            DestroyOptimizeButton();
             SaveStaticsToConfig();
         }
 
@@ -621,6 +638,15 @@ namespace BlueprintBeltSaver
             }
             GUILayout.Label(_text.SorterForceRebindDesc, desc);
 
+            // —— 网格复原 ——
+            GUILayout.Label(_text.RestoreSection, section);
+            bool restoreHeightNew = GUILayout.Toggle(_restoreQuantizeHeight.Value, _text.RestoreQuantizeHeight, toggle);
+            if (restoreHeightNew != _restoreQuantizeHeight.Value) _restoreQuantizeHeight.Value = restoreHeightNew;
+            GUILayout.Label(_text.RestoreQuantizeHeightDesc, desc);
+            bool restoreStrictNew = GUILayout.Toggle(_restoreStrictGrid.Value, _text.RestoreStrictGrid, toggle);
+            if (restoreStrictNew != _restoreStrictGrid.Value) _restoreStrictGrid.Value = restoreStrictNew;
+            GUILayout.Label(_text.RestoreStrictGridDesc, desc);
+
             // —— 省带建模 ——
             GUILayout.Label(_text.SecModel, section);
             bool modelNew = GUILayout.Toggle(_modelAtPlayerPosition.Value, _text.ModelAtPlayerPosition, toggle);
@@ -690,6 +716,10 @@ namespace BlueprintBeltSaver
                 {
                     _optimizeButton.SetActive(false);
                 }
+                if (_restoreButton != null)
+                {
+                    _restoreButton.SetActive(false);
+                }
                 return;
             }
             if (Time.unscaledTime < _nextButtonTry)
@@ -748,6 +778,9 @@ namespace BlueprintBeltSaver
             bool rebuild = _optimizeButton == null
                 || !_optimizeButton.activeInHierarchy
                 || _optimizeButton.transform.parent == null
+                || _restoreButton == null
+                || !_restoreButton.activeInHierarchy
+                || _restoreButton.transform.parent != _optimizeButton.transform.parent
                 || _anchoredAddFieldBtn != addField
                 || _anchoredUnderAddField != wantUnderAddField;
             if (rebuild)
@@ -759,8 +792,19 @@ namespace BlueprintBeltSaver
 
         private void DestroyOptimizeButton()
         {
+            if (_optimizeButtonButton != null) _optimizeButtonButton.onClick.RemoveAllListeners();
+            if (_restoreButtonButton != null) _restoreButtonButton.onClick.RemoveAllListeners();
+            if (_restoreButton != null)
+            {
+                _restoreButton.SetActive(false);
+                UnityEngine.Object.Destroy(_restoreButton);
+            }
+            _restoreButton = null;
+            _restoreButtonText = null;
+            _restoreButtonButton = null;
             if (_optimizeButton != null)
             {
+                _optimizeButton.SetActive(false);
                 UnityEngine.Object.Destroy(_optimizeButton);
             }
             _optimizeButton = null;
@@ -865,6 +909,11 @@ namespace BlueprintBeltSaver
                 {
                     GameObject textGo = UnityEngine.Object.Instantiate(template.gameObject, rect, false);
                     textGo.name = "Text";
+                    foreach (var localizer in textGo.GetComponentsInChildren<Localizer>(true))
+                    {
+                        localizer.enabled = false;
+                        UnityEngine.Object.Destroy(localizer);
+                    }
                     _optimizeButtonText = textGo.GetComponent<Text>();
                     if (_optimizeButtonText != null)
                     {
@@ -886,11 +935,63 @@ namespace BlueprintBeltSaver
                 _optimizeButtonButton.onClick.AddListener(new UnityAction(OnOptimizeButtonClick));
                 _optimizeButton = go;
                 _anchoredAddFieldBtn = addFieldBtn;
-                Log.Info("省带按钮已注入：" + (underAddField ? "新建属性下方" : "复制按钮左侧") + "，尺寸 " + size.x + "x" + size.y);
+                _restoreButton = UnityEngine.Object.Instantiate(go, parent, false);
+                _restoreButton.name = "BlueprintBeltSaver_RestoreBtn";
+                _restoreButtonText = _restoreButton.GetComponentInChildren<Text>(true);
+                _restoreButtonButton = _restoreButton.GetComponent<Button>();
+                _restoreButtonButton.onClick = new Button.ButtonClickedEvent();
+                _restoreButtonButton.onClick.AddListener(new UnityAction(OnRestoreButtonClick));
+                if (_restoreButtonText != null)
+                {
+                    _restoreButtonText.text = _text != null ? _text.RestoreButton : "Restore";
+                }
+                PositionRestoreButton();
+                Log.Info("省带/复原按钮已注入：" + (underAddField ? "新建属性下方" : "复制按钮左侧") + "，尺寸 " + size.x + "x" + size.y + "，复原位于省带左侧");
             }
             catch (Exception ex)
             {
-                Log.Error("injecting the long-belt button failed: " + ex);
+                DestroyOptimizeButton();
+                Log.Error("injecting the long-belt/restore buttons failed: " + ex);
+            }
+        }
+
+        /// <summary>Use transformed screen bounds: sizeDelta alone does not account for pivots or UI scale.</summary>
+        private void PositionRestoreButton()
+        {
+            if (_optimizeButton == null || _restoreButton == null) return;
+            var optimizeRect = _optimizeButton.transform as RectTransform;
+            var restoreRect = _restoreButton.transform as RectTransform;
+            if (optimizeRect == null || restoreRect == null || optimizeRect.parent == null) return;
+            if (restoreRect.sizeDelta != optimizeRect.sizeDelta) restoreRect.sizeDelta = optimizeRect.sizeDelta;
+            var position = restoreRect.anchoredPosition;
+            if (!Mathf.Approximately(position.y, optimizeRect.anchoredPosition.y))
+            {
+                position.y = optimizeRect.anchoredPosition.y;
+                restoreRect.anchoredPosition = position;
+            }
+            var canvas = optimizeRect.GetComponentInParent<Canvas>();
+            Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            float optimizeLeft = float.PositiveInfinity;
+            optimizeRect.GetWorldCorners(_buttonWorldCorners);
+            foreach (var corner in _buttonWorldCorners)
+            {
+                optimizeLeft = Mathf.Min(optimizeLeft, RectTransformUtility.WorldToScreenPoint(camera, corner).x);
+            }
+            float restoreRight = float.NegativeInfinity;
+            restoreRect.GetWorldCorners(_buttonWorldCorners);
+            foreach (var corner in _buttonWorldCorners)
+            {
+                restoreRight = Mathf.Max(restoreRight, RectTransformUtility.WorldToScreenPoint(camera, corner).x);
+            }
+            Transform parent = optimizeRect.parent;
+            float pixelsPerLocalX = RectTransformUtility.WorldToScreenPoint(camera, parent.TransformPoint(Vector3.right)).x
+                - RectTransformUtility.WorldToScreenPoint(camera, parent.TransformPoint(Vector3.zero)).x;
+            if (Mathf.Abs(pixelsPerLocalX) < 0.0001f) return;
+            float shift = optimizeLeft - RestoreButtonGapPixels - restoreRight;
+            if (Mathf.Abs(shift) > 0.01f)
+            {
+                position.x += shift / pixelsPerLocalX;
+                restoreRect.anchoredPosition = position;
             }
         }
 
@@ -936,11 +1037,29 @@ namespace BlueprintBeltSaver
             {
                 _optimizeButtonText.text = _text.OptimizeButton;
             }
+            if (_restoreButton != null && _restoreButton.activeSelf != visible)
+            {
+                _restoreButton.SetActive(visible);
+            }
+            if (_restoreButtonButton != null && _optimizeButtonButton != null
+                && _restoreButtonButton.enabled != _optimizeButtonButton.enabled)
+            {
+                _restoreButtonButton.enabled = _optimizeButtonButton.enabled;
+            }
+            if (_restoreButtonButton != null && _restoreButtonButton.interactable != interactable)
+            {
+                _restoreButtonButton.interactable = interactable;
+            }
+            if (_restoreButtonText != null && _text != null && _restoreButtonText.text != _text.RestoreButton)
+            {
+                _restoreButtonText.text = _text.RestoreButton;
+            }
             if (!logState)
             {
                 return;
             }
-            string state = "已创建=" + (_optimizeButton != null) + ", 锚点=新建属性下方=" + _anchoredUnderAddField + ", 有建筑=" + hasBuildings + ", 已启用=" + _enabled.Value + ", 可见=" + visible + ", 可点击=" + interactable;
+            PositionRestoreButton();
+            string state = "已创建=" + (_optimizeButton != null) + ", 复原已创建=" + (_restoreButton != null) + ", 锚点=新建属性下方=" + _anchoredUnderAddField + ", 有建筑=" + hasBuildings + ", 已启用=" + _enabled.Value + ", 可见=" + visible + ", 可点击=" + interactable;
             if (state != _lastButtonState)
             {
                 _lastButtonState = state;
@@ -950,8 +1069,7 @@ namespace BlueprintBeltSaver
 
         private void OnOptimizeButtonClick()
         {
-            _pendingBlueprint = null;
-            _pendingSourceSnapshot = null;
+            ClearPending();
             if (!_enabled.Value)
             {
                 _status = _text != null ? _text.Disabled : "disabled";
@@ -978,6 +1096,9 @@ namespace BlueprintBeltSaver
             if (TryOptimize(source, out optimized, out summary, out cap, out bool hardFailure, trustedSpans))
             {
                 _pendingBlueprint = optimized;
+                _pendingSourceBlueprint = source;
+                _pendingSourceBuildings = source.buildings;
+                _pendingInspector = _inspector;
                 _pendingSummary = summary;
                 _pendingCap = cap;
                 _pendingSourceSnapshot = SafeSnapshot(source);
@@ -989,27 +1110,62 @@ namespace BlueprintBeltSaver
             }
         }
 
+        private void OnRestoreButtonClick()
+        {
+            ClearPending();
+            if (!_enabled.Value)
+            {
+                _status = _text != null ? _text.Disabled : "disabled";
+                return;
+            }
+            if (_inspector == null || _inspector.blueprint == null) return;
+            var source = _inspector.blueprint;
+            if (source.buildings == null || !source.buildings.Any(IsBelt))
+            {
+                _status = _text != null ? _text.RestoreNoBelts : "This blueprint has no belts to restore.";
+                return;
+            }
+            if (TryRestore(source, out var restored, out var summary, out bool hardFailure))
+            {
+                _pendingBlueprint = restored;
+                _pendingSourceBlueprint = source;
+                _pendingSourceBuildings = source.buildings;
+                _pendingInspector = _inspector;
+                _pendingRestore = true;
+                _pendingRestoreQuantizeHeight = _restoreQuantizeHeight.Value;
+                _pendingRestoreStrictGrid = _restoreStrictGrid.Value;
+                _pendingSummary = summary;
+                _pendingSourceSnapshot = SafeSnapshot(source);
+                ShowConfirmDialog(summary);
+            }
+            else if (hardFailure)
+            {
+                ShowFailureDialog(_status, true);
+            }
+        }
+
         /// <summary>
         /// 省带失败的用户可见反馈（004.7）：此前只有设置窗里的 _status，游戏内点「省带」
         /// 失败时毫无反应（玩家报「完全无弹窗」）。用游戏原生消息框告知"已保留原蓝图"与原因，
         /// 便于玩家把原因连同 Player.log 一起反馈。
         /// </summary>
-        private void ShowFailureDialog(string reason)
+        private void ShowFailureDialog(string reason, bool restore = false)
         {
             if (string.IsNullOrEmpty(reason))
             {
-                reason = _text != null ? _text.ConfirmFailed : "unknown";
+                reason = _text != null ? (restore ? _text.RestoreUnknownFailure : _text.ConfirmFailed) : "unknown";
             }
-            if (reason.Length > 300)
+            int limit = restore ? 4096 : 300;
+            if (reason.Length > limit)
             {
-                reason = reason.Substring(0, 300) + "…";
+                reason = reason.Substring(0, limit) + "…";
             }
-            string title = _text != null ? _text.FailedTitle : "BlueprintBeltSaver";
-            string body = _text != null ? string.Format(_text.FailedBody, reason) : reason;
+            string title = _text != null ? (restore ? _text.RestoreFailedTitle : _text.FailedTitle) : "BlueprintBeltSaver";
+            string body = _text != null ? string.Format(restore ? _text.RestoreFailedBody : _text.FailedBody, reason) : reason;
             try
             {
                 UIMessageBox.Show(title, body, _text != null ? _text.Confirm : "OK", UIMessageBox.WARNING);
-                Log.Info("省带失败提示已显示：" + reason);
+                Log.Info((restore ? "复原" : "省带") + "失败提示已显示：" + reason);
             }
             catch (Exception ex)
             {
@@ -1024,90 +1180,111 @@ namespace BlueprintBeltSaver
         /// </summary>
         private void ShowConfirmDialog(string message)
         {
-            string title = _text != null ? _text.ConfirmTitle : "BlueprintBeltSaver 蓝图长带化";
-            string cancel = "取消";
-            string confirm = "确定";
+            string title = _text != null ? (_pendingRestore ? _text.RestoreConfirmTitle : _text.ConfirmTitle) : "BlueprintBeltSaver";
+            string cancel = _text != null ? _text.Cancel : "Cancel";
+            string confirm = _text != null ? _text.Confirm : "OK";
+            var expectedPending = _pendingBlueprint;
             try
             {
-                // The game localizes its own button captions through this extension.
-                cancel = "取消".Translate();
-                confirm = "确定".Translate();
-            }
-            catch
-            {
-                // Keep the plain Chinese captions when localization is not ready.
-            }
-            try
-            {
-                UIMessageBox.Show(title, message, cancel, confirm, UIMessageBox.WARNING, new UIMessageBox.Response(CancelPending), new UIMessageBox.Response(ApplyPending));
+                UIMessageBox.Show(title, message, cancel, confirm, UIMessageBox.WARNING,
+                    new UIMessageBox.Response(() => { if (ReferenceEquals(_pendingBlueprint, expectedPending)) CancelPending(); }),
+                    new UIMessageBox.Response(() => { if (ReferenceEquals(_pendingBlueprint, expectedPending)) ApplyPending(); }));
                 Log.Info("确认弹窗已显示；" + message.Replace(Environment.NewLine, " | "));
             }
             catch (Exception ex)
             {
                 Log.Error("showing the game message box failed: " + ex);
-                _pendingBlueprint = null;
-                _status = _text != null ? _text.ConfirmFailed : "confirm dialog failed";
+                bool restore = _pendingRestore;
+                ClearPending();
+                _status = _text != null ? (restore ? _text.RestoreConfirmFailed : _text.ConfirmFailed) : "confirm dialog failed";
+                ShowFailureDialog(_status, restore);
             }
         }
 
         private void CancelPending()
         {
+            bool restore = _pendingRestore;
+            ClearPending();
+            _status = _text != null ? (restore ? _text.RestoreCancelled : _text.Cancelled) : "cancelled";
+        }
+
+        private void ClearPending()
+        {
             _pendingBlueprint = null;
-            _status = _text != null ? _text.Cancelled : "cancelled";
+            _pendingSourceBlueprint = null;
+            _pendingSourceBuildings = null;
+            _pendingInspector = null;
+            _pendingSourceSnapshot = null;
+            _pendingSummary = "";
+            _pendingCap = 0f;
+            _pendingRestore = false;
+            _pendingRestoreQuantizeHeight = false;
+            _pendingRestoreStrictGrid = false;
         }
 
         private void ApplyPending()
         {
             var optimized = _pendingBlueprint;
-            _pendingBlueprint = null;
-            if (optimized == null)
+            var expectedSource = _pendingSourceBlueprint;
+            var expectedBuildings = _pendingSourceBuildings;
+            var expectedInspector = _pendingInspector;
+            string sourceSnapshot = _pendingSourceSnapshot;
+            string summary = _pendingSummary;
+            bool restore = _pendingRestore;
+            bool quantizeHeight = _pendingRestoreQuantizeHeight;
+            bool strictGrid = _pendingRestoreStrictGrid;
+            ClearPending();
+            if (optimized == null) return;
+            BlueprintData target = _inspector != null ? _inspector.blueprint : null;
+            if (!_enabled.Value || target == null || !ReferenceEquals(_inspector, expectedInspector)
+                || !ReferenceEquals(target, expectedSource) || !ReferenceEquals(target.buildings, expectedBuildings)
+                || (restore && (quantizeHeight != _restoreQuantizeHeight.Value || strictGrid != _restoreStrictGrid.Value))
+                || (sourceSnapshot != null && sourceSnapshot != SafeSnapshot(target)))
             {
+                _status = _text != null ? (restore ? _text.RestorePendingSourceChanged : _text.PendingSourceChanged) : "The source blueprint changed; nothing was applied.";
+                Log.Warn(_status);
+                ShowFailureDialog(_status, restore);
                 return;
             }
+            var originalBuildings = target.buildings;
+            string originalExternalFields = target.externalFields;
+            string previousSnapshot = _originalSnapshot;
+            var previousSpans = _originalSpans;
+            string previousStateKey = _stateBlueprintKey;
+            string previousObservationKey = _lastObservationKey;
+            float previousNextReoptimize = _nextReoptimize;
+            bool mutated = false;
             try
             {
-                BlueprintData target = _inspector != null ? _inspector.blueprint : null;
-                if (target == null)
+                // Preflight the owned result before touching the inspector's blueprint.
+                optimized.CheckBuildingData();
+                optimized.externalFields = restore ? RemoveOptimizeMarker(target.externalFields) : target.externalFields;
+                if (!restore && !HasOptimizeMarker(optimized))
                 {
-                    Log.Warn("no blueprint is open in the inspector; nothing was applied.");
-                    return;
+                    optimized.externalFields = string.IsNullOrEmpty(optimized.externalFields)
+                        ? OptimizeMarker : optimized.externalFields + ";" + OptimizeMarker;
                 }
-                // 记下原件与"本次建模用的粘贴位置"，供玩家在预览里移动/旋转后按新位置增量重算。
-                _originalSnapshot = _pendingSourceSnapshot ?? SafeSnapshot(target);
-                _pendingSourceSnapshot = null;
-                _originalSpans = SpansFromSnapshot(_originalSnapshot);
-                // 注意：_stateBlueprintKey 必须等 target.buildings 换成优化结果之后再算（见下方），
-                // 否则第一次拖动位置就会被判成"换了蓝图"，把原件快照/跨度整组清掉——玩家实测
-                // C1 的第一次位置重算因此丢失了真原件口径（004.9 修正）。
-                // 应用后强制下一次粘贴位置评估真正执行（清空位置键）：库内省带用的建模纬度
-                // （蓝图锚点/上次粘贴位置）与本次实际粘贴位置可以相同，若不清键，"位置没变"
-                // 的节流会跳过重算——按旧纬度切的跨度原样贴出，可能超上限（玩家 80环带 实测：
-                // 上下两边过长、违反铁律①）。清键后入口会按当前位置做增量复核 + 必要重算。
-                _lastObservationKey = "";
-                Log.Info("省带位置重算已就绪：原件快照 " + (_originalSnapshot == null ? "不可用（位置变化后不会重算）" : _originalSnapshot.Length + " 字符") +
-                    "，当前位置键 " + _lastObservationKey);
-                // Mutate the instance the inspector already holds instead of swapping the object, so
-                // nothing else can keep pointing at the pre-merge blueprint.
+                optimized.ToBase64String();
+                string originalSnapshot = restore ? null : sourceSnapshot ?? SafeSnapshot(target);
+                // Keep the inspector-owned instance; other consumers can hold references to it.
+                mutated = true;
                 target.buildings = optimized.buildings;
+                target.externalFields = optimized.externalFields;
                 target.CheckBuildingData();
-                _stateBlueprintKey = BlueprintKey(target);
-                // 写入本 MOD 优化标记（externalFields 扩展字段，随保存/加载往返）：之后这张蓝图
-                // 直接从库里拖到地上时，位置复核发现越限也能按当前位置从当前状态重省。
-                try
+                if (restore)
                 {
-                    if (string.IsNullOrEmpty(target.externalFields))
-                    {
-                        target.externalFields = OptimizeMarker;
-                    }
-                    else if (target.externalFields.IndexOf(OptimizeMarker, StringComparison.Ordinal) < 0)
-                    {
-                        target.externalFields = target.externalFields + ";" + OptimizeMarker;
-                    }
+                    ClearOptimizationState();
+                    Log.Info("复原已清除优化标记、原件快照和跨度缓存；不会自动重新省带。");
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Warn("写入优化标记失败（不影响本次省带）：" + ex.Message);
+                    _originalSnapshot = originalSnapshot;
+                    _originalSpans = SpansFromSnapshot(_originalSnapshot);
+                    _stateBlueprintKey = BlueprintKey(target);
+                    _lastObservationKey = "";
+                    Log.Info("省带位置重算已就绪：原件快照 " + (_originalSnapshot == null ? "不可用（位置变化后不会重算）" : _originalSnapshot.Length + " 字符"));
                 }
+                GUIUtility.systemCopyBuffer = target.ToBase64String();
                 try
                 {
                     _inspector.Refresh(true, true, true);
@@ -1116,16 +1293,36 @@ namespace BlueprintBeltSaver
                 {
                     Log.Warn("inspector refresh failed: " + ex.Message);
                 }
-                GUIUtility.systemCopyBuffer = target.ToBase64String();
                 SyncPasteTool(target, true);
-                _status = string.Format(_text.ApplyDone, CountBelts(target));
-                Log.Info("已应用优化：" + _pendingSummary.Replace(Environment.NewLine, " | "));
+                _status = string.Format(restore ? _text.RestoreApplyDone : _text.ApplyDone, CountBelts(target));
+                if (restore) _status += Environment.NewLine + summary;
+                Log.Info((restore ? "已应用复原：" : "已应用优化：") + summary.Replace(Environment.NewLine, " | "));
             }
             catch (Exception ex)
             {
-                Log.Error("applying the optimized blueprint failed: " + ex);
-                _status = ex.Message;
+                if (mutated)
+                {
+                    target.buildings = originalBuildings;
+                    target.externalFields = originalExternalFields;
+                    _originalSnapshot = previousSnapshot;
+                    _originalSpans = previousSpans;
+                    _stateBlueprintKey = previousStateKey;
+                    _lastObservationKey = previousObservationKey;
+                    _nextReoptimize = previousNextReoptimize;
+                }
+                Log.Error((restore ? "applying the restored blueprint failed: " : "applying the optimized blueprint failed: ") + ex);
+                _status = restore && _text != null ? _text.RestoreApplyFailed : ex.Message;
+                ShowFailureDialog(_status, restore);
             }
+        }
+
+        private void ClearOptimizationState()
+        {
+            _originalSnapshot = null;
+            _originalSpans = null;
+            _stateBlueprintKey = "";
+            _lastObservationKey = "";
+            _nextReoptimize = 0f;
         }
 
         /// <summary>
@@ -1178,6 +1375,10 @@ namespace BlueprintBeltSaver
                 {
                     return;
                 }
+            }
+            if (_originalSnapshot == null && !HasOptimizeMarker(target))
+            {
+                return;
             }
             _nextReoptimize = Time.unscaledTime + ReoptimizeInterval;
             _lastObservationKey = key;
@@ -1325,7 +1526,15 @@ namespace BlueprintBeltSaver
 
         private static bool HasOptimizeMarker(BlueprintData bp)
             => bp != null && !string.IsNullOrEmpty(bp.externalFields)
-                && bp.externalFields.IndexOf(OptimizeMarker, StringComparison.Ordinal) >= 0;
+                && bp.externalFields.Split(';').Any(field => string.Equals(field, OptimizeMarker, StringComparison.Ordinal));
+
+        private static string RemoveOptimizeMarker(string fields)
+        {
+            if (string.IsNullOrEmpty(fields)) return fields;
+            var parts = fields.Split(';');
+            if (!parts.Any(field => string.Equals(field, OptimizeMarker, StringComparison.Ordinal))) return fields;
+            return string.Join(";", parts.Where(field => !string.Equals(field, OptimizeMarker, StringComparison.Ordinal)).ToArray());
+        }
 
         /// <summary>
         /// Pushes the merged blueprint into the paste tool, but only where the game itself would do
@@ -1480,6 +1689,77 @@ namespace BlueprintBeltSaver
             => observation.HasValue
                 ? observation.Value.Quadrant + ":" + (observation.Value.AnchorLatitudeRad * 200.2).ToString("F1")
                 : "none";
+
+        private static string WriteRestoreAudit(BlueprintGridRestorer.Report report)
+        {
+            try
+            {
+                string dir = Path.Combine(Paths.ConfigPath, "BlueprintBeltSaver-restore-audit");
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, "protected-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + "-" + System.Guid.NewGuid().ToString("N").Substring(0, 8) + ".csv");
+                File.WriteAllLines(path, new[] { "sourceIndex,area,x,y,height" }.Concat(report.ProtectedPoints), new UTF8Encoding(false));
+                Log.Info("复原完整保留点报告：" + path);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("writing the restoration protected-point report failed: " + ex.Message);
+                return null;
+            }
+        }
+
+        private bool TryRestore(BlueprintData source, out BlueprintData restored, out string summary, out bool hardFailure)
+        {
+            restored = null;
+            summary = "";
+            hardFailure = false;
+            var text = _text ?? BeltSaverTranslate.Create(_textIsChinese);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                bool ok = BlueprintGridRestorer.TryRestore(source, out restored, out var report,
+                    _restoreQuantizeHeight.Value, _restoreStrictGrid.Value);
+                if (ok && (restored?.buildings == null || restored.buildings.Length > MaxBlueprintBuildings))
+                {
+                    ok = false;
+                    report.Reason = "building-limit";
+                }
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format(text.RestoreTotalLine, report.Before, report.After, report.Added, report.Removed));
+                sb.AppendLine(string.Format(text.RestoreRunLine, report.RestoredRuns, report.ProtectedRuns, report.UnaffectedRuns));
+                sb.AppendLine(string.Format(text.RestoreProtectedNodes, report.ProtectedNodes));
+                if (!string.IsNullOrEmpty(report.ProtectionDetails))
+                {
+                    sb.AppendLine(text.RestoreProtectionDetails);
+                    sb.AppendLine(_textIsChinese ? report.ProtectionDetails.Replace("area=", "区域=") : report.ProtectionDetails);
+                    string audit = WriteRestoreAudit(report);
+                    sb.AppendLine(string.IsNullOrEmpty(audit) ? text.RestoreProtectionReportFailed : string.Format(text.RestoreProtectionReport, audit));
+                }
+                if (ok && report.RestoredRuns == 0) sb.AppendLine(text.RestoreNoChange);
+                sb.AppendLine();
+                sb.AppendLine(text.RestoreMode);
+                summary = sb.ToString().TrimEnd();
+                Log.Info($"网格复原耗时 {watch.Elapsed.TotalMilliseconds:F1} ms；传送带 {report.Before} → {report.After}，新增 {report.Added}，移除 {report.Removed}，已复原区段 {report.RestoredRuns}，保护区段 {report.ProtectedRuns}，未调整区段 {report.UnaffectedRuns}；通过={ok}，原因={report.Reason}");
+                if (!ok)
+                {
+                    restored = null;
+                    hardFailure = true;
+                    _status = text.RestoreFailureReason(report.Reason);
+                    if (report.Before > 0) _status += Environment.NewLine + Environment.NewLine + text.RestoreNotAppliedPreview + Environment.NewLine + summary;
+                    Log.Error("belt grid restoration failed, the blueprint is left untouched: " + report.Reason);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                restored = null;
+                hardFailure = true;
+                _status = text.RestoreUnknownFailure;
+                Log.Error("belt grid restoration failed, the blueprint is left untouched: " + ex);
+                return false;
+            }
+        }
 
         private bool TryOptimize(BlueprintData source, out BlueprintData optimized, out string summary, out float cap, out bool hardFailure, HashSet<(long, long)> trustedOriginalSpans = null)
         {
@@ -2300,7 +2580,7 @@ namespace BlueprintBeltSaver
         {
             try
             {
-                return bp.ToBase64String();
+                return BlueprintGridRestorer.CloneOwned(bp).ToBase64String();
             }
             catch (Exception ex)
             {

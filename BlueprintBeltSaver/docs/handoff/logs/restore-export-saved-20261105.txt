@@ -1,0 +1,73 @@
+RestoreCheck 2026-11-05 12:55:46
+API Boolean TryRestore(BlueprintData, BlueprintData ByRef, Report ByRef, Boolean, Boolean) MOD=X:\戴森球计划\【MOD】修改仓库\1.我的MOD\BlueprintBeltSaver\tools\restorecheck\bin\Release\net8.0\BlueprintBeltSaver.dll SHA256=ADE78633F4405862D4D85C298B2F7746F280317D6A5346C627C5149814F8111A
+BATCH input=../../7.蓝图Blueprints/BlueprintBeltSaver 长带化导出/蓝图A-游戏外 files=14 export=tools/restorecheck/reports/A-saved
+  ok=True belts=1612->1675 added=135 removed=72 restored=22 protected=1461 reason=
+  placement frames=454 new-links=168 length=[0.407123,1.776719]m
+  placement frames=454 new-links=168 length=[0.407123,1.776719]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_1080传送带+360分拣器.txt
+PASS batch:A_lib_1080传送带+360分拣器
+  ok=True belts=1383->1443 added=122 removed=62 restored=17 protected=1267 reason=
+  placement frames=406 new-links=143 length=[0.416656,1.641907]m
+  placement frames=406 new-links=143 length=[0.416656,1.641907]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_1440太阳帆（低效）v1.1.txt
+PASS batch:A_lib_1440太阳帆（低效）v1.1
+  ok=True belts=898->912 added=23 removed=9 restored=7 protected=802 reason=
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_1440太阳帆（高效）.txt
+PASS batch:A_lib_1440太阳帆（高效）
+  ok=True belts=1732->1756 added=41 removed=17 restored=11 protected=1641 reason=
+  placement frames=438 new-links=58 length=[0.400436,1.791086]m
+  placement frames=438 new-links=58 length=[0.400436,1.791086]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_16.4小火箭.txt
+PASS batch:A_lib_16.4小火箭
+  ok=True belts=898->912 added=23 removed=9 restored=7 protected=802 reason=
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_2880太阳帆（高效）.txt
+PASS batch:A_lib_2880太阳帆（高效）
+  ok=True belts=1866->1914 added=112 removed=64 restored=20 protected=1722 reason=
+  placement frames=366 new-links=138 length=[0.442028,1.707344]m
+  placement frames=366 new-links=138 length=[0.442028,1.707344]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_37.5小火箭 （需求氘棒）.txt
+PASS batch:A_lib_37.5小火箭 （需求氘棒）
+  ok=True belts=4146->4189 added=88 removed=45 restored=12 protected=4000 reason=
+  placement frames=2 new-links=103 length=[0.401334,1.671114]m
+  placement frames=2 new-links=103 length=[0.401334,1.671114]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_65.6低效火箭.txt
+PASS batch:A_lib_65.6低效火箭
+  ok=True belts=2741->2741 added=0 removed=0 restored=0 protected=2705 reason=
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_6k太阳帆.txt
+PASS batch:A_lib_6k太阳帆
+  ok=True belts=52->80 added=68 removed=40 restored=4 protected=8 reason=
+  placement frames=884 new-links=72 length=[0.494343,1.425518]m
+  placement frames=884 new-links=72 length=[0.494343,1.425518]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_80环带.txt
+PASS batch:A_lib_80环带
+  ok=True belts=932->955 added=53 removed=30 restored=8 protected=858 reason=
+  placement frames=460 new-links=66 length=[0.479515,1.790859]m
+  placement frames=460 new-links=66 length=[0.479515,1.790859]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_B.150紫糖（刺笋）.txt
+PASS batch:A_lib_B.150紫糖（刺笋）
+  ok=True belts=1054->1074 added=50 removed=30 restored=6 protected=975 reason=
+  placement frames=428 new-links=59 length=[0.482479,1.784009]m
+  placement frames=428 new-links=59 length=[0.482479,1.784009]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_B.150紫糖（可燃冰）.txt
+PASS batch:A_lib_B.150紫糖（可燃冰）
+  ok=True belts=1769->1801 added=65 removed=33 restored=11 protected=1662 reason=
+  placement frames=376 new-links=79 length=[0.426963,1.734198]m
+  placement frames=376 new-links=79 length=[0.426963,1.734198]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_C1.150绿糖.txt
+PASS batch:A_lib_C1.150绿糖
+  ok=True belts=796->826 added=55 removed=25 restored=12 protected=720 reason=
+  placement frames=496 new-links=73 length=[0.530115,1.736109]m
+  placement frames=496 new-links=73 length=[0.530115,1.736109]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_C2-60-120-240反物质燃料棒（黑棒）.txt
+PASS batch:A_lib_C2-60-120-240反物质燃料棒（黑棒）
+  ok=True belts=300->413 added=218 removed=105 restored=27 protected=133 reason=
+  placement frames=856 new-links=278 length=[0.411972,1.425518]m
+  placement frames=856 new-links=278 length=[0.411972,1.425518]m
+  EXPORT tools/restorecheck/reports/A-saved\A_R_A_lib_长带测试图01.txt
+PASS batch:A_lib_长带测试图01
+BATCH TOTAL belts=20179->20691 added=1053 removed=541 refused=0; net added is permitted for restoration
+SUMMARY PASS=14 FAIL=0 REFUSED=0 EXIT=0
