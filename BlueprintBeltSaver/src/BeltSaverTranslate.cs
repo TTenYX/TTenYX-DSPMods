@@ -31,6 +31,7 @@
         internal string RestoreApplyDone;
         internal string RestoreTotalLine;
         internal string RestoreRunLine;
+        internal string RestoreNativeLine;
         internal string RestoreMode;
         internal string RestoreNoChange;
         internal string RestoreNotAppliedPreview;
@@ -146,7 +147,8 @@
                 text.RestoreApplyDone = "复原完成：已刷新蓝图窗口、写入剪贴板，传送带 {0} 个节点。";
                 text.RestoreTotalLine = "传送带节点：{0} → {1}（新增 {2}，移除 {3}）";
                 text.RestoreRunLine = "已复原区段：{0}；受保护区段：{1}；未调整区段：{2}。";
-                text.RestoreMode = "按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。\n这不是原蓝图备份还原，不能找回未知原蓝图。";
+                text.RestoreNativeLine = "原生网格规划区段：{0}；已安全规范化浮点误差的节点：{1}。";
+                text.RestoreMode = "沿现有走向生成游戏网格节点，优先使用原生路径规划。设备连接窗口、弯道、坡道和无法安全调整的部分保留；未绑定区段的极小坐标误差仅在安全校验通过后规范化。安全检查始终执行，不受省带设置影响。\n这不是原蓝图备份还原，不能找回未知原蓝图。";
                 text.RestoreNoChange = "没有可安全调整的网格节点。确认后仍会清除本 MOD 的优化标记，停止此前的自动重算。";
                 text.RestoreNotAppliedPreview = "以下为未应用的复原试算结果，当前蓝图保持原样：";
                 text.RestoreFailedTitle = "BlueprintBeltSaver 复原未执行";
@@ -235,7 +237,8 @@
                 text.RestoreApplyDone = "Restored: blueprint window refreshed, clipboard updated, {0} belt nodes.";
                 text.RestoreTotalLine = "Belt nodes: {0} → {1} (added {2}, removed {3})";
                 text.RestoreRunLine = "Restored runs: {0}; protected runs: {1}; unaffected runs: {2}.";
-                text.RestoreMode = "Restore one-grid nodes along the current belt route. Connection points, curves, slopes and parts that cannot be adjusted safely are kept. Safety checks always run regardless of merge settings.\nThis is not a blueprint backup restore and cannot recover an unknown original blueprint.";
+                text.RestoreNativeLine = "Native grid-planned runs: {0}; safely normalized coordinate-noise nodes: {1}.";
+                text.RestoreMode = "Generate game-grid nodes along the current route, preferring the native path planner. Equipment connection windows, curves, slopes and unsafe parts are kept; tiny coordinate noise on unbound sections is normalized only after safety validation. Safety checks always run regardless of merge settings.\nThis is not a blueprint backup restore and cannot recover an unknown original blueprint.";
                 text.RestoreNoChange = "No grid nodes can be adjusted safely. Confirming still clears this mod's optimization marker and stops its previous automatic re-optimization.";
                 text.RestoreNotAppliedPreview = "The following restoration preview was NOT applied; the current blueprint is unchanged:";
                 text.RestoreFailedTitle = "BlueprintBeltSaver - restoration not applied";

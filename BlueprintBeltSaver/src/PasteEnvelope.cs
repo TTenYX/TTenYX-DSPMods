@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace BlueprintBeltSaver
@@ -188,25 +189,62 @@ namespace BlueprintBeltSaver
             env.CleanSubset = clean.Count > 0;
             env.protectedFrames.AddRange(env.CleanSubset ? clean : legal);
 
-            // 解析分组：同偏航、c 连续、各区域格宽逐一相同。
+            env.RebuildGroups();
+            return env;
+        }
+
+        /// <summary>
+        /// Restoration must distinguish a working source pose from a max-only pose where belts have
+        /// already collapsed (notably one-row blueprints at the poles). Exclude source-MIN-invalid
+        /// frames, never frames selected by the proposed result. With no fully working source pose,
+        /// retain the old conservative envelope so unchanged legacy defects remain fail-soft.
+        /// Saving keeps using Build with its existing semantics.
+        /// </summary>
+        internal static PasteEnvelope BuildForRestoration(BlueprintArea[] areas, int primaryAreaIdx,
+            IList<BlueprintBuilding> source, Func<BlueprintBuilding, bool> isBelt)
+        {
+            var env = Build(areas, primaryAreaIdx, source, isBelt);
+            if (source == null) return env;
+            var links = source.Where(n => n != null && isBelt(n) && n.outputObj != null && isBelt(n.outputObj)).ToArray();
+            if (links.Length == 0) return env;
+            var working = new List<Frame>();
+            float minimumSq = (float)(BeltPathOptimizer.MinimumMeters * BeltPathOptimizer.MinimumMeters);
+            float maximumSq = (float)(BeltPathOptimizer.MaximumMeters * BeltPathOptimizer.MaximumMeters);
+            foreach (var f in env.protectedFrames)
+            {
+                bool valid = true;
+                foreach (var a in links)
+                {
+                    float d2 = (LPos(a.outputObj, f) - LPos(a, f)).sqrMagnitude;
+                    if (float.IsNaN(d2) || float.IsInfinity(d2) || d2 < minimumSq || d2 > maximumSq)
+                    { valid = false; break; }
+                }
+                if (valid) working.Add(f);
+            }
+            if (working.Count > 0 && working.Count < env.protectedFrames.Count)
+            {
+                env.MinExcludedFrames = env.protectedFrames.Count - working.Count;
+                env.protectedFrames.Clear(); env.protectedFrames.AddRange(working);
+                env.CleanCount = working.Count;
+                env.RebuildGroups();
+            }
+            return env;
+        }
+
+        internal int MinExcludedFrames { get; private set; }
+        private void RebuildGroups()
+        {
+            groups.Clear();
             Group current = null;
             Frame previous = null;
-            foreach (var f in env.protectedFrames)
+            foreach (var f in protectedFrames)
             {
                 bool extend = current != null && previous != null && previous.Yaw == f.Yaw
                     && f.LatGrid == previous.LatGrid + 1 && SameWidths(previous, f);
-                if (extend)
-                {
-                    current.SpanRad = (f.LatGrid - current.Lo.LatGrid) * (double)LatRadF;
-                }
-                else
-                {
-                    current = new Group { Lo = f, SpanRad = 0.0 };
-                    env.groups.Add(current);
-                }
+                if (extend) current.SpanRad = (f.LatGrid - current.Lo.LatGrid) * (double)LatRadF;
+                else { current = new Group { Lo = f, SpanRad = 0.0 }; groups.Add(current); }
                 previous = f;
             }
-            return env;
         }
 
         private static bool SameWidths(Frame a, Frame b)
@@ -286,6 +324,14 @@ namespace BlueprintBeltSaver
                 legal = false;
                 return null;
             }
+        }
+
+        internal static Frame FrameForNativeGrid(BlueprintArea[] areas, int primaryAreaIdx, int latGrid, float yaw)
+        {
+            if (areas == null || areas.Length == 0) return null;
+            var bp = new BlueprintData { areas = areas, primaryAreaIdx = ResolvePrimary(areas, primaryAreaIdx) };
+            var cursor = BlueprintUtils.GetDir(0f, latGrid * LatRadF) * (RealRadius + 0.2f);
+            return MakeFrame(bp, cursor, yaw, latGrid);
         }
 
         /// <summary>RefreshBuildPreview 1703-1778 行逐字复刻（_dotsCursor = 1），并拆成逐区域参考系。</summary>

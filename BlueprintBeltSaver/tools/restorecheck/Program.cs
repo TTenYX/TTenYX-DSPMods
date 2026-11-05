@@ -12,6 +12,7 @@ using UnityEngine;
 // Independent CLI regression harness. No production source is linked into this assembly.
 // CLI: --fixtures [--out report.txt] | --batch <dir> [--out report.txt]
 //      --export <inputdir> <outdir> [--out report.txt] | --compare <Adir> <Bdir>
+//      --dump <file> [--out report.txt] (authoritative game parser; no MOD API required)
 //      --all [--originals dir] [--optimized dir] [--out report.txt]
 // Exit codes: 0 all checks passed; 1 failed assertions; 2 usage/environment/input failure.
 internal static class Program
@@ -22,12 +23,13 @@ internal static class Program
     const string Managed = "D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed";
     const string DefaultOriginals = "X:/戴森球计划/【MOD】修改仓库/7.蓝图Blueprints/BlueprintBeltSaver 测试蓝图";
     const string DefaultOptimized = "X:/戴森球计划/【MOD】修改仓库/7.蓝图Blueprints/BlueprintBeltSaver 长带化导出/蓝图A-游戏外";
+    const string DefaultUserCase = "D:/Game/DSP/Dyson Sphere Program/Blueprint/复原测试用例001.txt";
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     static readonly List<string> Log = new();
     static Assembly Mod;
     static MethodInfo Restore;
     static int Pass, Fail, Refused;
-    static string Output;
+    static string Output, Filter;
     static readonly FieldInfo[] BuildingFields = Fields(typeof(BlueprintBuilding));
     // Raw deserialization indices are caches, not semantic target identity; the bit-exact
     // source fingerprint below still includes them. Authoritative refs are checked in full.
@@ -42,6 +44,7 @@ internal static class Program
         {
             AppDomain.CurrentDomain.AssemblyResolve += ResolveAssembly;
             Output = Option(args, "--out", null);
+            Filter = Option(args, "--filter", null);
             Info("RestoreCheck " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", Inv));
             if (args.Contains("--help")) { Help(); return Finish(0); }
             if (args.Contains("--inspect"))
@@ -50,6 +53,8 @@ internal static class Program
                 { Info(t.FullName); foreach (var f in Fields(t)) Info("  " + f.Name + " : " + f.FieldType); }
                 return Finish(0);
             }
+            if (args.Length > 0 && args[0] == "--dump")
+            { Need(args, 2); Dump(args[1]); return Finish(0); }
             if (args.Length > 0 && args[0] == "--compare")
             { Need(args, 3); Compare(args[1], args[2]); return Finish(Fail == 0 ? 0 : 1); }
             if (args.Length > 0 && args[0] == "--baseline")
@@ -63,11 +68,14 @@ internal static class Program
             string originals = Option(args, "--originals", DefaultOriginals);
             string optimized = Option(args, "--optimized", DefaultOptimized);
             if (args.Length == 0 || args[0] == "--fixtures") Fixtures(originals);
+            else if (args[0] == "--snap-fixtures") SnapFixtures(originals, Option(args, "--case", DefaultUserCase));
+            else if (args[0] == "--pose-dump") { Need(args, 2); var bp = Load(args[1]); PlacementCheck(bp, bp, new Graph(bp), new Graph(bp), true); }
             else if (args[0] == "--batch") { Need(args, 2); Batch(args[1], null, false); }
             else if (args[0] == "--export") { Need(args, 3); Batch(args[1], args[2], false); }
             else if (args[0] == "--all")
             {
                 Fixtures(originals);
+                SnapFixtures(originals, Option(args, "--case", DefaultUserCase));
                 Batch(originals, null, false);
                 Batch(optimized, null, true);
             }
@@ -82,7 +90,7 @@ internal static class Program
         }
     }
 
-    static void Help() => Info("--fixtures | --all [--originals dir] [--optimized dir] | --batch dir | --export inputdir outdir | --compare Adir Bdir; optional --out report.txt and --mod DLL. Export preserves complete source headings and writes A_R_<input-basename>.txt. Failure is a nonzero exit code, not an unhandled exception.");
+    static void Help() => Info("--dump file | --pose-dump file | --snap-fixtures [--case file] | --fixtures | --all [--originals dir] [--optimized dir] | --batch dir | --export inputdir outdir | --compare Adir Bdir; optional --out report.txt, --filter fixture-name and --mod DLL. --canonical-noise explicitly uses an independently checked <=0.0002 source-derived reference for batch/export; default batch and legacy fixtures retain exact endpoint contracts. Dump uses actual game FromBase64String and needs no MOD API. Pose dump selects source-working legal placements without restoring. Export preserves complete source headings and writes A_R_<input-basename>.txt. Failure is a nonzero exit code, not an unhandled exception.");
     static void Need(string[] a, int n) { if (a.Length < n) throw new CheckException("E_USAGE", "missing positional argument"); }
     static string Option(string[] a, string key, string fallback)
     { int i = Array.IndexOf(a, key); return i < 0 ? fallback : i + 1 < a.Length ? a[i + 1] : throw new CheckException("E_USAGE", "missing " + key + " value"); }
@@ -99,6 +107,7 @@ internal static class Program
     static void Info(string s) { Log.Add(s); Console.WriteLine(s); }
     static void Check(string name, Action f)
     {
+        if (Filter != null && !name.Contains(Filter, StringComparison.OrdinalIgnoreCase)) return;
         try { f(); Pass++; Info("PASS " + name); }
         catch (Exception e) { e = Unwrap(e); Fail++; Info("FAIL " + name + " :: " + (e is CheckException c ? c.Code + " " : "") + e.Message); }
     }
@@ -136,7 +145,7 @@ internal static class Program
     {
         public int Int(string name) => Convert.ToInt32(Value(Report, name), Inv);
         public string Reason => Convert.ToString(Value(Report, "Reason"), Inv) ?? "";
-        public override string ToString() => $"ok={Ok} belts={Int("Before")}->{Int("After")} added={Int("Added")} removed={Int("Removed")} restored={Int("RestoredRuns")} protected={Int("ProtectedRuns")} reason={Reason}";
+        public override string ToString() => $"ok={Ok} belts={Int("Before")}->{Int("After")} added={Int("Added")} removed={Int("Removed")} restored={Int("RestoredRuns")} protected={Int("ProtectedRuns")} snapped={Int("SnappedNodes")} native={Int("NativePlannedRuns")} excluded-source-short={Int("ExcludedShortSourcePoses")} reason={Reason}";
     }
     static Outcome Invoke(BlueprintData source, bool quantizeHeight = true, bool strictGrid = false)
     {
@@ -260,6 +269,46 @@ internal static class Program
         Require(b.buildings != null && b.areas != null, "E_PARSE_EMPTY", path);
         return b;
     }
+    static void Dump(string path)
+    {
+        var bp = Load(path);
+        string before = ExactFingerprint(bp);
+        Info("DUMP source=" + Path.GetFullPath(path));
+        Info("PARSER " + typeof(BlueprintData).Assembly.Location + " SHA256=" + Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(BlueprintData).Assembly.Location))));
+        Info("SOURCE full-field-fingerprint=" + before + " buildings=" + bp.buildings.Length + " areas=" + bp.areas.Length);
+        foreach (var f in Fields(typeof(BlueprintData)).Where(HeadingField)) Info("HEADER " + f.Name + "=" + Scalar(f.GetValue(bp)));
+        foreach (var area in bp.areas) Info("AREA " + string.Join(" ", Fields(typeof(BlueprintArea)).Select(f => f.Name + "=" + Convert.ToString(f.GetValue(area), Inv))));
+        var rows = bp.buildings.Select((n, i) => (n, i)).Where(v => v.n != null).ToDictionary(v => v.n, v => v.i);
+        string Ref(BlueprintBuilding n) => n == null ? "-" : rows.TryGetValue(n, out int i) ? i + ":" + n.index : "DANGLING:" + n.index;
+        string P(float x, float y, float z) => $"({x:R},{y:R},{z:R})";
+        Vector3 Rounded(BlueprintBuilding n) => new((float)Math.Round(n.localOffset_x), (float)Math.Round(n.localOffset_y), (float)(Math.Round(n.localOffset_z * 2) * .5));
+        Info("TABLE array:index | area | item:model | XYZ | XYZ2 | in(array:index) | out(array:index) | tempIn:tempOut | roundXYZ | deltaXYZ | maxXYerr | halfZerr");
+        foreach (var (n, i) in bp.buildings.Select((n, i) => (n, i)))
+        {
+            if (n == null) { Info(i + " NULL"); continue; }
+            var r = Rounded(n); var delta = r - Vec(n);
+            Info($"NODE {i}:{n.index} | {n.areaIndex} | {n.itemId}:{n.modelIndex} | {P(n.localOffset_x, n.localOffset_y, n.localOffset_z)} | {P(n.localOffset_x2, n.localOffset_y2, n.localOffset_z2)} | {Ref(n.inputObj)} | {Ref(n.outputObj)} | {n.tempInputObjIdx}:{n.tempOutputObjIdx} | {P(r.x, r.y, r.z)} | {P(delta.x, delta.y, delta.z)} | {Math.Max(Math.Abs(delta.x), Math.Abs(delta.y)):R} | {Math.Abs(delta.z):R}");
+            Info("DATA " + i + " " + Metadata(n));
+        }
+        var graph = new Graph(bp);
+        Info("GRAPH components=" + graph.Components + " directed-edges=" + graph.Edges.Count);
+        foreach (int line in graph.Line.Values.Distinct().OrderBy(x => x))
+        {
+            var nodes = graph.Nodes.Where(n => graph.Line[n] == line).ToArray();
+            bool attached = bp.buildings.Any(n => n != null && (!IsBelt(n) && (nodes.Contains(n.inputObj) || nodes.Contains(n.outputObj)) || nodes.Contains(n) && (n.inputObj != null && !IsBelt(n.inputObj) || n.outputObj != null && !IsBelt(n.outputObj))));
+            Info($"LINE {line} nodes={nodes.Length} attached={attached} single-chain={nodes.All(n => graph.In[n].Count <= 1 && graph.Out[n].Count <= 1)} cycle={nodes.All(n => graph.In[n].Count == 1 && graph.Out[n].Count == 1)} maxXYerr={nodes.Max(n => Math.Max(Math.Abs(Rounded(n).x - n.localOffset_x), Math.Abs(Rounded(n).y - n.localOffset_y))):R} maxHalfZerr={nodes.Max(n => Math.Abs(Rounded(n).z - n.localOffset_z)):R}");
+        }
+        // Distances below are explicitly local-coordinate lengths, not a substitute
+        // for the separate full legal-paste-pose world-distance safety oracle.
+        Info("EDGE TABLE A->B | line | original-grid-length | rounded-grid-length | original-vector | rounded-vector; local coordinates only, NOT placement safety");
+        foreach (var e in graph.Edges.OrderBy(e => rows[e.A]).ThenBy(e => rows[e.B]))
+        {
+            var oldDelta = Vec(e.B) - Vec(e.A); var newDelta = Rounded(e.B) - Rounded(e.A);
+            Info($"EDGE {Ref(e.A)}->{Ref(e.B)} | {graph.Line[e.A]} | {oldDelta.magnitude:R} | {newDelta.magnitude:R} | {P(oldDelta.x, oldDelta.y, oldDelta.z)} | {P(newDelta.x, newDelta.y, newDelta.z)}");
+        }
+        Require(before == ExactFingerprint(bp), "E_DUMP_MUTATED", "authoritative diagnostics changed parsed data");
+    }
+
     static BlueprintData RoundTrip(BlueprintData b)
     {
         string text = b.ToBase64String();
@@ -312,6 +361,7 @@ internal static class Program
             var a = new HashSet<BlueprintBuilding>();
             foreach (var n in Nodes)
             {
+                if (n.filterId != 0 || n.recipeId != 0 || !string.IsNullOrEmpty(n.content) || (n.parameters != null && n.parameters.Length != 0)) a.Add(n);
                 if (In[n].Count != 1 || Out[n].Count != 1) { a.Add(n); continue; }
                 var p = In[n][0]; var q = Out[n][0];
                 if (!AxisContinuation(p, n, q) || p.itemId != n.itemId || q.itemId != n.itemId
@@ -424,21 +474,222 @@ internal static class Program
         if (doPlacement) PlacementCheck(source, result, old, cur);
     }
 
+    // This oracle is deliberately opt-in. Validate above keeps its original exact-endpoint
+    // contract; snapping is allowed only relative to an independently supplied reference.
+    // It never calls a production snapping helper or weakens device-target validation.
+    const double SnapOracleLimit = .0002;
+    static BlueprintData DiagnosticClone(BlueprintData source)
+    {
+        var copies = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
+        var memberwise = typeof(object).GetMethod("MemberwiseClone", BF);
+        object Copy(object value)
+        {
+            if (value == null) return null;
+            Type type = value.GetType();
+            if (type.IsPrimitive || type.IsEnum || value is string || value is DateTime || value is decimal) return value;
+            if (copies.TryGetValue(value, out object found)) return found;
+            if (value is Array a)
+            {
+                Require(a.Rank == 1, "E_DIAGNOSTIC_ARRAY", type.FullName);
+                var dst = Array.CreateInstance(type.GetElementType(), a.Length); copies[value] = dst;
+                for (int i = 0; i < a.Length; i++) dst.SetValue(Copy(a.GetValue(i)), i);
+                return dst;
+            }
+            if (value is IList list)
+            {
+                var dst = (IList)Activator.CreateInstance(type); copies[value] = dst;
+                foreach (object entry in list) dst.Add(Copy(entry));
+                return dst;
+            }
+            var clone = memberwise.Invoke(value, null); copies[value] = clone;
+            foreach (var f in Fields(type)) f.SetValue(clone, Copy(f.GetValue(value)));
+            return clone;
+        }
+        return (BlueprintData)Copy(source);
+    }
+    static BlueprintData NoiseReference(BlueprintData source, bool quantizeHeight = true)
+    {
+        var reference = DiagnosticClone(source);
+        foreach (var n in reference.buildings.Where(IsBelt))
+        {
+            float Near(float value, double step) => Math.Abs(value - Math.Round(value / step) * step) <= SnapOracleLimit
+                ? (float)(Math.Round(value / step) * step) : value;
+            n.localOffset_x = Near(n.localOffset_x, 1); n.localOffset_y = Near(n.localOffset_y, 1);
+            n.localOffset_x2 = Near(n.localOffset_x2, 1); n.localOffset_y2 = Near(n.localOffset_y2, 1);
+            if (quantizeHeight) { n.localOffset_z = Near(n.localOffset_z, .5); n.localOffset_z2 = Near(n.localOffset_z2, .5); }
+        }
+        return reference;
+    }
+    static void ReferenceEvidence(BlueprintData source, BlueprintData reference, bool quantizeHeight)
+    {
+        Require(Heading(source) == Heading(reference) && source.buildings.Length == reference.buildings.Length,
+            "E_SNAP_REFERENCE_ROOT", "canonical reference must preserve all source headings and all nodes");
+        var src = new Graph(source); var expected = new Graph(reference);
+        var indices = source.buildings.Select((n, i) => (n, i)).ToDictionary(x => x.n, x => x.i);
+        var ids = reference.buildings.Select((n, i) => (n, i)).ToDictionary(x => x.n, x => x.i);
+        int Id(BlueprintBuilding n, Dictionary<BlueprintBuilding, int> map) => n == null ? -1 : map[n];
+        Require(src.Components == expected.Components && src.Edges.Count == expected.Edges.Count, "E_SNAP_REFERENCE_TOPOLOGY", "same graph required");
+        var movedLines = new HashSet<int>();
+        for (int i = 0; i < source.buildings.Length; i++)
+        {
+            var a = source.buildings[i]; var b = reference.buildings[i];
+            Require(Metadata(a) == Metadata(b) && a.index == b.index
+                && Id(a.inputObj, indices) == Id(b.inputObj, ids) && Id(a.outputObj, indices) == Id(b.outputObj, ids),
+                "E_SNAP_REFERENCE_DATA", "node#" + i + " metadata or authoritative ref side changed");
+            bool moved = GeometryFields.Any(name => Scalar(Value(a, name)) != Scalar(Value(b, name)));
+            if (!moved) continue;
+            Require(IsBelt(a), "E_SNAP_REFERENCE_DEVICE", "non-belt cannot move");
+            movedLines.Add(src.Line[a]);
+            foreach (string name in GeometryFields)
+            {
+                double oldValue = Convert.ToDouble(Value(a, name), Inv), newValue = Convert.ToDouble(Value(b, name), Inv);
+                if (oldValue == newValue) continue;
+                bool height = name is "localOffset_z" or "localOffset_z2";
+                double target = height ? Math.Round(oldValue * 2) * .5 : Math.Round(oldValue);
+                Require((!height || quantizeHeight) && Math.Abs(newValue - oldValue) <= SnapOracleLimit + 1e-7 && newValue == target,
+                    "E_SNAP_REFERENCE_RELOCATION", "node#" + i + "." + name + $" {oldValue:R}->{newValue:R}; bounded nearest lattice only");
+            }
+        }
+        foreach (int line in movedLines)
+        {
+            var nodes = src.Nodes.Where(n => src.Line[n] == line).ToArray(); var set = nodes.ToHashSet();
+            Require(nodes.All(n => src.In[n].Count <= 1 && src.Out[n].Count <= 1), "E_SNAP_REFERENCE_BRANCH", "only complete single-chain components");
+            Require(nodes.All(n => n.areaIndex == nodes[0].areaIndex && n.itemId == nodes[0].itemId && n.modelIndex == nodes[0].modelIndex),
+                "E_SNAP_REFERENCE_PROTECTED", "mixed area/tier component cannot move");
+            Require(!source.buildings.Any(n => n != null && (!IsBelt(n) && (set.Contains(n.inputObj) || set.Contains(n.outputObj))
+                || set.Contains(n) && (n.inputObj != null && !IsBelt(n.inputObj) || n.outputObj != null && !IsBelt(n.outputObj)))),
+                "E_SNAP_REFERENCE_ATTACHMENT", "device-owned component cannot move");
+            Require(nodes.All(n => n.inputObj == null || n.inputObj.outputObj == n), "E_SNAP_REFERENCE_CONTRADICTORY_INPUT", "recorded input must agree with authoritative output path");
+            foreach (var addon in source.buildings.Where(n => n.itemId is 2313 or 2030 or 3001 or 3003 or 3004 or 3005 or 3006 or 3010))
+                Require(!nodes.Any(n => n.areaIndex == addon.areaIndex && (ClearancePosition(n) - ClearancePosition(addon)).magnitude < 3.5)
+                    && !src.Edges.Any(e => src.Line[e.A] == line && e.A.areaIndex == addon.areaIndex && e.B.areaIndex == addon.areaIndex && ClearancePointSegment(addon, e.A, e.B) < 3.5),
+                    "E_SNAP_REFERENCE_ADDON", "automatic attachment window cannot move");
+            foreach (var edge in src.Edges.Where(e => src.Line[e.A] == line))
+            {
+                var a = reference.buildings[indices[edge.A]]; var b = reference.buildings[indices[edge.B]];
+                var delta = Vec(b) - Vec(a); var previous = Vec(edge.B) - Vec(edge.A);
+                Require(a.areaIndex == b.areaIndex && Math.Max(Math.Abs(previous.x), Math.Abs(previous.y)) <= 64 && delta.z == 0 && ((delta.x == 0 && delta.y != 0) || (delta.y == 0 && delta.x != 0))
+                    && Vector3.Dot(previous, delta) > 0, "E_SNAP_REFERENCE_DIRECTION", "normalization cannot invent oblique paths, slopes, collapsed links or direction reversals");
+            }
+        }
+    }
+    static void ExactDevices(BlueprintData source, BlueprintData result)
+    {
+        string Key(BlueprintBuilding n) => NodeData(n, false) + ";in=" + NodeData(n.inputObj, false) + ";out=" + NodeData(n.outputObj, false);
+        var a = source.buildings.Where(n => !IsBelt(n)).Select(Key).OrderBy(x => x, StringComparer.Ordinal);
+        var b = result.buildings.Where(n => !IsBelt(n)).Select(Key).OrderBy(x => x, StringComparer.Ordinal);
+        Require(a.SequenceEqual(b), "E_EXACT_DEVICE_TARGET", "device fields and primary/secondary geometry plus target position/ref side cannot move");
+    }
+    static void ValidateWithSnapping(BlueprintData source, BlueprintData result, BlueprintData reference, bool quantizeHeight = true)
+    {
+        string before = ExactFingerprint(source);
+        ReferenceEvidence(source, reference, quantizeHeight);
+        Validate(reference, result, false);
+        ExactDevices(source, result);
+        // Unlike quantized kept spans, exact keys ensure tiny endpoint movements do not
+        // inherit old-span exemptions. Every genuinely changed edge gets min/max checks.
+        PlacementCheck(source, result, new Graph(source), new Graph(result), true);
+        SnapClearance(source, result);
+        Require(before == ExactFingerprint(source), "E_SNAP_ORACLE_MUTATED", "oracle changed source fields");
+    }
+    static Vector3 ClearancePosition(BlueprintBuilding b) => new(b.localOffset_x, b.localOffset_y, b.localOffset_z * 1.06f);
+    static double ClearancePointSegment(BlueprintBuilding p, BlueprintBuilding a, BlueprintBuilding b)
+    {
+        var d = ClearancePosition(b) - ClearancePosition(a); var v = ClearancePosition(p) - ClearancePosition(a);
+        double t = d.sqrMagnitude == 0 ? 0 : Math.Clamp(Vector3.Dot(v, d) / d.sqrMagnitude, 0, 1);
+        return (v - d * (float)t).magnitude;
+    }
+    static double ClearanceSegments(BlueprintBuilding a, BlueprintBuilding b, BlueprintBuilding c, BlueprintBuilding d)
+    {
+        var u = ClearancePosition(b) - ClearancePosition(a); var v = ClearancePosition(d) - ClearancePosition(c);
+        var w = ClearancePosition(a) - ClearancePosition(c);
+        double aa = u.sqrMagnitude, bb = Vector3.Dot(u, v), cc = v.sqrMagnitude, dd = Vector3.Dot(u, w), ee = Vector3.Dot(v, w);
+        double s, t;
+        if (aa < 1e-12 && cc < 1e-12) return w.magnitude;
+        if (aa < 1e-12) { s = 0; t = Math.Clamp(ee / cc, 0, 1); }
+        else if (cc < 1e-12) { t = 0; s = Math.Clamp(-dd / aa, 0, 1); }
+        else
+        {
+            double denominator = aa * cc - bb * bb;
+            s = denominator > 1e-12 ? Math.Clamp((bb * ee - cc * dd) / denominator, 0, 1) : 0;
+            t = (bb * s + ee) / cc;
+            if (t < 0) { t = 0; s = Math.Clamp(-dd / aa, 0, 1); }
+            else if (t > 1) { t = 1; s = Math.Clamp((bb - dd) / aa, 0, 1); }
+        }
+        return (w + u * (float)s - v * (float)t).magnitude;
+    }
+    static void SnapClearance(BlueprintData source, BlueprintData result)
+    {
+        var graph = new Graph(result);
+        var original = new Graph(source);
+        var oldSpans = original.Edges.Select(e => Pos(e.A, true) + ">" + Pos(e.B, true)).ToHashSet();
+        foreach (var edge in graph.Edges.Where(e => !oldSpans.Contains(Pos(e.A, true) + ">" + Pos(e.B, true))))
+            foreach (var foreign in graph.Edges.Where(f => graph.Line[f.A] != graph.Line[edge.A] && f.A.areaIndex == edge.A.areaIndex && f.B.areaIndex == edge.A.areaIndex))
+                Require(ClearanceSegments(edge.A, edge.B, foreign.A, foreign.B) >= .4 - 1e-6,
+                    "E_SNAP_FOREIGN_SEGMENTS", "changed span too near foreign-line segment");
+        var oldKeys = source.buildings.Where(IsBelt).Select(n => Pos(n, true)).ToHashSet();
+        var changed = graph.Nodes.Where(n => !oldKeys.Contains(Pos(n, true))).ToArray();
+        foreach (var n in changed)
+        {
+            foreach (var other in graph.Nodes.Where(b => b.areaIndex == n.areaIndex && graph.Line[b] != graph.Line[n]))
+                Require((ClearancePosition(n) - ClearancePosition(other)).magnitude >= .4 - 1e-6,
+                    "E_SNAP_FOREIGN_NODE", Pos(n, true) + " too near foreign-line node " + Pos(other, true));
+            foreach (var edge in graph.Edges.Where(e => e.A.areaIndex == n.areaIndex && e.B.areaIndex == n.areaIndex && graph.Line[e.A] != graph.Line[n]))
+                Require(ClearancePointSegment(n, edge.A, edge.B) >= .4 - 1e-6,
+                    "E_SNAP_FOREIGN_EDGE", Pos(n, true) + " too near foreign-line edge");
+            foreach (var device in source.buildings.Where(b => b != null && !IsBelt(b) && b.areaIndex == n.areaIndex))
+            {
+                // This focused oracle uses immutable collider DATA, not the production
+                // collision decision. Recompute the node-sphere/AABB test independently.
+                var type = Mod.GetType("BlueprintBeltSaver.BuildingColliders");
+                object[] args = { (int)device.itemId, null };
+                bool known = (bool)type.GetMethod("TryGet", BF).Invoke(null, args);
+                if (!known || args[1] is not IEnumerable boxes) continue;
+                double yaw = device.yaw * Math.PI / 180, c = Math.Abs(Math.Cos(yaw)), s = Math.Abs(Math.Sin(yaw));
+                foreach (object box in boxes)
+                {
+                    double F(string key) => Convert.ToDouble(Value(box, key), Inv);
+                    double ex = Math.Abs(F("cx")) + F("ex") * c + F("ez") * s, ey = F("ey"), ez = Math.Abs(F("cz")) + F("ex") * s + F("ez") * c;
+                    double z = n.localOffset_z + .2 / (4.0 / 3), centerZ = device.localOffset_z + F("cy");
+                    bool hit = Math.Abs(n.localOffset_x - device.localOffset_x) <= ex + .23 / (Math.PI * .4)
+                        && Math.Abs(n.localOffset_y - device.localOffset_y) <= ez + .23 / (Math.PI * .4)
+                        && z + .23 / (4.0 / 3) >= centerZ - ey && z - .23 / (4.0 / 3) <= centerZ + ey;
+                    Require(!hit, "E_SNAP_DEVICE_COLLISION", Pos(n, true) + " hits device " + Pos(device, true));
+                }
+            }
+        }
+    }
+
     // Use production PasteEnvelope only for legal original-clean placements and its hard
     // gate. The separate check below explicitly recomputes float spherical positions and
     // checks both NEW short and long links, which the production upper gate alone cannot.
-    static void PlacementCheck(BlueprintData source, BlueprintData result, Graph old, Graph cur)
+    static void PlacementCheck(BlueprintData source, BlueprintData result, Graph old, Graph cur, bool exactOriginal = false)
     {
         var envType = Mod.GetType("BlueprintBeltSaver.PasteEnvelope");
         var env = envType.GetMethod("Build", BF).Invoke(null, new object[] { source.areas, source.primaryAreaIdx, source.buildings, new Func<BlueprintBuilding, bool>(IsBelt), true });
-        var spans = new HashSet<string>(old.Edges.Select(e => Pos(e.A) + ">" + Pos(e.B)));
-        Func<BlueprintBuilding, BlueprintBuilding, bool> pre = (a, b) => spans.Contains(Pos(a) + ">" + Pos(b));
+        string Span(BlueprintBuilding a, BlueprintBuilding b) => Pos(a, exactOriginal) + ">" + Pos(b, exactOriginal);
+        var spans = new HashSet<string>(old.Edges.Select(e => Span(e.A, e.B)));
+        Func<BlueprintBuilding, BlueprintBuilding, bool> pre = (a, b) => spans.Contains(Span(a, b));
         var gate = envType.GetMethod("Gate", BF).Invoke(env, new object[] { result.buildings, new Func<BlueprintBuilding, bool>(IsBelt), pre });
         var frames = ((IEnumerable)Value(env, "ProtectedFrames")).Cast<object>().ToArray();
+        if (exactOriginal)
+        {
+            int all = frames.Length, minBad = 0, maxBad = 0, collapsed = 0;
+            frames = frames.Where(f =>
+            {
+                var d2 = old.Edges.Select(e => (IndependentPosition(e.A, f) - IndependentPosition(e.B, f)).sqrMagnitude).ToArray();
+                bool badMin = d2.Any(d => d < .400001f * .400001f), badMax = d2.Any(d => d > 5.3f);
+                if (badMin) minBad++; if (badMax) maxBad++; if (d2.Any(d => d < 1e-8)) collapsed++;
+                if (badMin && Math.Abs(Convert.ToInt32(Value(f, "LatGrid"), Inv)) >= 249)
+                    Info($"  source-unworkable-polar-pose yaw={Value(f, "Yaw")} latGrid={Value(f, "LatGrid")} source-length=[{Math.Sqrt(d2.Min()):R},{Math.Sqrt(d2.Max()):R}]m");
+                return !badMin && !badMax;
+            }).ToArray();
+            Info($"  source-pose-filter old-max-clean={all} source-working={frames.Length} rejected-source-short={minBad} rejected-source-long={maxBad} source-collapsed={collapsed}; candidate never participates in pose selection");
+        }
         var newEdges = cur.Edges.Where(e => !pre(e.A, e.B)).ToArray();
         if (newEdges.Length == 0) return;
-        Require(frames.Length > 0, "E_NO_LEGAL_PLACEMENTS", "new links without protected original-clean legal placements");
-        Require(Convert.ToInt32(Value(gate, "Over"), Inv) == 0, "E_PASTE_GATE", Convert.ToString(Value(gate, "First"), Inv));
+        Require(frames.Length > 0, "E_NO_LEGAL_PLACEMENTS", "new links without protected source-working legal placements");
+        if (!exactOriginal) Require(Convert.ToInt32(Value(gate, "Over"), Inv) == 0, "E_PASTE_GATE", Convert.ToString(Value(gate, "First"), Inv));
         double worst = 0, shortest = double.PositiveInfinity;
         foreach (var f in frames)
         {
@@ -508,6 +759,18 @@ internal static class Program
                 Require(Math.Abs(v - Math.Round(v)) < Eps, "E_NOT_GRID", Pos(n));
         }
     }
+    static void ExactGrid(BlueprintData b, bool quantizeHeight = true)
+    {
+        foreach (var n in b.buildings.Where(IsBelt))
+        {
+            Require(n.localOffset_x == Math.Round(n.localOffset_x) && n.localOffset_y == Math.Round(n.localOffset_y)
+                && n.localOffset_x2 == Math.Round(n.localOffset_x2) && n.localOffset_y2 == Math.Round(n.localOffset_y2),
+                "E_NOT_EXACT_XY_GRID", Pos(n, true));
+            if (quantizeHeight) Require(n.localOffset_z * 2 == Math.Round(n.localOffset_z * 2)
+                && n.localOffset_z2 * 2 == Math.Round(n.localOffset_z2 * 2), "E_NOT_EXACT_HALF_HEIGHT", Pos(n, true));
+        }
+    }
+
     static Outcome TestRestore(BlueprintData b, bool expectSuccess = true, bool requireAdded = false, bool noChange = false, bool validate = true)
     {
         var o = Invoke(b); Info("  " + o);
@@ -673,9 +936,201 @@ internal static class Program
         });
     }
 
+    static string ExactSemanticFingerprint(BlueprintData b) => Heading(b) + "\n" + string.Join("\n", b.buildings.Select(n => NodeData(n, false) + ";in=" + Pos(n.inputObj, true) + ";out=" + Pos(n.outputObj, true)).OrderBy(x => x, StringComparer.Ordinal));
+    static string SerializedOwned(BlueprintData b) => DiagnosticClone(b).ToBase64String();
+    static Outcome TestSnapped(BlueprintData source, bool quantizeHeight = true, int expectedBelts = -1)
+    {
+        string before = ExactFingerprint(source);
+        var reference = NoiseReference(source, quantizeHeight);
+        var first = Invoke(source, quantizeHeight); Info("  " + first);
+        Require(first.Ok, "E_SNAP_OUTCOME", first.ToString());
+        ValidateWithSnapping(source, first.Result, reference, quantizeHeight); ExactGrid(first.Result, quantizeHeight);
+        if (expectedBelts >= 0) Require(first.Result.buildings.Count(IsBelt) == expectedBelts, "E_SNAP_COUNT", first.ToString());
+        var again = Invoke(first.Result, quantizeHeight);
+        Require(again.Ok && again.Int("Added") == 0 && again.Int("Removed") == 0 && ExactSemanticFingerprint(first.Result) == ExactSemanticFingerprint(again.Result),
+            "E_SNAP_IDEMPOTENCE", again.ToString());
+        string text = SerializedOwned(first.Result);
+        Require(text == SerializedOwned(again.Result), "E_SNAP_EXPORT_REPEAT", "repeated restoration changes exported blueprint bytes");
+        var independent = Invoke(source, quantizeHeight);
+        Require(independent.Ok && text == SerializedOwned(independent.Result), "E_SNAP_NONDETERMINISTIC", "two independent restores/exports of immutable source differ");
+        var loaded = RoundTrip(DiagnosticClone(first.Result));
+        ValidateWithSnapping(source, loaded, reference, quantizeHeight); ExactGrid(loaded, quantizeHeight);
+        var reloaded = Invoke(loaded, quantizeHeight);
+        Require(reloaded.Ok && ExactSemanticFingerprint(loaded) == ExactSemanticFingerprint(reloaded.Result) && text == SerializedOwned(reloaded.Result),
+            "E_SNAP_EXPORT_ROUNDTRIP", "restore/export/reload/restore is not identical");
+        var strict = Invoke(source, quantizeHeight, true);
+        Require(strict.Ok && text == SerializedOwned(strict.Result), "E_SNAP_STRICT", "strict and default safe exact-grid exports differ: " + strict);
+        Require(before == ExactFingerprint(source), "E_SNAP_SOURCE_MUTATED", "full-field source fingerprint changed after repeated restore/export");
+        Info("  exact-grid deterministic export SHA256=" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))));
+        return first;
+    }
+    static void TestPreciselyProtected(BlueprintData source)
+    {
+        string before = ExactFingerprint(source);
+        var o = Invoke(source); Info("  " + o);
+        Require(o.Ok, "E_PROTECTED_OUTCOME", o.ToString()); Validate(source, o.Result);
+        Require(ExactSemanticFingerprint(source) == ExactSemanticFingerprint(o.Result) && o.Int("Added") == 0 && o.Int("Removed") == 0,
+            "E_PROTECTED_MOVEMENT", "protected component must retain exact primary/secondary poses, labels and target-ref sides");
+        Require(before == ExactFingerprint(source), "E_PROTECTED_SOURCE_MUTATED", "full-field source changed");
+    }
+    static BlueprintBuilding[] NoiseLoop(float noise)
+    {
+        var nodes = new[] { Belt(noise, noise, noise), Belt(1 + noise, noise, noise), Belt(2 + noise, noise, noise),
+            Belt(2 + noise, 1 + noise, noise), Belt(2 + noise, 2 + noise, noise), Belt(1 + noise, 2 + noise, noise),
+            Belt(noise, 2 + noise, noise), Belt(noise, 1 + noise, noise) };
+        for (int i = 0; i < nodes.Length; i++) Link(nodes[i], nodes[(i + 1) % nodes.Length]);
+        return nodes;
+    }
+    static void SnapFixtures(string originals, string userCase)
+    {
+        var seed = Seed(originals);
+        Info("SNAP FIXTURES bounded nearest-coordinate noise <=" + SnapOracleLimit.ToString("R", Inv) + "; conservative Validate contract unchanged");
+        void Reject(Action body)
+        {
+            bool rejected = false;
+            try { body(); } catch (CheckException e) { rejected = true; Info("  snapping oracle rejected " + e.Code); }
+            Require(rejected, "E_SNAP_ORACLE_FALSE_NEGATIVE", "unsafe mutation escaped opt-in snapping oracle");
+        }
+        Check("snap-user-case-default-strict-exact-grid-source-determinism", () =>
+        {
+            var source = Load(userCase); var o = TestSnapped(source, expectedBelts: 15);
+            Require(o.Int("SnappedNodes") > 0 && o.Int("NativePlannedRuns") > 0 && o.Int("ExcludedShortSourcePoses") == 8,
+                "E_USER_CASE_NATIVE_PIPELINE", "case must use native planner plus bounded normalization and exactly the independently identified 8 source-short pose exclusions");
+            Require(source.buildings.Count(IsBelt) == 13 && source.buildings.All(IsBelt), "E_USER_CASE_SOURCE", "expected authoritative 13-belt reproduction");
+            Require(o.Result.buildings.All(n => n.localOffset_y == 0 && n.localOffset_y2 == 0 && n.localOffset_z == 0 && n.localOffset_z2 == 0),
+                "E_USER_CASE_POSE", "user case must be exactly y=z=0, not merely within serializer epsilon");
+            Require(o.Result.buildings.Select(n => n.localOffset_x).OrderBy(x => x).SequenceEqual(Enumerable.Range(0, 15).Select(x => (float)x)),
+                "E_USER_CASE_PATH", "must be every x=0..14, no invented/lost point");
+        });
+        Check("snap-epsilon-interpolants-and-label-preserved", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.3334f, 3.6667f, 5.0001f }, transverse: .0001f, z: .0001f);
+            nodes[1].parameters = new[] { 17, 23 }; nodes[1].content = "immutable-signal"; nodes[1].filterId = 1001;
+            TestSnapped(Fixture(seed, nodes), expectedBelts: 6);
+        });
+        Check("snap-oblique-larger-offsets-exactly-protected", () =>
+        {
+            var nodes = Chain(new[] { 0f, 1f, 2f, 3f });
+            for (int i = 0; i < nodes.Length; i++) nodes[i].localOffset_y = nodes[i].localOffset_y2 = .015f + .4f * i;
+            TestPreciselyProtected(Fixture(seed, nodes));
+        });
+        Check("snap-genuine-fractional-transverse-no-larger-tolerance", () =>
+            TestPreciselyProtected(Fixture(seed, Chain(new[] { 0f, 1f, 2f, 3f }, transverse: .001f))));
+        Check("snap-device-component-pose-and-target-exactly-protected", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f, z: .0001f);
+            var sorter = Belt(1, 2); Set(sorter, "itemId", 2011); Set(sorter, "modelIndex", 41); sorter.inputObj = nodes[1];
+            sorter.parameters = new[] { 99, 101 }; sorter.localOffset_x2 = nodes[1].localOffset_x; sorter.localOffset_y2 = nodes[1].localOffset_y;
+            TestPreciselyProtected(Fixture(seed, nodes.Concat(new[] { sorter }).ToArray()));
+        });
+        Check("snap-addon-component-without-serialized-ref-protected", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f, z: .0001f);
+            var addon = Belt(1, 1); Set(addon, "itemId", 2313); Set(addon, "modelIndex", 120);
+            TestPreciselyProtected(Fixture(seed, nodes.Concat(new[] { addon }).ToArray()));
+        });
+        Check("snap-two-near-lines-conflict-prevents-snap", () =>
+        {
+            var a = Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f);
+            var b = Chain(new[] { -.0001f, .9999f, 1.9999f, 2.9999f }, transverse: -.0001f);
+            TestPreciselyProtected(Fixture(seed, a.Concat(b).ToArray()));
+        });
+        Check("snap-near-noise-pole-collision-component-protected", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f);
+            var pole = Belt(1); Set(pole, "itemId", 2201); Set(pole, "modelIndex", 44);
+            TestPreciselyProtected(Fixture(seed, nodes.Concat(new[] { pole }).ToArray()));
+        });
+        Check("snap-near-integer-loop-safe-and-directed", () => TestSnapped(Fixture(seed, NoiseLoop(.0001f)), expectedBelts: 8));
+        Check("snap-near-integer-loop-foreign-conflict-protected", () =>
+            TestPreciselyProtected(Fixture(seed, NoiseLoop(.0001f).Concat(NoiseLoop(-.0001f)).ToArray())));
+        Check("snap-height-option-false-keeps-original-height", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.3334f, 2.6667f, 4.0001f }, transverse: .0001f, z: 1.25f));
+            var o = TestSnapped(source, false, 5);
+            Require(o.Result.buildings.All(n => n.localOffset_z == 1.25f && n.localOffset_z2 == 1.25f), "E_SNAP_HEIGHT_OPTION", "height disabled must preserve original height exactly");
+        });
+        Check("snap-oracle-canonical-noise-is-permitted", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f, z: .0001f));
+            var reference = NoiseReference(source); ValidateWithSnapping(source, DiagnosticClone(reference), reference); ExactGrid(reference);
+        });
+        Check("snap-oracle-no-arbitrary-endpoint-relocation", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .25f, 1.25f, 2.25f })); var reference = DiagnosticClone(source);
+            foreach (var n in reference.buildings) n.localOffset_x = n.localOffset_x2 = (float)Math.Round(n.localOffset_x);
+            Reject(() => ValidateWithSnapping(source, DiagnosticClone(reference), reference));
+        });
+        Check("snap-oracle-direction-reversal-rejected", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.0001f, 2.0001f }, transverse: .0001f));
+            var reference = NoiseReference(source); var bad = DiagnosticClone(reference); var n = bad.buildings.OrderBy(x => x.localOffset_x).ToArray();
+            foreach (var node in n) { node.inputObj = null; node.outputObj = null; }
+            for (int i = 1; i < n.Length; i++) Link(n[i], n[i - 1]);
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+        Check("snap-oracle-device-target-movement-not-waived", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.0001f }, transverse: .0001f);
+            var device = Belt(1, 3); Set(device, "itemId", 2011); device.inputObj = nodes[1];
+            var source = Fixture(seed, nodes.Concat(new[] { device }).ToArray()); var reference = NoiseReference(source);
+            Reject(() => ValidateWithSnapping(source, DiagnosticClone(reference), reference));
+        });
+        Check("snap-oracle-foreign-conflict-rejected", () =>
+        {
+            var a = Chain(new[] { .0001f, 1.0001f, 2.0001f }, transverse: .0001f);
+            var b = Chain(new[] { -.0001f, .9999f, 1.9999f }, transverse: -.0001f);
+            var source = Fixture(seed, a.Concat(b).ToArray()); var reference = NoiseReference(source);
+            Reject(() => ValidateWithSnapping(source, DiagnosticClone(reference), reference));
+        });
+        Check("snap-oracle-label-deletion-rejected", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.0001f, 2.0001f }, transverse: .0001f)); source.buildings[1].parameters = new[] { 41, 42 };
+            var reference = NoiseReference(source); var bad = DiagnosticClone(reference); bad.buildings[1].parameters = Array.Empty<int>();
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+        Check("snap-oracle-pole-collision-rejected", () =>
+        {
+            var nodes = Chain(new[] { .0001f, 1.0001f, 2.0001f }, transverse: .0001f);
+            var pole = Belt(1); Set(pole, "itemId", 2201); Set(pole, "modelIndex", 44);
+            var source = Fixture(seed, nodes.Concat(new[] { pole }).ToArray()); var reference = NoiseReference(source);
+            Reject(() => ValidateWithSnapping(source, DiagnosticClone(reference), reference));
+        });
+        Check("snap-oracle-new-long-link-rejected-not-filtered", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f));
+            var reference = NoiseReference(source); var bad = DiagnosticClone(reference); var first = bad.buildings[0]; var last = bad.buildings[3];
+            first.outputObj = last; last.inputObj = first; bad.buildings = new[] { first, last };
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+        Check("snap-oracle-new-short-link-rejected-not-filtered", () =>
+        {
+            var source = Fixture(seed, Chain(new[] { .0001f, 1.0001f, 2.0001f, 3.0001f }, transverse: .0001f));
+            var reference = NoiseReference(source); var bad = DiagnosticClone(reference); var extra = Belt(.1f);
+            var first = bad.buildings[0]; var second = bad.buildings[1]; Link(first, extra); Link(extra, second);
+            bad.buildings = bad.buildings.Concat(new[] { extra }).ToArray();
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+        Check("snap-oracle-secondary-device-target-no-tolerance-waiver", () =>
+        {
+            var nodes = Chain(new[] { 0f, 1f, 2f }); var device = Belt(1, 3); Set(device, "itemId", 2011); device.inputObj = nodes[1];
+            var source = Fixture(seed, nodes.Concat(new[] { device }).ToArray()); var reference = DiagnosticClone(source); var bad = DiagnosticClone(source);
+            bad.buildings[1].localOffset_x2 += .00005f;
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+        Check("snap-oracle-loop-cut-rejected", () =>
+        {
+            var source = Fixture(seed, NoiseLoop(.0001f)); var reference = NoiseReference(source); var bad = DiagnosticClone(reference);
+            var last = bad.buildings.Last(); var first = last.outputObj; last.outputObj = null; first.inputObj = null;
+            Require(new Graph(bad).Components == 1, "E_SNAP_ORACLE_SETUP", "cut loop still one component");
+            Reject(() => ValidateWithSnapping(source, bad, reference));
+        });
+    }
+
     static void Batch(string input, string exportDir, bool libraryOnly)
     {
         libraryOnly |= Environment.GetCommandLineArgs().Contains("--library-only");
+        bool canonicalNoise = Environment.GetCommandLineArgs().Contains("--canonical-noise");
         Require(Directory.Exists(input) || File.Exists(input), "E_INPUT_DIR", input);
         var files = File.Exists(input) ? new[] { input } : Directory.GetFiles(input, libraryOnly ? "A_lib_*.txt" : "*.txt").OrderBy(x => x, StringComparer.Ordinal).ToArray();
         Require(files.Length > 0, "E_INPUT_NO_FILES", input);
@@ -686,7 +1141,11 @@ internal static class Program
         {
             Check("batch:" + Path.GetFileNameWithoutExtension(file), () =>
             {
-                var src = Load(file); var o = Invoke(src); Info("  " + o);
+                var src = Load(file); string sourceBefore = ExactFingerprint(src);
+                var reference = canonicalNoise ? NoiseReference(src) : null;
+                void ValidateResult(BlueprintData result)
+                { if (canonicalNoise) ValidateWithSnapping(src, result, reference); else Validate(src, result); }
+                var o = Invoke(src); Info("  " + o);
                 totalBefore += o.Int("Before");
                 if (!o.Ok)
                 {
@@ -695,22 +1154,23 @@ internal static class Program
                     return;
                 }
                 totalAfter += o.Int("After"); totalAdded += o.Int("Added"); totalRemoved += o.Int("Removed");
-                Validate(src, o.Result);
+                ValidateResult(o.Result);
                 var again = Invoke(o.Result);
                 Require(again.Ok && again.Int("Added") == 0 && again.Int("Removed") == 0 && SemanticFingerprint(o.Result) == SemanticFingerprint(again.Result), "E_BATCH_IDEMPOTENCE", again.ToString());
-                var loaded = RoundTrip(o.Result); Validate(src, loaded);
+                var loaded = RoundTrip(o.Result); ValidateResult(loaded);
                 Require(SemanticFingerprint(o.Result) == SemanticFingerprint(loaded), "E_BATCH_ROUNDTRIP_SEMANTICS", "game serialization changed geometry/metadata/reference targets");
                 var reloaded = Invoke(loaded);
                 Require(reloaded.Ok && reloaded.Int("Added") == 0 && reloaded.Int("Removed") == 0 && SemanticFingerprint(loaded) == SemanticFingerprint(reloaded.Result), "E_BATCH_RELOADED_IDEMPOTENCE", reloaded.ToString());
                 if (exportDir != null)
                 {
                     string target = Path.Combine(exportDir, "A_R_" + Path.GetFileName(file));
-                    File.WriteAllText(target, o.Result.ToBase64String(), new UTF8Encoding(false));
-                    var exported = Load(target);
+                    File.WriteAllText(target, SerializedOwned(o.Result), new UTF8Encoding(false));
+                    var exported = Load(target); ValidateResult(exported);
                     Require(SemanticFingerprint(exported) == SemanticFingerprint(loaded), "E_EXPORT_SEMANTICS", target);
                     Require(Heading(src) == Heading(exported), "E_EXPORT_HEADING", target);
                     Info("  EXPORT " + target);
                 }
+                Require(sourceBefore == ExactFingerprint(src), "E_BATCH_EXPORT_SOURCE_MUTATED", "full-field source changed during restore/reload/export");
             });
         }
         Info($"BATCH TOTAL belts={totalBefore}->{totalAfter} added={totalAdded} removed={totalRemoved} refused={Refused}; net added is permitted for restoration");

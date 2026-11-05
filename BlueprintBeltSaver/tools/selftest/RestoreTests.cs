@@ -62,6 +62,7 @@ namespace BBSaver.SelfTest
                     }
                     catch (Exception ex) { Record("restore:" + name, false, ex.InnerException?.ToString() ?? ex.ToString()); }
                 }
+                RunCase001Tests(mod, plugin, output);
                 RestoreUiTests(mod, plugin);
             }
             finally
@@ -76,7 +77,8 @@ namespace BBSaver.SelfTest
         private void RealPreviewAudit(Assembly mod, BlueprintData source, BlueprintData result, string name)
         {
             var envelope = mod.GetType("BlueprintBeltSaver.PasteEnvelope");
-            var env = envelope.GetMethod("Build", RestoreFlags).Invoke(null, new object[] { source.areas, source.primaryAreaIdx, source.buildings, new Func<BlueprintBuilding, bool>(IsBelt), true });
+            var env = envelope.GetMethod("BuildForRestoration", RestoreFlags).Invoke(null,
+                new object[] { source.areas, source.primaryAreaIdx, source.buildings, new Func<BlueprintBuilding, bool>(IsBelt) });
             var frames = (IEnumerable)envelope.GetProperty("ProtectedFrames", RestoreFlags).GetValue(env, null);
             var bp = result.Clone();
             bp.buildings = bp.buildings.Where(IsBelt).ToArray();
@@ -93,7 +95,11 @@ namespace BBSaver.SelfTest
             var conds = new IntVector4[bp.areas.Length];
             var boxes = new BPGratBox[bp.areas.Length];
             byte[] reforms = null;
-            int poses = 0, over = 0; float worstSq = 0;
+            int poses = 0, over = 0, shortNew = 0; float worstSq = 0, minNewSq = float.PositiveInfinity;
+            (int, float, float, float, int, float, float, float) Key(BlueprintBuilding a, BlueprintBuilding b)
+                => (a.areaIndex, a.localOffset_x, a.localOffset_y, a.localOffset_z, b.areaIndex, b.localOffset_x, b.localOffset_y, b.localOffset_z);
+            var sourceSpans = new System.Collections.Generic.HashSet<(int, float, float, float, int, float, float, float)>(
+                source.buildings.Where(n => IsBelt(n) && IsBelt(n.outputObj)).Select(n => Key(n, n.outputObj)));
             foreach (var frame in frames)
             {
                 int c = (int)Get(frame, "LatGrid"); float yaw = (float)Get(frame, "Yaw");
@@ -108,9 +114,15 @@ namespace BBSaver.SelfTest
                     float d2 = (previews[n.outputObj.index].lpos - previews[n.index].lpos).sqrMagnitude;
                     worstSq = Mathf.Max(worstSq, d2);
                     if (d2 > 5.3f) over++;
+                    if (!sourceSpans.Contains(Key(n, n.outputObj)))
+                    {
+                        minNewSq = Mathf.Min(minNewSq, d2);
+                        if (float.IsNaN(d2) || d2 < 0.400001f * 0.400001f) shortNew++;
+                    }
                 }
             }
-            Record("restore-real-preview:" + name, poses > 0 && over == 0, $"game RefreshBuildPreview: poses={poses}, over={over}, worst={Math.Sqrt(worstSq):F4} m");
+            Record("restore-real-preview:" + name, poses > 0 && over == 0 && shortNew == 0,
+                $"game RefreshBuildPreview: poses={poses}, over={over}, short-new={shortNew}, new-min={Math.Sqrt(minNewSq):F6} m, worst={Math.Sqrt(worstSq):F4} m");
         }
 
         private void RestoreUiTests(Assembly mod, object plugin)

@@ -1727,6 +1727,7 @@ namespace BlueprintBeltSaver
                 var sb = new StringBuilder();
                 sb.AppendLine(string.Format(text.RestoreTotalLine, report.Before, report.After, report.Added, report.Removed));
                 sb.AppendLine(string.Format(text.RestoreRunLine, report.RestoredRuns, report.ProtectedRuns, report.UnaffectedRuns));
+                sb.AppendLine(string.Format(text.RestoreNativeLine, report.NativePlannedRuns, report.SnappedNodes));
                 sb.AppendLine(string.Format(text.RestoreProtectedNodes, report.ProtectedNodes));
                 if (!string.IsNullOrEmpty(report.ProtectionDetails))
                 {
@@ -1735,11 +1736,12 @@ namespace BlueprintBeltSaver
                     string audit = WriteRestoreAudit(report);
                     sb.AppendLine(string.IsNullOrEmpty(audit) ? text.RestoreProtectionReportFailed : string.Format(text.RestoreProtectionReport, audit));
                 }
-                if (ok && report.RestoredRuns == 0) sb.AppendLine(text.RestoreNoChange);
+                if (ok && report.RestoredRuns == 0 && report.SnappedNodes == 0) sb.AppendLine(text.RestoreNoChange);
                 sb.AppendLine();
                 sb.AppendLine(text.RestoreMode);
                 summary = sb.ToString().TrimEnd();
                 Log.Info($"网格复原耗时 {watch.Elapsed.TotalMilliseconds:F1} ms；传送带 {report.Before} → {report.After}，新增 {report.Added}，移除 {report.Removed}，已复原区段 {report.RestoredRuns}，保护区段 {report.ProtectedRuns}，未调整区段 {report.UnaffectedRuns}；通过={ok}，原因={report.Reason}");
+                Log.Info($"原生网格规划 {report.NativePlannedRuns} 区段，安全规范化 {report.SnappedNodes} 节点；原件过短排除姿态 {report.ExcludedShortSourcePoses} 个。");
                 if (!ok)
                 {
                     restored = null;

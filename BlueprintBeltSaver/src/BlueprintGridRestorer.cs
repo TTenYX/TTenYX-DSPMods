@@ -9,7 +9,7 @@ namespace BlueprintBeltSaver
     /// Turns, slopes, endpoints, tiers, labels and attachment windows stay intact. No benefit test,
     /// no nearest-neighbour rewiring and no configuration switch bypasses safety checks.
     /// </summary>
-    internal static class BlueprintGridRestorer
+    internal static partial class BlueprintGridRestorer
     {
         private const double Epsilon = 0.0002; // serializer noise, not a routing tolerance
         private const int BuildingLimit = 15000;
@@ -17,6 +17,7 @@ namespace BlueprintBeltSaver
         internal sealed class Report
         {
             internal int Before, After, Added, Removed, RestoredRuns, ProtectedRuns, UnaffectedRuns, CheckedPoses, ProtectedNodes;
+            internal int SnappedNodes, NativePlannedRuns, ExcludedShortSourcePoses;
             internal string Reason = "", ProtectionDetails = "";
             internal string[] ProtectedPoints = new string[0];
         }
@@ -68,6 +69,12 @@ namespace BlueprintBeltSaver
                 var oldIn = original.ToDictionary(n => n, n => n.inputObj);
                 var incoming = belts.ToDictionary(n => n, n => new List<BlueprintBuilding>());
                 foreach (var n in original) if (Belt(n) && Belt(n.outputObj)) incoming[n.outputObj].Add(n);
+                var envelope = PasteEnvelope.BuildForRestoration(bp.areas, bp.primaryAreaIdx, original, Belt);
+                if (envelope.Empty) return Fail(report, "no-legal-placement");
+                report.CheckedPoses = envelope.ProtectedCount;
+                report.ExcludedShortSourcePoses = envelope.MinExcludedFrames;
+                var movedNodes = NormalizeGridNoise(original, oldIn, oldOut, incoming, envelope, quantizeHeight);
+                report.SnappedNodes = movedNodes.Count;
                 var anchors = new HashSet<BlueprintBuilding>();
                 var frozen = new HashSet<BlueprintBuilding>();
                 foreach (var n in original.Where(Belt))
@@ -111,9 +118,6 @@ namespace BlueprintBeltSaver
                 var visited = new HashSet<BlueprintBuilding>();
                 foreach (var n in original.Where(n => Belt(n) && anchors.Contains(n))) Walk(n, visited, oldOut);
                 foreach (var n in original.Where(Belt)) if (!visited.Contains(n)) { anchors.Add(n); Walk(n, visited, oldOut); }
-                var envelope = PasteEnvelope.Build(bp.areas, bp.primaryAreaIdx, original, Belt);
-                if (envelope.Empty) return Fail(report, "no-legal-placement");
-                report.CheckedPoses = envelope.ProtectedCount;
                 var lineOf = Lines(original, oldIn, oldOut);
                 var ancestry = new Dictionary<BlueprintBuilding, int>(lineOf);
                 var removed = new HashSet<BlueprintBuilding>();
@@ -140,7 +144,7 @@ namespace BlueprintBeltSaver
                             (Axis(path[k], axis) - Axis(path[k - 1], axis)) * (Axis(path[1], axis) - Axis(start, axis)) <= 0) compatible = false;
                     if (!compatible || Math.Abs(Axis(path.Last(), axis) - Axis(start, axis)) > RunLimit)
                     { report.ProtectedRuns++; continue; }
-                    var replacement = GridSequence(path, axis, envelope, quantizeHeight);
+                    var replacement = GridSequence(path, axis, envelope, quantizeHeight, bp.areas, bp.primaryAreaIdx, out bool nativePlanned);
                     if (replacement == null || replacement.Any(n => !NativeGridScaleMatches(n, envelope)))
                     { report.ProtectedRuns++; continue; }
                     if (SameSequence(path, replacement)) { report.UnaffectedRuns++; continue; }
@@ -169,6 +173,7 @@ namespace BlueprintBeltSaver
                     insertAfter[start] = generated;
                     foreach (var n in generated) ancestry[n] = lineOf[start];
                     report.Added += generated.Count; report.RestoredRuns++;
+                    if (nativePlanned) report.NativePlannedRuns++;
                 }
                 if (report.RestoredRuns > 0)
                 {
@@ -182,27 +187,23 @@ namespace BlueprintBeltSaver
                     bp.buildings = result.Where(Belt).Concat(result.Where(n => !Belt(n))).ToArray();
                 }
                 report.Removed = removed.Count; report.After = bp.buildings.Count(Belt);
-                var exceptions = bp.buildings.Where(n => Belt(n) && (!Integer(n.localOffset_x) || !Integer(n.localOffset_y) || (quantizeHeight && !Half(n.localOffset_z)))).ToArray();
+                var exceptions = bp.buildings.Where(n => Belt(n) &&
+                    (n.localOffset_x != Math.Round(n.localOffset_x) || n.localOffset_y != Math.Round(n.localOffset_y) ||
+                    (quantizeHeight && n.localOffset_z * 2 != Math.Round(n.localOffset_z * 2)))).ToArray();
                 report.ProtectedNodes = exceptions.Length;
                 report.ProtectedPoints = exceptions.Select(n => string.Format(System.Globalization.CultureInfo.InvariantCulture,
                     "{0},{1},{2:R},{3:R},{4:R}", n.index, n.areaIndex, n.localOffset_x, n.localOffset_y, n.localOffset_z)).ToArray();
                 report.ProtectionDetails = string.Join("\n", exceptions.Take(12).Select(n => $"#{n.index} area={n.areaIndex} ({n.localOffset_x:0.####}, {n.localOffset_y:0.####}, {n.localOffset_z:0.####})"));
                 if (strictGrid && exceptions.Length > 0) return Fail(report, "strict-grid-conflict");
-                if (strictGrid)
-                {
-                    // Only sub-mm serializer noise remains. Snap it exactly; no geometric routing.
-                    foreach (var n in bp.buildings.Where(Belt))
-                    {
-                        n.localOffset_x = n.localOffset_x2 = (float)Math.Round(n.localOffset_x);
-                        n.localOffset_y = n.localOffset_y2 = (float)Math.Round(n.localOffset_y);
-                        if (quantizeHeight) n.localOffset_z = n.localOffset_z2 = (float)(Math.Round(n.localOffset_z * 2) / 2);
-                    }
-                }
                 if (!VerifyTopology(original, bp.buildings, oldIn, oldOut, ancestry, removed)) return Fail(report, "topology-failed");
                 var spans = new HashSet<(BlueprintBuilding, BlueprintBuilding)>();
                 foreach (var n in original.Where(Belt)) if (Belt(oldOut[n])) spans.Add((n, oldOut[n]));
-                if (envelope.Gate(bp.buildings, Belt, (a, b) => spans.Contains((a, b))).Over != 0) return Fail(report, "distance-failed");
-                if (report.RestoredRuns > 0 || strictGrid)
+                bool Preexisting(BlueprintBuilding a, BlueprintBuilding b) => spans.Contains((a, b)) && !movedNodes.Contains(a) && !movedNodes.Contains(b);
+                if (envelope.Gate(bp.buildings, Belt, Preexisting).Over != 0) return Fail(report, "distance-failed");
+                foreach (var n in bp.buildings.Where(Belt))
+                    if (Belt(n.outputObj) && !Preexisting(n, n.outputObj) && !SpanWithinWorkingPoses(n, n.outputObj, envelope))
+                        return Fail(report, "distance-failed");
+                if (report.RestoredRuns > 0 || report.SnappedNodes > 0 || strictGrid)
                 {
                     // The game filters index != array position as invalid data; it does NOT simply
                     // reindex. New nodes must have their final IDs before CheckBuildingData reads them.
@@ -225,8 +226,14 @@ namespace BlueprintBeltSaver
                 }
                 if (envelope.Gate(roundtrip.buildings, Belt, (a, b) => a.index >= 0 && b.index >= 0 &&
                     a.index < bp.buildings.Length && b.index < bp.buildings.Length &&
-                    spans.Contains((bp.buildings[a.index], bp.buildings[b.index]))).Over != 0)
+                    Preexisting(bp.buildings[a.index], bp.buildings[b.index])).Over != 0)
                     return Fail(report, "distance-failed");
+                foreach (var n in roundtrip.buildings.Where(Belt))
+                {
+                    if (!Belt(n.outputObj)) continue;
+                    var a = bp.buildings[n.index]; var b = bp.buildings[n.outputObj.index];
+                    if (!Preexisting(a, b) && !SpanWithinWorkingPoses(n, n.outputObj, envelope)) return Fail(report, "distance-failed");
+                }
                 restored = bp;
                 return true;
             }
@@ -279,14 +286,18 @@ namespace BlueprintBeltSaver
             Freeze(ins[n], depth - 1, frozen, ins, outs, incoming);
             foreach (var p in incoming[n]) Freeze(p, depth - 1, frozen, ins, outs, incoming);
         }
-        private static List<BlueprintBuilding> GridSequence(List<BlueprintBuilding> path, int axis, PasteEnvelope env, bool height)
+        private static List<BlueprintBuilding> GridSequence(List<BlueprintBuilding> path, int axis, PasteEnvelope env, bool height,
+            BlueprintArea[] areas, int primaryAreaIdx, out bool nativePlanned)
         {
             var first = path[0]; var last = path.Last();
             double from = Axis(first, axis), to = Axis(last, axis), dir = Math.Sign(to - from);
             var candidates = new List<BlueprintBuilding> { first, last };
             candidates.AddRange(path.Skip(1).Take(path.Count - 2).Where(n => Integer(Axis(n, axis))));
+            var native = NativeGridRoute(path, axis, env, areas, primaryAreaIdx);
+            nativePlanned = native != null;
             int min = (int)Math.Ceiling(Math.Min(from, to)), max = (int)Math.Floor(Math.Max(from, to));
-            for (int cell = min; cell <= max; cell++)
+            var proposedCells = native != null ? native.Select(p => (int)(axis == 0 ? p.x : p.y)) : Enumerable.Range(min, Math.Max(0, max - min + 1));
+            foreach (int cell in proposedCells)
             {
                 if ((cell - from) * dir <= Epsilon || (to - cell) * dir <= Epsilon || candidates.Any(n => Math.Abs(Axis(n, axis) - cell) <= Epsilon)) continue;
                 int donor = 0;
