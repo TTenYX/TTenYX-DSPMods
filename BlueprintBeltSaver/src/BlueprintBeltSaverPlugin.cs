@@ -38,8 +38,6 @@ namespace BlueprintBeltSaver
         private ConfigEntry<KeyboardShortcut> _hotkey;
         private ConfigEntry<float> _currentDistance;
         private ConfigEntry<float> _blueprintMaxDistance;
-        private ConfigEntry<float> _longitudeDistance;
-        private ConfigEntry<float> _latitudeDistance;
         private ConfigEntry<bool> _longerOnGrid;
         private ConfigEntry<int> _slopePathMode;
         private ConfigEntry<bool> _shortestUnlimit;
@@ -137,8 +135,9 @@ namespace BlueprintBeltSaver
             _hotkey = Config.Bind("General", "WindowHotkey", new KeyboardShortcut(KeyCode.LeftAlt, KeyCode.B), "打开/关闭本 MOD 设置窗口的快捷键。格式：修饰键 + 主键，例如 LeftAlt + B、LeftControl + F8、None + F9。");
             _currentDistance = Config.Bind("Belt", "CurrentDistance", 1.9f, "徒手拉带的最远距离（米）。只影响 F1 徒手拉带（测地线分段）。蓝图长带优化使用独立上限 BlueprintMaxDistance。取值范围 0.400001 ~ 2.301172。");
             _blueprintMaxDistance = Config.Bind("Belt", "BlueprintMaxDistance", 2.301172f, "蓝图长带优化的单段上限（米）。独立于徒手拉带；默认取游戏硬上限 2.301172（长带化收益最大）。范围 0.400001 ~ 2.301172。调低可更保守，但会留下更多 1 格带无法合并。");
-            _longitudeDistance = Config.Bind("Belt", "LongitudeDistance", 1.75f, "经纬线模式的沿纬线跨度（格）。范围 1 ~ 3，仅影响徒手拉带。");
-            _latitudeDistance = Config.Bind("Belt", "LatitudeDistance", 1.5f, "经纬线模式的沿经线跨度（格）。范围 1 ~ 3，仅影响徒手拉带。");
+            // 004.18：格数分段退役，这两个旧键保留在配置文件中并标注废弃（不再读取）。
+            Config.Bind("Belt", "LongitudeDistance", 1.75f, "已废弃（004.18 起经纬线拉带按实际米制长度均匀分段，此键不再读取；保留仅为兼容旧配置文件）。| Deprecated: gridline belt spacing is now metre-based; this key is no longer read (kept for config compatibility).");
+            Config.Bind("Belt", "LatitudeDistance", 1.5f, "已废弃（004.18 起经纬线拉带按实际米制长度均匀分段，此键不再读取；保留仅为兼容旧配置文件）。| Deprecated: gridline belt spacing is now metre-based; this key is no longer read (kept for config compatibility).");
             _longerOnGrid = Config.Bind("Belt", "LongerOnGrid", false, "开启经纬线模式的更大跨度（徒手拉带用，与蓝图长带优化无关）。");
             _slopePathMode = Config.Bind("Belt", "SlopePathMode", 0, "斜坡带模式：0 = 原版升降逻辑，1 = 阿基米德螺线等距分割（仅影响徒手拉带）。");
             _rebindSorterLinks = Config.Bind("Belt", "RebindSorterLinks", false, "默认关闭。开启后被分拣器/建筑引用的传送带节点也可参与合并，这些建筑的连接会重绑到覆盖它的新合并段（即多个分拣器共用同一长带）。守卫：被删节点与覆盖段的朝向必须一致，被删节点位置必须落在新段跨度内；只改写引用，槽位与沿带偏移原样保留。开启后请先在粘贴预览确认无红色报错、分拣器能正常工作再保存。");
@@ -158,8 +157,6 @@ namespace BlueprintBeltSaver
             _slopePathMode.SettingChanged += delegate { PushConfigToStatics(); };
             _shortestUnlimit.SettingChanged += delegate { PushConfigToStatics(); };
             _currentDistance.SettingChanged += delegate { PushConfigToStatics(); };
-            _longitudeDistance.SettingChanged += delegate { PushConfigToStatics(); };
-            _latitudeDistance.SettingChanged += delegate { PushConfigToStatics(); };
             PushConfigToStatics();
             _harmony = new Harmony(Guid);
             LogStartupBanner();
@@ -313,8 +310,6 @@ namespace BlueprintBeltSaver
             LongerBeltPath.longerOnGrid = _longerOnGrid.Value;
             LongerBeltPath.isometricSegmentation = Mathf.Clamp(_slopePathMode.Value, 0, 1);
             LongerBeltPath.currentDistance = Mathf.Clamp(_currentDistance.Value, LongerBeltPath.MinimumDistance, LongerBeltPath.MaximumDistance);
-            LongerBeltPath.longitudeDistance = Mathf.Clamp(_longitudeDistance.Value, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance);
-            LongerBeltPath.latitudeDistance = Mathf.Clamp(_latitudeDistance.Value, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance);
             LongerBeltPath.shortestUnlimit = _shortestUnlimit.Value;
         }
 
@@ -329,8 +324,6 @@ namespace BlueprintBeltSaver
                 _longerOnGrid.Value = LongerBeltPath.longerOnGrid;
                 _slopePathMode.Value = LongerBeltPath.isometricSegmentation;
                 _currentDistance.Value = LongerBeltPath.currentDistance;
-                _longitudeDistance.Value = LongerBeltPath.longitudeDistance;
-                _latitudeDistance.Value = LongerBeltPath.latitudeDistance;
                 _shortestUnlimit.Value = LongerBeltPath.shortestUnlimit;
                 Config.Save();
             }
@@ -598,20 +591,11 @@ namespace BlueprintBeltSaver
             GUILayout.Label(_text.SecMerge, section);
             LongerBeltPath.longerOnGrid = GUILayout.Toggle(LongerBeltPath.longerOnGrid, _text.IfLongerOnGrid, toggle);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(_text.LongitudeDistance, sliderLabel, GUILayout.Width(190f));
-            LongerBeltPath.longitudeDistance = GUILayout.HorizontalSlider(LongerBeltPath.longitudeDistance, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance, slider, thumb, GUILayout.Width(280f));
-            GUILayout.Label(LongerBeltPath.longitudeDistance.ToString("0.000"), sliderLabel, GUILayout.Width(60f));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(_text.LatitudeDistance, sliderLabel, GUILayout.Width(190f));
-            LongerBeltPath.latitudeDistance = GUILayout.HorizontalSlider(LongerBeltPath.latitudeDistance, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance, slider, thumb, GUILayout.Width(280f));
-            GUILayout.Label(LongerBeltPath.latitudeDistance.ToString("0.000"), sliderLabel, GUILayout.Width(60f));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
             GUILayout.Label(_text.DistanceSetting, sliderLabel, GUILayout.Width(190f));
             LongerBeltPath.currentDistance = GUILayout.HorizontalSlider(LongerBeltPath.currentDistance, LongerBeltPath.MinimumDistance, LongerBeltPath.MaximumDistance, slider, thumb, GUILayout.Width(280f));
             GUILayout.Label(LongerBeltPath.currentDistance.ToString("0.000000"), sliderLabel, GUILayout.Width(90f));
             GUILayout.EndHorizontal();
+            GUILayout.Label(_text.DistanceSettingDesc, desc);
             bool gridExactNew = GUILayout.Toggle(_gridExactMerging.Value, _text.GridExactMerging, toggle);
             if (gridExactNew != _gridExactMerging.Value)
             {

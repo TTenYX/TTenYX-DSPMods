@@ -25,13 +25,11 @@ internal static class Program
         var grid = new PlanetGrid(EGridType.LatitudeLongitude, 200, UnityEngine.Quaternion.identity);
 
         void Set(string field, object v) => path.GetField(field, BF)!.SetValue(null, v);
-        void Run(string label, float beginLatDeg, float spanDeg, float endLatDeg, float radius, float current, float longitude, float latitude)
+        void Run(string label, float beginLatDeg, float spanDeg, float endLatDeg, float radius, float current)
         {
             Set("longerOnGrid", true);
             Set("shortestUnlimit", false);
             Set("currentDistance", current);
-            Set("longitudeDistance", longitude);
-            Set("latitudeDistance", latitude);
             float lat0 = beginLatDeg * Mathf.Deg2Rad, lat1 = endLatDeg * Mathf.Deg2Rad;
             var begin = new Vector3(Mathf.Cos(lat0), Mathf.Sin(lat0), 0f) * radius;
             var end = new Vector3(Mathf.Cos(spanDeg * Mathf.Deg2Rad) * Mathf.Cos(lat1), Mathf.Sin(lat1), -Mathf.Sin(spanDeg * Mathf.Deg2Rad) * Mathf.Cos(lat1)) * radius;
@@ -46,12 +44,14 @@ internal static class Program
             if (ok) _pass++; else _fail++;
         }
 
-        Run("3cells-equator-cap2.301172", 0f, 36f, 0f, 200.2f, 2.301172f, 3f, 3f);   // 旧设置：3 格必超 → 必须加密
-        Run("3cells-equator-cap1.9", 0f, 36f, 0f, 200.2f, 1.9f, 3f, 3f);
-        Run("1.75cells-default", 0f, 24f, 0f, 200.2f, 1.9f, 1.75f, 1.5f);            // 原默认：1.75 格 ≈ 2.20 m > 1.9 m 也会被加密
-        Run("3cells-highaltitude", 0f, 30f, 0f, 208.2f, 2.301172f, 3f, 3f);          // 高空带：半径更大
-        Run("latitude45", 45f, 24f, 45f, 200.2f, 2.301172f, 3f, 3f);                 // 45° 纬线方向
-        Run("meridian", 0f, 0.001f, 24f, 200.2f, 2.301172f, 3f, 3f);                 // 沿经线（纬度方向）
+        Run("3cells-equator-cap2.301172", 0f, 36f, 0f, 200.2f, 2.301172f);   // 旧 3 格设置跨度：超限自动加密
+        Run("3cells-equator-cap1.9", 0f, 36f, 0f, 200.2f, 1.9f);
+        Run("1.75cells-default", 0f, 24f, 0f, 200.2f, 1.9f);
+        Run("3cells-highaltitude", 0f, 30f, 0f, 208.2f, 2.301172f);          // 高空带：半径更大
+        Run("latitude45", 45f, 24f, 45f, 200.2f, 2.301172f);                 // 45° 纬线方向
+        Run("meridian", 0f, 0.001f, 24f, 200.2f, 2.301172f);                 // 沿经线（纬度方向）
+        Run("latitude82", 82.04f, 10f, 82.04f, 200.4f, 2.301172f);           // 82° 高纬：每格 ≈1.09 m
+        Run("latitude82-meridian", 82.04f, 0.001f, 8f, 200.4f, 2.301172f);   // 82° 沿经线
 
         void Geodesic(string label, float current, float heightEnd, bool spiral)
         {

@@ -2,7 +2,8 @@ namespace BlueprintBeltSaver
 {
     /// <summary>
     /// F2 window and F4 dialog text. Wording follows the plan; the two gridline span labels use the
-    /// plan's configuration table ("LongitudeDistance = 沿纬线最远距离", "LatitudeDistance = 沿经线最远距离").
+    /// plan's configuration table; 004.18 retired the grid-count spacing keys
+    /// (LongitudeDistance / LatitudeDistance) in favour of the metre-based cap.
     /// Note: LongerBelts itself labels those two the other way round, so the in-game wording differs
     /// from the reference MOD even though the underlying math is identical.
     /// </summary>
@@ -10,9 +11,8 @@ namespace BlueprintBeltSaver
     {
         internal string Title;
         internal string IfLongerOnGrid;
-        internal string LongitudeDistance;
-        internal string LatitudeDistance;
         internal string DistanceSetting;
+        internal string DistanceSettingDesc;
         internal string PathModeOriginal;
         internal string PathModeIsometric;
         internal string PathMode;
@@ -124,9 +124,8 @@ namespace BlueprintBeltSaver
             {
                 text.Title = "蓝图省带 BlueprintBeltSaver";
                 text.IfLongerOnGrid = "更改经纬线模式默认跨度";
-                text.LongitudeDistance = "沿纬线最远距离（格）";
-                text.LatitudeDistance = "沿经线最远距离（格）";
                 text.DistanceSetting = "最远距离（米）";
+                text.DistanceSettingDesc = "所有徒手拉带模式的分段长度上限。经纬线模式不再按格数分段：无论纬度，每段实际长度都 ≤ 该值且尽量取大（节点最少 = 最省带），粘贴始终合法。";
                 text.PathMode = "传送带路径（二选一）";
                 text.PathModeOriginal = "原版升降逻辑（水平移动一格后每节升降 0.5 层）";
                 text.PathModeIsometric = "垂直等距分割（端点不水平，需先在两端拉好水平带）";
@@ -216,9 +215,8 @@ namespace BlueprintBeltSaver
             {
                 text.Title = "BlueprintBeltSaver";
                 text.IfLongerOnGrid = "Change default span in gridline mode";
-                text.LongitudeDistance = "Longitude Span (grids)";
-                text.LatitudeDistance = "Latitude Span (grids)";
                 text.DistanceSetting = "Maximum Spacing (meters)";
+                text.DistanceSettingDesc = "Segment-length cap for ALL hand-drawn belt modes. Gridline belts are no longer spaced by grid count: at any latitude every segment is at most this long and as long as possible (fewest nodes = fewest belts), and pasting always stays valid.";
                 text.PathMode = "Belt Path Mode (pick one)";
                 text.PathModeOriginal = "Vanilla rise/fall (0.5 level per horizontal grid)";
                 text.PathModeIsometric = "Vertical even segmentation (endpoints not level; draw level belts at both ends first)";
