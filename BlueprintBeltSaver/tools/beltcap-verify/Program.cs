@@ -11,7 +11,7 @@ using Vector3 = UnityEngine.Vector3;
 internal static class Program
 {
     private const BindingFlags BF = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-    private const float HardCap = 2.301172f * 0.98f;
+    private const float HardCap = 2.301172f;
     private static int _pass, _fail;
 
     private static void Main()

@@ -1,0 +1,12 @@
+MOD D21457453EF185C9F5EA082F1ED6FA56B4EC6C64FFC7B49EFCA9435165D2DD99
+PASS grid-3cells-equator-cap2.301172: nodes=69 cap=2.3012 worst=1.8499 radius=200.2
+PASS grid-3cells-equator-cap1.9: nodes=69 cap=1.9000 worst=1.8499 radius=200.2
+PASS grid-1.75cells-default: nodes=46 cap=1.9000 worst=1.8636 radius=200.2
+PASS grid-3cells-highaltitude: nodes=57 cap=2.3012 worst=1.9467 radius=208.2
+PASS grid-latitude45: nodes=37 cap=2.3012 worst=1.6471 radius=200.2
+PASS grid-meridian: nodes=47 cap=2.3012 worst=1.8230 radius=200.2
+PASS geodesic-plain-cap2.301172: nodes=51 unitSnaps=True cap=2.3012 worst=2.2928 heightEnd=0
+PASS geodesic-plain-cap1.9: nodes=62 unitSnaps=True cap=1.9000 worst=1.8793 heightEnd=0
+PASS geodesic-spiral-cap2.301172-h6: nodes=52 unitSnaps=False cap=2.3012 worst=2.2672 heightEnd=6
+PASS geodesic-spiral-cap1.9-h6: nodes=62 unitSnaps=False cap=1.9000 worst=1.8958 heightEnd=6
+SUMMARY PASS=10 FAIL=0

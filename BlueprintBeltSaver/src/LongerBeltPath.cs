@@ -75,12 +75,15 @@ namespace BlueprintBeltSaver
 
         /// <summary>
         /// 米制弦长托底（用户 2026-11-18 定稿）：格数只是期望步长，拉带交付前把每段实际弦长
-        /// 钳到面板「最远距离」与游戏硬上限 2% 余量中的较小者——超限段在球面上 slerp 加密，
+        /// 钳到面板「最远距离」与游戏硬上限常量中的较小者——超限段在球面上 slerp 加密，
         /// 确保拉出的带子保存成蓝图后在原版粘贴判据（位移平方 &gt; 5.3）下一定不报「距离太远」。
+        /// 不加额外余量：托底量的是本星球当前高度的真实弦长（无省带的跨姿态包络问题），
+        /// 而 2.301172 &lt; √5.3 ≈ 2.301776（平方 5.2954 &lt; 5.3）本身严格合法，顶格设置不应被加密
+        /// （2026-11-18 用户实测：×0.98 会把顶格测地线拉带全部加密、节点翻倍，长带效果消失）。
         /// 弱约束间距（shortestUnlimit，慎用通道）开启时保持原行为不做钳制。
         /// </summary>
         private static float MetreCap()
-            => Mathf.Clamp(Mathf.Min(currentDistance, MaximumDistance * 0.98f), MinimumDistance, MaximumDistance * 0.98f);
+            => Mathf.Clamp(Mathf.Min(currentDistance, MaximumDistance), MinimumDistance, MaximumDistance);
 
         private static Vector3[] _metreCapBuffer;
 
