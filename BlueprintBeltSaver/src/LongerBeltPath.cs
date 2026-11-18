@@ -34,6 +34,100 @@ namespace BlueprintBeltSaver
         internal static int isometricSegmentation;
         internal static bool shortestUnlimit;
 
+        /// <summary>
+        /// 托管版 slerp（与 Unity Vector3.Slerp 语义一致：方向球面插值、模长线性插值）。
+        /// 不用 Vector3.Slerp 的原因：它是引擎 internal call，离线校验台（net8.0 进程）无法执行，
+        /// 拉带生成就无法做米制托底的离线断言；共线/反共线边界这里显式走线性混合，比引擎实现更稳。
+        /// </summary>
+        private static Vector3 SlerpStable(Vector3 a, Vector3 b, float t)
+        {
+            float lengthA = a.magnitude, lengthB = b.magnitude;
+            if (lengthA < 1e-8f || lengthB < 1e-8f)
+            {
+                return new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+            }
+            var na = new Vector3(a.x / lengthA, a.y / lengthA, a.z / lengthA);
+            var nb = new Vector3(b.x / lengthB, b.y / lengthB, b.z / lengthB);
+            float dot = Mathf.Clamp(Vector3.Dot(na, nb), -1f, 1f);
+            float theta = Mathf.Acos(dot);
+            float scaleA, scaleB;
+            if (theta < 1e-4f)
+            {
+                scaleA = 1f - t;
+                scaleB = t;
+            }
+            else
+            {
+                float sin = Mathf.Sin(theta);
+                scaleA = Mathf.Sin((1f - t) * theta) / sin;
+                scaleB = Mathf.Sin(t * theta) / sin;
+            }
+            var mixed = na * scaleA + nb * scaleB;
+            float mixedMagnitude = mixed.magnitude;
+            if (mixedMagnitude < 1e-8f)
+            {
+                mixed = na;
+                mixedMagnitude = 1f;
+            }
+            float length = lengthA + (lengthB - lengthA) * t;
+            return new Vector3(mixed.x / mixedMagnitude * length, mixed.y / mixedMagnitude * length, mixed.z / mixedMagnitude * length);
+        }
+
+        /// <summary>
+        /// 米制弦长托底（用户 2026-11-18 定稿）：格数只是期望步长，拉带交付前把每段实际弦长
+        /// 钳到面板「最远距离」与游戏硬上限 2% 余量中的较小者——超限段在球面上 slerp 加密，
+        /// 确保拉出的带子保存成蓝图后在原版粘贴判据（位移平方 &gt; 5.3）下一定不报「距离太远」。
+        /// 弱约束间距（shortestUnlimit，慎用通道）开启时保持原行为不做钳制。
+        /// </summary>
+        private static float MetreCap()
+            => Mathf.Clamp(Mathf.Min(currentDistance, MaximumDistance * 0.98f), MinimumDistance, MaximumDistance * 0.98f);
+
+        private static Vector3[] _metreCapBuffer;
+
+        /// <summary>radiusScale：snaps 存单位向量时传真实半径（含高度），已带半径时传 1。</summary>
+        private static int EnforceMetreCap(Vector3[] snaps, int count, float radiusScale, int limit)
+        {
+            if (shortestUnlimit || count < 2)
+            {
+                return count;
+            }
+            float cap = MetreCap();
+            int extra = 0;
+            for (int i = 0; i < count - 1; i++)
+            {
+                float chord = Vector3.Distance(snaps[i], snaps[i + 1]) * radiusScale;
+                if (chord > cap)
+                {
+                    extra += Mathf.CeilToInt(chord / cap) - 1;
+                }
+            }
+            if (extra == 0)
+            {
+                return count;
+            }
+            if (_metreCapBuffer == null || _metreCapBuffer.Length < count + extra)
+            {
+                _metreCapBuffer = new Vector3[Math.Max(count + extra, limit + 16)];
+            }
+            int write = 0;
+            _metreCapBuffer[write++] = snaps[0];
+            for (int i = 1; i < count; i++)
+            {
+                float chord = Vector3.Distance(snaps[i - 1], snaps[i]) * radiusScale;
+                int pieces = chord > cap ? Mathf.CeilToInt(chord / cap) : 1;
+                for (int k = 1; k < pieces; k++)
+                {
+                    // Slerp keeps unit snaps unit and radius-carrying snaps on the same radial blend.
+                    float t = (float)k / pieces;
+                    _metreCapBuffer[write++] = SlerpStable(snaps[i - 1], snaps[i], t);
+                }
+                _metreCapBuffer[write++] = snaps[i];
+            }
+            int final = Mathf.Min(write, limit);
+            Array.Copy(_metreCapBuffer, snaps, final);
+            return final;
+        }
+
         internal static int LongerSnapLineNonAlloc(PlanetGrid planetGrid, Vector3 begin, Vector3 end, int path, Vector3[] snaps, out int swerveIndex)
         {
             if (!longerOnGrid)
@@ -48,6 +142,7 @@ namespace BlueprintBeltSaver
                 return 0;
             }
 
+            float radiusScale = begin.magnitude; // real radius incl. altitude, before Normalize
             begin.Normalize();
             end.Normalize();
             float beginLatitude = Mathf.Asin(begin.y);
@@ -130,7 +225,7 @@ namespace BlueprintBeltSaver
                     0f - cosLatitude * Mathf.Cos(targetLongitude));
                 if ((endNormalized - corner).magnitude < 0.00251f)
                 {
-                    return count;
+                    return EnforceMetreCap(snaps, count, radiusScale, limit);
                 }
                 for (int j = 1; j <= latitudeSnaps; j++)
                 {
@@ -138,9 +233,9 @@ namespace BlueprintBeltSaver
                     {
                         break;
                     }
-                    snaps[count++] = Vector3.Slerp(corner, endNormalized, (float)j / latitudeSnaps).normalized;
+                    snaps[count++] = SlerpStable(corner, endNormalized, (float)j / latitudeSnaps);
                 }
-                return count;
+                return EnforceMetreCap(snaps, count, radiusScale, limit);
             }
             else
             {
@@ -171,7 +266,7 @@ namespace BlueprintBeltSaver
                     {
                         break;
                     }
-                    snaps[count++] = Vector3.Slerp(beginNormalized, corner, (float)k / latitudeSnaps).normalized;
+                    snaps[count++] = SlerpStable(beginNormalized, corner, (float)k / latitudeSnaps);
                 }
                 swerveIndex = count;
                 if (Mathf.Abs(deltaLongitude) / 1.2566370614357f * segmentCount < 0.4f)
@@ -190,7 +285,7 @@ namespace BlueprintBeltSaver
                         Mathf.Sin(endLatitude),
                         0f - cosLatitude * Mathf.Cos(longitude));
                 }
-                return count;
+                return EnforceMetreCap(snaps, count, radiusScale, limit);
             }
         }
 
@@ -202,6 +297,7 @@ namespace BlueprintBeltSaver
             Vector3 endNormalized = end.normalized;
             float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(beginNormalized, endNormalized), -1f, 1f));
             float geodesicDistance = angle * maxRadius;
+            float radiusScale = begin.magnitude; // unit-snaps exits scale chords by the real radius
             float nodesCount;
             int snapCount;
 
@@ -226,6 +322,7 @@ namespace BlueprintBeltSaver
                         // 1.5.3 correction: the start node must keep the real start radius.
                         snaps[0] = beginNormalized * beginMagnitude;
                         snaps[counts++] = beginNormalized * endMagnitude;
+                        counts = EnforceMetreCap(snaps, counts, 1f, maxSnapsLength);
                         return false;
                     }
                 }
@@ -233,7 +330,7 @@ namespace BlueprintBeltSaver
                 {
                     for (int i = 0; i <= snapCount && counts < maxSnapsLength; i++)
                     {
-                        snaps[counts++] = Vector3.Slerp(beginNormalized, endNormalized, (float)i / snapCount).normalized;
+                        snaps[counts++] = SlerpStable(beginNormalized, endNormalized, (float)i / snapCount);
                     }
                 }
                 if (counts < 2)
@@ -245,6 +342,7 @@ namespace BlueprintBeltSaver
                 {
                     snaps[j] *= beginMagnitude * (counts - 1 - j) / (counts - 1) + endMagnitude * (float)j / (counts - 1);
                 }
+                counts = EnforceMetreCap(snaps, counts, 1f, maxSnapsLength);
                 return false;
             }
 
@@ -263,9 +361,10 @@ namespace BlueprintBeltSaver
             {
                 for (int k = 0; k <= snapCount && counts < maxSnapsLength; k++)
                 {
-                    snaps[counts++] = Vector3.Slerp(beginNormalized, endNormalized, (float)k / snapCount).normalized;
+                    snaps[counts++] = SlerpStable(beginNormalized, endNormalized, (float)k / snapCount);
                 }
             }
+            counts = EnforceMetreCap(snaps, counts, radiusScale, maxSnapsLength);
             return true;
         }
 

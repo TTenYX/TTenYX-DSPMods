@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>BeltCapVerify</AssemblyName>
+    <GameManaged>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed</GameManaged>
+    <ModDll>$(MSBuildThisFileDirectory)../../bin/Release/netstandard2.1/BlueprintBeltSaver.dll</ModDll>
+  </PropertyGroup>
+  <!-- 不链接生产源码：只反射调用构建 DLL，保证验证的是部署产物。
+       BlueprintBeltSaver 引用 Private=true 复制到输出目录，直接从 BaseDirectory 加载。 -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(GameManaged)/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManaged)/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="BlueprintBeltSaver"><HintPath>$(ModDll)</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+</Project>
