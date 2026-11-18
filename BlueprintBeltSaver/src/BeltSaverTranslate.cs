@@ -1,4 +1,4 @@
-﻿namespace BlueprintBeltSaver
+namespace BlueprintBeltSaver
 {
     /// <summary>
     /// F2 window and F4 dialog text. Wording follows the plan; the two gridline span labels use the
@@ -13,6 +13,8 @@
         internal string LongitudeDistance;
         internal string LatitudeDistance;
         internal string DistanceSetting;
+        internal string PathModeOriginal;
+        internal string PathModeIsometric;
         internal string PathMode;
         internal string[] PathModeStrings;
         internal string WarningNotice;
@@ -122,10 +124,12 @@
             {
                 text.Title = "蓝图省带 BlueprintBeltSaver";
                 text.IfLongerOnGrid = "更改经纬线模式默认跨度";
-                text.LongitudeDistance = "沿纬线最远距离";
-                text.LatitudeDistance = "沿经线最远距离";
-                text.DistanceSetting = "最远距离";
-                text.PathMode = "传送带路径";
+                text.LongitudeDistance = "沿纬线最远距离（格）";
+                text.LatitudeDistance = "沿经线最远距离（格）";
+                text.DistanceSetting = "最远距离（米）";
+                text.PathMode = "传送带路径（二选一）";
+                text.PathModeOriginal = "原版升降逻辑（水平移动一格后每节升降 0.5 层）";
+                text.PathModeIsometric = "垂直等距分割（端点不水平，需先在两端拉好水平带）";
                 text.PathModeStrings = new[]
                 {
                     "原版升降逻辑(水平移动一格后每节升降0.5层至目标高度)",
@@ -135,7 +139,7 @@
                 text.UnlimitInstruction = "勾选以启用弱约束间距(常规游戏中会出现传送带过短或过长等错误)";
                 text.CapLinkage = "最远距离只影响徒手拉带；蓝图长带优化使用下方的蓝图合并上限。";
                 text.CurrentCap = "当前蓝图优化间距上限";
-                text.BlueprintCap = "蓝图合并单段上限";
+                text.BlueprintCap = "蓝图合并单段上限（米）";
                 text.BlueprintCapDesc = "独立于徒手拉带。默认取游戏硬上限 2.301172 m（长带化收益最大）；调低更保守，但会留下更多 1 格带无法合并。";
                 text.CapFromBlueprint = "来源：蓝图合并上限（本 MOD）";
                 text.Disabled = "本 MOD 已在配置中禁用（General/Enabled = false）。";
@@ -212,10 +216,12 @@
             {
                 text.Title = "BlueprintBeltSaver";
                 text.IfLongerOnGrid = "Change default span in gridline mode";
-                text.LongitudeDistance = "Longitude Span";
-                text.LatitudeDistance = "Latitude Span";
+                text.LongitudeDistance = "Longitude Span (grids)";
+                text.LatitudeDistance = "Latitude Span (grids)";
                 text.DistanceSetting = "Maximum Spacing (meters)";
-                text.PathMode = "Belt Path Mode";
+                text.PathMode = "Belt Path Mode (pick one)";
+                text.PathModeOriginal = "Vanilla rise/fall (0.5 level per horizontal grid)";
+                text.PathModeIsometric = "Vertical even segmentation (endpoints not level; draw level belts at both ends first)";
                 text.PathModeStrings = new[]
                 {
                     "Original elevating logic (moving horizontally one grid and changing\nelevation by 0.5 units per segment to reach the target height)",
@@ -225,7 +231,7 @@
                 text.UnlimitInstruction = "Ignore the minimum belt distance (short or over-long belts can occur in vanilla).";
                 text.CapLinkage = "Maximum Spacing affects hand-drawn belts only; blueprint merging uses the blueprint merge cap below.";
                 text.CurrentCap = "Current blueprint merge spacing cap";
-                text.BlueprintCap = "Blueprint merge cap";
+                text.BlueprintCap = "Blueprint merge cap (meters)";
                 text.BlueprintCapDesc = "Independent of hand-drawn belts. Defaults to the game hard limit 2.301172 m (maximum merging); lowering it is more conservative but leaves more 1-grid belts unmerged.";
                 text.CapFromBlueprint = "source: blueprint merge cap (this mod)";
                 text.Disabled = "This mod is disabled (General/Enabled = false).";

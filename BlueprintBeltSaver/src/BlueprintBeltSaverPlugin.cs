@@ -619,7 +619,19 @@ namespace BlueprintBeltSaver
             }
             GUILayout.Label(_text.GridExactMergingDesc, desc);
             GUILayout.Label(_text.PathMode, big);
-            LongerBeltPath.isometricSegmentation = GUILayout.SelectionGrid(LongerBeltPath.isometricSegmentation, _text.PathModeStrings, 1);
+            // 互斥勾选框（替代原 SelectionGrid，避免被误解成两个独立按钮）：
+            // 内部是单个整型配置 0/1，点击当前已勾选项不产生变化，任何时刻恰好一项被选中。
+            bool vanillaMode = LongerBeltPath.isometricSegmentation == 0;
+            if (GUILayout.Toggle(vanillaMode, _text.PathModeOriginal, toggle) && !vanillaMode)
+            {
+                LongerBeltPath.isometricSegmentation = 0;
+            }
+            bool isometricMode = LongerBeltPath.isometricSegmentation == 1;
+            if (GUILayout.Toggle(isometricMode, _text.PathModeIsometric, toggle) && !isometricMode)
+            {
+                LongerBeltPath.isometricSegmentation = 1;
+            }
+            GUILayout.Label(_text.PathModeStrings[Mathf.Clamp(LongerBeltPath.isometricSegmentation, 0, 1)], desc);
             GUILayout.Label(_text.WarningNotice, desc);
             LongerBeltPath.shortestUnlimit = GUILayout.Toggle(LongerBeltPath.shortestUnlimit, _text.UnlimitInstruction, toggle);
 
