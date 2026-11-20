@@ -31,16 +31,21 @@ namespace BlueprintBeltSaver
 
         internal sealed class Report
         {
-            internal int Inserters, Ends, EmptyBefore, Rebond, Unresolved, Verified, MachineEnds;
+            internal int Inserters, Ends, EmptyBefore, Rebond, Unresolved, Verified, MachineEnds, SameLinePreferred, CrossLine, BaselineKept;
             public override string ToString() =>
-                $"分拣器 {Inserters} 个，端点 {Ends} 个：原有空端 {EmptyBefore}，机器端 {MachineEnds}（不改动），重新绑定 {Rebond}，无可绑定 {Unresolved}，原连接校验通过 {Verified}";
+                $"分拣器 {Inserters} 个，端点 {Ends} 个：原有空端 {EmptyBefore}，机器端 {MachineEnds}（不改动），重新绑定 {Rebond}，无可绑定 {Unresolved}，原连接校验通过 {Verified}"
+                + (BaselineKept > 0 ? $"，基线保留 {BaselineKept}" : "")
+                + (SameLinePreferred > 0 ? $"，同线优先 {SameLinePreferred}" : "")
+                + (CrossLine > 0 ? $"，跨线重绑 {CrossLine}" : "");
         }
 
         internal static bool IsBeltItem(int itemId) => itemId >= 2001 && itemId <= 2009;
         internal static bool IsInserterItem(int itemId) => itemId > 2010 && itemId < 2020;
 
         internal static Report Repair(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt,
-            Func<BlueprintBuilding, BlueprintBuilding, double> meters)
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters,
+            Func<BlueprintBuilding, int> lineOf = null,
+            Func<BlueprintBuilding, bool, BlueprintBuilding, bool> isBaselineLink = null)
         {
             var report = new Report();
             if (buildings == null)
@@ -67,15 +72,17 @@ namespace BlueprintBeltSaver
                 report.EmptyBefore += (wasEmptyInput ? 1 : 0) + (wasEmptyOutput ? 1 : 0);
 
                 report.Ends += 2;
-                inserter.inputObj = Resolve(inserter, inserter.inputObj, true, belts, all, isBelt, meters, report);
-                inserter.outputObj = Resolve(inserter, inserter.outputObj, false, belts, all, isBelt, meters, report);
+                inserter.inputObj = Resolve(inserter, inserter.inputObj, true, belts, all, isBelt, meters, report, lineOf, isBaselineLink);
+                inserter.outputObj = Resolve(inserter, inserter.outputObj, false, belts, all, isBelt, meters, report, lineOf, isBaselineLink);
             }
             return report;
         }
 
         private static BlueprintBuilding Resolve(BlueprintBuilding inserter, BlueprintBuilding current, bool isInput,
             BlueprintBuilding[] belts, HashSet<BlueprintBuilding> all, Func<BlueprintBuilding, bool> isBelt,
-            Func<BlueprintBuilding, BlueprintBuilding, double> meters, Report report)
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters, Report report,
+            Func<BlueprintBuilding, int> lineOf = null,
+            Func<BlueprintBuilding, bool, BlueprintBuilding, bool> isBaselineLink = null)
         {
             if (current != null && all.Contains(current) && !isBelt(current))
             {
@@ -83,14 +90,36 @@ namespace BlueprintBeltSaver
                 report.MachineEnds++;
                 return current;
             }
-            if (current != null && all.Contains(current) && isBelt(current) && IsCompatible(inserter, current, isBelt, meters))
+            if (current != null && all.Contains(current) && isBelt(current))
             {
-                report.Verified++;
-                return current;
+                // 004.15：基线（优化前快照）就存在、目标仍存活且对象未变的引用——一律保留。
+                // 原几何是游戏验证过的（如分流器 2 格顺带取放，投影 t=-2 不满足分拣器覆盖
+                // 容差但完全合法）；优化器没动它，binder 替游戏"修正"只会制造跨线
+                // （1080 分流器#1971 实证：基线→(113,18) 被误判失效 → 重绑到 (110,19.5) 的
+                // 别线同位新节点 → 拓扑门禁整单拦截）。
+                if (isBaselineLink != null && isBaselineLink(inserter, isInput, current))
+                {
+                    report.Verified++;
+                    report.BaselineKept++;
+                    return current;
+                }
+                if (IsCompatible(inserter, current, isBelt, meters))
+                {
+                    report.Verified++;
+                    return current;
+                }
             }
+
+            // 004.12-c 线感知（准则⑦）：重绑优先落在**原目标同一条基线线路**上——密集平行带
+            // 场景下全局最近候选可能是邻线节点（1080 分流器#238 实证：44 线 → 36 线，游戏会把
+            // 分拣器吸到别的物品条）。lineOf 把任意结果节点（幸存/新增）映射回基线线路号；
+            // 无同线候选时才回退全局就近（旧行为）。
+            int wantLine = lineOf != null && current != null ? lineOf(current) : -1;
 
             BlueprintBuilding best = null;
             double bestScore = double.MaxValue;
+            BlueprintBuilding bestSameLine = null;
+            double bestSameLineScore = double.MaxValue;
             foreach (var candidate in belts)
             {
                 if (ReferenceEquals(candidate, current))
@@ -103,6 +132,18 @@ namespace BlueprintBeltSaver
                     bestScore = score;
                     best = candidate;
                 }
+                if (wantLine >= 0 && lineOf != null && lineOf(candidate) == wantLine && score < bestSameLineScore)
+                {
+                    bestSameLineScore = score;
+                    bestSameLine = candidate;
+                }
+            }
+            if (bestSameLine != null)
+            {
+                // 同线候选存在：即使它分数略差也优先（跨线的代价是分拣器吸错物品条，不可接受）。
+                report.Rebond++;
+                report.SameLinePreferred++;
+                return bestSameLine;
             }
             if (best == null)
             {
@@ -117,6 +158,12 @@ namespace BlueprintBeltSaver
             }
             if (best != null)
             {
+                // 004.15 跨线记账：无同线候选时的就近兜底就是跨线源（准则⑦拓扑门禁据此整单
+                // 拦截、保留原件）。计数进报告，供离线矩阵/A 导出判定直接读出风险端点数。
+                if (wantLine >= 0 && lineOf != null && lineOf(best) != wantLine)
+                {
+                    report.CrossLine++;
+                }
                 report.Rebond++;
                 return best;
             }
@@ -305,6 +352,60 @@ namespace BlueprintBeltSaver
                 delta += 360.0;
             }
             return delta;
+        }
+
+        /// <summary>
+        /// 004.15 优化器侧兼容守卫（与 <see cref="IsCompatible"/> 同判据），供 BuildRebinds 在
+        /// 重绑生效前预判：跨度由链序邻居显式给出（替换链在提交前尚未互连引用）。
+        /// 判不过 → binder 会二次重绑，密集平行带处无同线候选时就近兜底即跨线（准则⑦门禁
+        /// 整单拦截，1080 分流器#1971 实证：基线#40 → 结果#36）。调用方应改走 restoreIdx
+        /// 回插原目标（引用原样保留 → 永远同线，原几何在游戏里验证过）。
+        /// </summary>
+        internal static bool RebindCompatible(BlueprintBuilding owner, BlueprintBuilding node,
+            BlueprintBuilding prev, BlueprintBuilding next,
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters)
+        {
+            double distance = meters(owner, node);
+            if (double.IsNaN(distance) || distance > ValidationReachMeters)
+            {
+                return false;
+            }
+            double best = double.MaxValue;
+            // 与 CoverageWithin(ValidationStartTolerance, ValidationEndTolerance) 同口径：
+            // owner 投影须落在 (prev→node) 或 (node→next) 跨度的容差区间内。
+            if (prev != null)
+            {
+                best = Math.Min(best, SpanOvershoot(owner, prev, node));
+            }
+            if (next != null)
+            {
+                best = Math.Min(best, SpanOvershoot(owner, node, next));
+            }
+            // 与 CoverageWithin 同口径：任一跨度在容差内即通过；否则仅「无后继的行尾节点」
+            // 按距离口径接受（对应 CoverageWithin 尾部的 50.0 兜底），其余拒绝。
+            if (best < double.MaxValue)
+            {
+                return true;
+            }
+            return next == null;
+        }
+
+        /// <summary>owner 在 (head→tail) 跨度上的投影越界量；区间外越界或零长跨度 = MaxValue。</summary>
+        private static double SpanOvershoot(BlueprintBuilding n, BlueprintBuilding head, BlueprintBuilding tail)
+        {
+            double dx = tail.localOffset_x - head.localOffset_x;
+            double dy = tail.localOffset_y - head.localOffset_y;
+            double lengthSquared = dx * dx + dy * dy;
+            if (lengthSquared < 1e-9)
+            {
+                return double.MaxValue;
+            }
+            double t = ((n.localOffset_x - head.localOffset_x) * dx + (n.localOffset_y - head.localOffset_y) * dy) / lengthSquared;
+            if (t < -ValidationStartTolerance || t > 1.0 + ValidationEndTolerance)
+            {
+                return double.MaxValue;
+            }
+            return t < 0 ? -t : (t > 1 ? t - 1 : 0);
         }
 
         /// <summary>

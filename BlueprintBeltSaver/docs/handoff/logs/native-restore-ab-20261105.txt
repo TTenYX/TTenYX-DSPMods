@@ -1,0 +1,32 @@
+RestoreCheck 2026-11-05 20:01:34
+  SEMANTIC-IDENTICAL 1080传送带+360分拣器
+PASS compare:1080传送带+360分拣器
+  SEMANTIC-IDENTICAL 1440太阳帆（低效）v1.1
+PASS compare:1440太阳帆（低效）v1.1
+  SEMANTIC-IDENTICAL 1440太阳帆（高效）
+PASS compare:1440太阳帆（高效）
+  SEMANTIC-IDENTICAL 16.4小火箭
+PASS compare:16.4小火箭
+  SEMANTIC-IDENTICAL 2880太阳帆（高效）
+PASS compare:2880太阳帆（高效）
+  SEMANTIC-IDENTICAL 37.5小火箭 （需求氘棒）
+PASS compare:37.5小火箭 （需求氘棒）
+  SEMANTIC-IDENTICAL 65.6低效火箭
+PASS compare:65.6低效火箭
+  SEMANTIC-IDENTICAL 6k太阳帆
+PASS compare:6k太阳帆
+  SEMANTIC-IDENTICAL 80环带
+PASS compare:80环带
+  SEMANTIC-IDENTICAL B.150紫糖（刺笋）
+PASS compare:B.150紫糖（刺笋）
+  SEMANTIC-IDENTICAL B.150紫糖（可燃冰）
+PASS compare:B.150紫糖（可燃冰）
+  SEMANTIC-IDENTICAL C1.150绿糖
+PASS compare:C1.150绿糖
+  SEMANTIC-IDENTICAL C2-60-120-240反物质燃料棒（黑棒）
+PASS compare:C2-60-120-240反物质燃料棒（黑棒）
+  SEMANTIC-IDENTICAL 复原测试用例001
+PASS compare:复原测试用例001
+  SEMANTIC-IDENTICAL 长带测试图01
+PASS compare:长带测试图01
+SUMMARY PASS=15 FAIL=0 REFUSED=0 EXIT=0

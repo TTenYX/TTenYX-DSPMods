@@ -1,0 +1,20 @@
+addon prefab dump 2026-11-04 23:02:12
+item 2030 流速监测器 model=208 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0,0,1) col.pos=(0,0,0) col.rot=(0,0,0,1) col.fwd=(0,0,1) size=(0.3,0.1,0.7)
+item 2313 喷涂机 model=120 addonType=Belt areas=2 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0,0,1) col.pos=(0,0,-0.25) col.rot=(0,0,0,1) col.fwd=(0,0,1) size=(0.3,0.1,2.4)
+  [1] pose.pos=(0,1.3333,-1.25) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,1.3333,-1.25) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.3,0.1,0.7)
+item 2107 物流配送器 model=371 addonType=Storage areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0,0,1) col.pos=(0,0,0) col.rot=(0,0,0,1) col.fwd=(0,0,1) size=(0.5,0.5,0.5)
+item 3001 高斯机枪塔 model=374 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.5,0.099999994,1.258)
+item 3003 聚爆加农炮 model=375 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.6,0.099999994,2.516)
+item 3004 磁化电浆炮 model=408 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.5,0.1,2.516)
+item 3005 导弹防御塔 model=407 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.55,0.099999994,2.6)
+item 3006 干扰塔 model=422 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.5500005,0.099999994,2.60000181)
+item 3010 近程电浆塔 model=482 addonType=Belt areas=1 isBelt=False
+  [0] pose.pos=(0,0,0) pose.rot=(0,0.7071068,0,0.7071068) col.pos=(0,0.1,0) col.rot=(0,0.7071068,0,0.7071068) col.fwd=(1.00000012,0,-1.1920929E-07) size=(0.5,0.099999994,1.258)

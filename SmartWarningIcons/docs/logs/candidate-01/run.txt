@@ -1,0 +1,8 @@
+MOD SHA256=342A9626D688EC0CEF3213BC196AB65477466220A1822D6D104D6277922E4DC2; deployed copy identical; four assets identical
+Game Assembly-CSharp SHA256=EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C
+Sandbox=C:\Users\Administrator\AppData\Local\Temp\SmartWarningIcons-07de5e0df9944ce59416a71545a0ffd0
+START pid=46732 time=2026-11-20T07:23:28.9651599+08:00
+EXIT pid=46732 code=1 time=2026-11-20T07:25:41.3829757+08:00
+FAIL Game self-test failed.
+Sandbox removed; original installation, r2modman profile and saves not written by runner.
+RESULT FAIL

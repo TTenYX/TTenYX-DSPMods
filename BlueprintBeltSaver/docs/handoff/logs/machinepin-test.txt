@@ -1,0 +1,49 @@
+﻿=== 0.长带测试\C1.150绿糖.txt ===
+    [build-order] 首个非带建筑位 1506（带节点共 1506），违例 0 处
+C1.150绿糖.txt @按原始纬度（锚点 72.00°）：2190 → 1506（省 684）；最坏新链节 2.2533 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 93.84 ms / 合并 14.42 ms / 校验 10.33 ms / 合计 118.73 ms
+    区域0 分段160 第2带 节点纬度72.00°~89.64°（跨7带） 每x单位62.8947~4.1930 m；区域0:分段160→第2纬度带(28.98°~46.98°)，节点纬度 72.00°~89.64°（跨7带），每x单位 62.8947~4.1930 m；按蓝图自身锚点纬度 72.000°（位置未知）；证据链节 2134 条，最长原件链节 2.2771 m；跨纬带；路径 499（已优化 499），固定点 568
+    [build-order] 首个非带建筑位 1551（带节点共 1551），违例 0 处
+C1.150绿糖.txt @赤道附近0.5°（锚点 0.50°）：2190 → 1551（省 639）；最坏新链节 2.2516 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 3.22 ms / 合并 17.86 ms / 校验 8.86 ms / 合计 29.95 ms
+    区域0 分段160 第2带 节点纬度0.50°~18.14°（跨1带） 每x单位1.2579~1.2579 m；区域0:分段160→第2纬度带(28.98°~46.98°)，节点纬度 0.50°~18.14°（跨1带），每x单位 1.2579~1.2579 m；按本次粘贴位置 0.500°，num=0（纬向+1 经向+1），锚点纬度 0.500°；证据链节 2134 条，最长原件链节 2.0041 m；路径 499（已优化 499），固定点 568
+=== 0.长带测试\16.4小火箭.txt ===
+    [build-order] 首个非带建筑位 1492（带节点共 1492），违例 0 处
+16.4小火箭.txt @按原始纬度（锚点 75.00°）：2307 → 1492（省 815）；最坏新链节 2.2400 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 82.40 ms / 合并 12.62 ms / 校验 14.05 ms / 合计 109.23 ms
+    区域0 分段200 第1带 节点纬度75.00°~88.68°（跨7带） 每x单位62.8947~4.1930 m；区域0:分段200→第1纬度带(0.00°~28.98°)，节点纬度 75.00°~88.68°（跨7带），每x单位 62.8947~4.1930 m；按蓝图自身锚点纬度 75.000°（位置未知）；证据链节 2253 条，最长原件链节 2.0712 m；跨纬带；路径 408（已优化 408），固定点 462
+    [build-order] 首个非带建筑位 1490（带节点共 1490），违例 0 处
+16.4小火箭.txt @赤道附近0.5°（锚点 0.50°）：2307 → 1490（省 817）；最坏新链节 2.2509 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 3.27 ms / 合并 17.02 ms / 校验 11.92 ms / 合计 32.21 ms
+    区域0 分段200 第1带 节点纬度0.50°~14.18°（跨1带） 每x单位1.2579~1.2579 m；区域0:分段200→第1纬度带(0.00°~28.98°)，节点纬度 0.50°~14.18°（跨1带），每x单位 1.2579~1.2579 m；按本次粘贴位置 0.500°，num=0（纬向+1 经向+1），锚点纬度 0.500°；证据链节 2253 条，最长原件链节 1.9074 m；路径 408（已优化 408），固定点 462
+=== 0.长带测试\B.150紫糖（刺笋）.txt ===
+    [build-order] 首个非带建筑位 817（带节点共 817），违例 0 处
+B.150紫糖（刺笋）.txt @按原始纬度（锚点 70.00°）：1097 → 817（省 280）；最坏新链节 2.2512 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 44.43 ms / 合并 3.07 ms / 校验 6.16 ms / 合计 53.82 ms
+    区域0 分段200 第1带 节点纬度70.00°~85.12°（跨6带） 每x单位15.7237~3.1447 m；区域0:分段200→第1纬度带(0.00°~28.98°)，节点纬度 70.00°~85.12°（跨6带），每x单位 15.7237~3.1447 m；按蓝图自身锚点纬度 70.000°（位置未知）；证据链节 1026 条，最长原件链节 2.2223 m；跨纬带；路径 193（已优化 193），固定点 233
+    [build-order] 首个非带建筑位 812（带节点共 812），违例 0 处
+B.150紫糖（刺笋）.txt @赤道附近0.5°（锚点 0.50°）：1097 → 812（省 285）；最坏新链节 2.2512 m，越限新链节 0，越限全部 0；空端 0，悬空 0；模型 0.40 ms / 合并 2.44 ms / 校验 4.52 ms / 合计 7.37 ms
+    区域0 分段200 第1带 节点纬度0.50°~15.62°（跨1带） 每x单位1.2579~1.2579 m；区域0:分段200→第1纬度带(0.00°~28.98°)，节点纬度 0.50°~15.62°（跨1带），每x单位 1.2579~1.2579 m；按本次粘贴位置 0.500°，num=0（纬向+1 经向+1），锚点纬度 0.500°；证据链节 1026 条，最长原件链节 1.9490 m；路径 193（已优化 193），固定点 233
+=== 0.长带测试\三糖180.txt ===
+  [提示] 游戏解析返回空蓝图，改用自定义解析。
+Checks.exe : Unhandled exception. System.IO.FileNotFoundException: Could not find file 'D:\Game\DSP\Dyson Sphere Progra
+m\Blueprint\0.长带测试\三糖180.txt'.
+At line:1 char:541
++ ...  utf8 $out; & $chk --one "$bp\$f" 2.3 rebind resample proj 2>&1 | Out ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Unhandled excep...带测试\三糖180.txt'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+File name: 'D:\Game\DSP\Dyson Sphere Program\Blueprint\0.长带测试\三糖180.txt'
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShar
+e share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare shar
+e, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, F
+ileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShar
+e share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.StreamReader.ValidateArgsAndOpenPath(String path, Encoding encoding, Int32 bufferSize)
+   at System.IO.File.ReadAllText(String path, Encoding encoding)
+   at RealBlueprintChecks.Load(String filename, BlueprintArea[]& areas) in X:\戴森球计划\【MOD】修改仓库\.work\belt-regression\Rea
+lBlueprintChecks.cs:line 24
+   at PastePositionRegression.One(String file, Double cap, String positionLabel, Nullable`1 anchorDeg, Boolean rebind, 
+Boolean gridExact, Boolean proj) in X:\戴森球计划\【MOD】修改仓库\.work\belt-regression\PastePositionRegression.cs:line 163
+   at PastePositionRegression.One(String file, Double cap, Boolean rebind, Boolean gridExact, Boolean proj) in X:\戴森球计划
+\【MOD】修改仓库\.work\belt-regression\PastePositionRegression.cs:line 86
+   at Program.Main(String[] args) in X:\戴森球计划\【MOD】修改仓库\.work\belt-regression\Program.cs:line 10

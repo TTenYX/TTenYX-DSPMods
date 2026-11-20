@@ -1,0 +1,19 @@
+﻿REAL buildings=2371 areas=[{"index":0,"areaSegments":200,"tropicAnchor":0}]
+REAL belts=1640 params=21 nonzero=21
+REAL attachment anchors=446
+PASS REAL all external attachment positions/ports and 21 tower mouths unchanged
+PASS REAL native serialization and second optimization stable
+REAL result=1640 路径 990，已优化 0，无需减少 990，固定点 1035，异常连接 0，重绑附属连接 0，因朝向不一致跳过 0，修正越界偏移 0
+PASS input-only topology normalized and optimized
+PASS both sides of mixed-model boundary optimize
+PASS floating point noise retains polyline and reduces
+PASS 3D slope distance and endpoint retention
+PASS asymmetric external input, zero and nonzero parameters
+PASS gently curved path resamples original polyline
+PASS excessive radius retains paths that cannot reduce safely
+PASS latitude-band spacing bounds in meters
+PASS straight 10 -> 4, endpoints and game Export/Import
+PASS U path 16 -> 16, all three sides and four anchors
+PASS square 40 -> 22, four corners, shuffled order, closed cycle, roundtrip
+PASS square 40 -> 22, four corners, shuffled order, closed cycle, roundtrip
+PASS junction and sorter attachments

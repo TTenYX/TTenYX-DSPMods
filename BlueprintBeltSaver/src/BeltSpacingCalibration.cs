@@ -920,61 +920,33 @@ namespace BlueprintBeltSaver
             return ClampLat(model.RefLatOf(building.areaIndex) + signLat * latAxis * LatPerGrid);
         }
 
-        /// <summary>沿 x 积分时的采样步长（格）。0.25 格 ≈ 0.09°，比游戏自己的纬度分带细 4 倍以上。</summary>
-        private const double LongitudeSampleGrids = 0.25;
-
         /// <summary>
-        /// 两节点之间的经度差（弧度）。
+        /// 两节点之间的经度差（弧度），与游戏 RefreshBuildPreview 1948-1953 行同式：
+        /// <c>lon = num32 + x' × GetLongitudeRadPerGrid(num33) × num2</c>，其中 num32/num33 是**节点所属
+        /// 区域**的参考经度/参考纬度，x' 为换轴后的经向坐标（TransitionWidthAndHeight）。
         ///
-        /// 游戏侧是 <c>lon = refLon + lonSign * x * GetLongitudeRadPerGrid(节点纬度)</c>，而
-        /// <c>GetLongitudeRadPerGrid</c> 又按**节点纬度查分段表**：离极点越近一圈格数越多、每格越窄。
-        /// 所以经度必须**沿 x 积分**，不能用"x × 某一处的格宽"。
-        ///
-        /// 上一版用"x × 端点格宽"：带边界上会跳一下——实测 6k 里 x≈599 上的相邻两点（x 差 0.001）
-        /// 因为两端落在 400 格/圈与 300 格/圈两个带里，被算成相隔 175°，距离虚报成 391 m。
-        /// 那条假链节又触发"越限邻域固定"与合并拒绝，是"绝大部分传送带无法长带化"的直接来源之一。
-        /// 这里在两点之间以 0.25 格步长累加：单格误差 &lt; 1 mm 量级，且带边界不再产生跳变。
+        /// 004.17 修正：经度格宽只由区域参考纬度决定，同一区域所有节点共用（换轴时亦然）。旧实现
+        /// 按节点纬度查表/沿纬度积分，节点落在区域格框外时与游戏不符——6k太阳帆 区域0 框高 3 行、
+        /// 节点铺满 131 行，赤道端游戏是 2.096 m/格、旧模型算成 1.258 m/格，004.16 产物因此在它的
+        /// 合法姿态上有 206 条越限（tools/abprobe --pasteaudit 游戏同式审计实证）。原件 6k 的经度
+        /// 接缝（x=599.48 → -0.47）只有按区域格宽才能闭合，反过来印证了游戏口径。
+        /// 跨区域链节两端各用自己区域的格宽，参考经度差（已含经向符号）只取模一次。
+        /// 同一区域内**不做任何取模**：积分是 x 的严格单调函数，绕完整圈的接缝由三角函数自然折叠。
         /// </summary>
         private static double LongitudeBetween(Result model, BlueprintBuilding a, BlueprintBuilding b,
             bool swap, double signLat, double signLon, double latitudeA, double latitudeB)
         {
+            _ = signLat; _ = latitudeA; _ = latitudeB;
             double xa = swap ? a.localOffset_y : a.localOffset_x;
             double xb = swap ? b.localOffset_y : b.localOffset_x;
-            double delta = IntegralLongitude(model, a.areaIndex, xa, xb, swap, signLat, latitudeA, latitudeB);
-            if (a.areaIndex != b.areaIndex)
+            double widthA = LonRadPerGridFast(model.RefLatOf(a.areaIndex));
+            if (a.areaIndex == b.areaIndex)
             {
-                delta += Math.IEEERemainder(model.RefLonOf(b.areaIndex) - model.RefLonOf(a.areaIndex), 2.0 * Math.PI);
+                return signLon * (xb - xa) * widthA;
             }
-            return delta * signLon;
-        }
-
-        /// <summary>沿 x 从 xFrom 到 xTo 累加每格经度（同一区域内）。</summary>
-        private static double IntegralLongitude(Result model, int areaIndex, double xFrom, double xTo,
-            bool swap, double signLat, double latitudeA, double latitudeB)
-        {
-            double refLat = model.RefLatOf(areaIndex);
-            double span = xTo - xFrom;
-            if (Math.Abs(span) < 1e-9)
-            {
-                return 0.0;
-            }
-            if (!swap)
-            {
-                // 非换轴时纬度只由 y 决定，两端 y 相同 → 纬度沿 x 是常数，直接用该常数格宽。
-                return span * LonRadPerGridFast(latitudeA);
-            }
-            // 换轴时局地 x 轴就是纬度轴，格宽沿 x 变化，必须逐步积分。
-            int steps = Math.Max(1, (int)Math.Ceiling(Math.Abs(span) / LongitudeSampleGrids));
-            double step = span / steps;
-            double sum = 0.0;
-            for (int i = 0; i < steps; i++)
-            {
-                double sample = xFrom + step * (i + 0.5);
-                double latitude = ClampLat(refLat + signLat * sample * LatPerGrid);
-                sum += LonRadPerGridFast(latitude);
-            }
-            _ = latitudeB;
-            return sum * step;
+            double widthB = LonRadPerGridFast(model.RefLatOf(b.areaIndex));
+            return Math.IEEERemainder(model.RefLonOf(b.areaIndex) - model.RefLonOf(a.areaIndex), 2.0 * Math.PI)
+                + signLon * (xb * widthB - xa * widthA);
         }
 
         /// <summary>

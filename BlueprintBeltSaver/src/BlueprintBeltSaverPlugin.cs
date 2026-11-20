@@ -24,7 +24,7 @@ namespace BlueprintBeltSaver
     {
         public const string Guid = "com.dsp.blueprintbeltsaver";
         public const string Name = "BlueprintBeltSaver";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.4";
 
         private const int MaxBlueprintBuildings = 15000;
         private const int BeltItemIdFirst = 2001;
@@ -37,14 +37,18 @@ namespace BlueprintBeltSaver
         private ConfigEntry<bool> _enabled;
         private ConfigEntry<KeyboardShortcut> _hotkey;
         private ConfigEntry<float> _currentDistance;
-        private ConfigEntry<float> _longitudeDistance;
-        private ConfigEntry<float> _latitudeDistance;
+        private ConfigEntry<float> _blueprintMaxDistance;
         private ConfigEntry<bool> _longerOnGrid;
         private ConfigEntry<int> _slopePathMode;
         private ConfigEntry<bool> _shortestUnlimit;
         private ConfigEntry<bool> _rebindSorterLinks;
         private ConfigEntry<bool> _sorterForceRebind;
+        private ConfigEntry<bool> _modelAtPlayerPosition;
+        private ConfigEntry<bool> _crossLatitudeSafety;
+        private string _stateBlueprintKey = "";
         private ConfigEntry<bool> _gridExactMerging;
+        private ConfigEntry<bool> _restoreQuantizeHeight;
+        private ConfigEntry<bool> _restoreStrictGrid;
 
         private Harmony _harmony;
         private static FieldInfo _longerBeltsDistanceField;
@@ -58,7 +62,23 @@ namespace BlueprintBeltSaver
         private bool _f1Patched;
 
         private bool _windowVisible;
-        private Rect _windowRect = new Rect(280f, 150f, 560f, 420f);
+        private Rect _windowRect = new Rect(240f, 80f, 680f, 900f);
+        private UnityEngine.GUISkin _bigLabelSkin;
+        private Dictionary<int, GUIStyle> _bigLabelStyles;
+        private GUIStyle _bigToggleStyle;
+        private GUIStyle _bigSliderLabelStyle;
+        private GUIStyle _bigSectionStyle;
+        private GUIStyle _windowBgStyle;
+        private ConfigEntry<float> _uiFontSize;
+        private ConfigEntry<float> _uiWindowW;
+        private ConfigEntry<float> _uiWindowH;
+        private Vector2 _scrollPos;
+        private bool _resizing;
+        private GUIStyle _resizeHandleStyle;
+        private Vector2 _resizeStartMouse;
+        private float _resizeStartW;
+        private float _resizeStartH;
+        private float _bigFontSnapshot = -1f;
         private BeltSaverTranslate _text;
         private bool _textIsChinese;
         private string _status = "";
@@ -67,6 +87,11 @@ namespace BlueprintBeltSaver
         private GameObject _optimizeButton;
         private Text _optimizeButtonText;
         private Button _optimizeButtonButton;
+        private GameObject _restoreButton;
+        private Text _restoreButtonText;
+        private Button _restoreButtonButton;
+        private readonly Vector3[] _buttonWorldCorners = new Vector3[4];
+        private const float RestoreButtonGapPixels = 10f;
         private UIButton _anchoredAddFieldBtn;
         private bool _anchoredUnderAddField;
         private float _nextButtonTry;
@@ -76,6 +101,12 @@ namespace BlueprintBeltSaver
         private string _lastInjectWarning = "";
 
         private BlueprintData _pendingBlueprint;
+        private BlueprintData _pendingSourceBlueprint;
+        private BlueprintBuilding[] _pendingSourceBuildings;
+        private UIBlueprintInspector _pendingInspector;
+        private bool _pendingRestore;
+        private bool _pendingRestoreQuantizeHeight;
+        private bool _pendingRestoreStrictGrid;
         private string _pendingSummary = "";
         private float _pendingCap;
 
@@ -102,22 +133,30 @@ namespace BlueprintBeltSaver
             Log.Init(Logger);
             _enabled = Config.Bind("General", "Enabled", true, "总开关。关闭后不安装任何补丁，蓝图窗口的长带优化按钮也不生效。");
             _hotkey = Config.Bind("General", "WindowHotkey", new KeyboardShortcut(KeyCode.LeftAlt, KeyCode.B), "打开/关闭本 MOD 设置窗口的快捷键。格式：修饰键 + 主键，例如 LeftAlt + B、LeftControl + F8、None + F9。");
-            _currentDistance = Config.Bind("Belt", "CurrentDistance", 1.9f, "最远距离（米）。用于徒手拉带（测地线分段）；未安装 LongerBelts 时，同时作为蓝图长带优化的单段上限。取值范围 0.400001 ~ 2.301172。实测：极地蓝图 1.9 时省 7 段，2.301172 时省 20 段。");
-            _longitudeDistance = Config.Bind("Belt", "LongitudeDistance", 1.75f, "经纬线模式的沿纬线跨度（格）。范围 1 ~ 3，仅影响徒手拉带。");
-            _latitudeDistance = Config.Bind("Belt", "LatitudeDistance", 1.5f, "经纬线模式的沿经线跨度（格）。范围 1 ~ 3，仅影响徒手拉带。");
+            _currentDistance = Config.Bind("Belt", "CurrentDistance", 1.9f, "徒手拉带的最远距离（米）。只影响 F1 徒手拉带（测地线分段）。蓝图长带优化使用独立上限 BlueprintMaxDistance。取值范围 0.400001 ~ 2.301172。");
+            _blueprintMaxDistance = Config.Bind("Belt", "BlueprintMaxDistance", 2.301172f, "蓝图长带优化的单段上限（米）。独立于徒手拉带；默认取游戏硬上限 2.301172（长带化收益最大）。范围 0.400001 ~ 2.301172。调低可更保守，但会留下更多 1 格带无法合并。");
+            // 004.18：格数分段退役，这两个旧键保留在配置文件中并标注废弃（不再读取）。
+            Config.Bind("Belt", "LongitudeDistance", 1.75f, "已废弃（004.18 起经纬线拉带按实际米制长度均匀分段，此键不再读取；保留仅为兼容旧配置文件）。| Deprecated: gridline belt spacing is now metre-based; this key is no longer read (kept for config compatibility).");
+            Config.Bind("Belt", "LatitudeDistance", 1.5f, "已废弃（004.18 起经纬线拉带按实际米制长度均匀分段，此键不再读取；保留仅为兼容旧配置文件）。| Deprecated: gridline belt spacing is now metre-based; this key is no longer read (kept for config compatibility).");
             _longerOnGrid = Config.Bind("Belt", "LongerOnGrid", false, "开启经纬线模式的更大跨度（徒手拉带用，与蓝图长带优化无关）。");
             _slopePathMode = Config.Bind("Belt", "SlopePathMode", 0, "斜坡带模式：0 = 原版升降逻辑，1 = 阿基米德螺线等距分割（仅影响徒手拉带）。");
             _rebindSorterLinks = Config.Bind("Belt", "RebindSorterLinks", false, "默认关闭。开启后被分拣器/建筑引用的传送带节点也可参与合并，这些建筑的连接会重绑到覆盖它的新合并段（即多个分拣器共用同一长带）。守卫：被删节点与覆盖段的朝向必须一致，被删节点位置必须落在新段跨度内；只改写引用，槽位与沿带偏移原样保留。开启后请先在粘贴预览确认无红色报错、分拣器能正常工作再保存。");
             _shortestUnlimit = Config.Bind("Belt", "ShortestUnlimit", false, "忽略最小间距限制（测试用，可能产出过短或过长的非法带，请勿在正式蓝图使用）。");
             _gridExactMerging = Config.Bind("Belt", "GridExactMerging", true, "默认开启（推荐）。合并时只保留原有传送带节点，不生成插值坐标：粘贴时不会因网格换算而变长，跨纬度带与高空传送带都安全。关闭后改为按弧长均匀插值新节点（省得更多，但新节点不在格点上，跨纬度/高空粘贴时可能被算得更长而报「距离太远」）。");
             _sorterForceRebind = Config.Bind("Belt", "SorterForceRebind", false, "默认关闭（实验，需与 RebindSorterLinks 同时开启）。三件套：① 合并完全忽略分拣器自由重布线；② 合并后按每个分拣器的取货点坐标把引用强制重绑到覆盖它的新带节点，并按新段中心重锚定沿带偏移（取货点世界坐标保持不动）；③ 重排建造顺序——带节点全部排到分拣器之前，修复「分拣器先于目标带被建造导致链接失效」。开启后请先在粘贴预览逐个确认分拣器正常再保存。");
+            _modelAtPlayerPosition = Config.Bind("Belt", "ModelAtPlayerPosition", false, "省带建模纬度（库内点省带时）：默认关闭 = 按赤道建模（跨纬度粘贴兼容性最好）；勾选 = 按机甲当前位置建模（弹窗数量即脚下粘贴的最终数量）。粘贴模式下的位置重算不受此项影响，始终按实际粘贴位置。");
+            _crossLatitudeSafety = Config.Bind("Belt", "CrossLatitudeSafety", true, "跨纬度结构安全（强烈推荐保持开启）：按游戏允许的全部粘贴姿态（任意纬度、任意朝向）逐条校验链节，长带化产物在任何位置粘贴都不会出现「距离太远」断链。关闭后只按本次建模位置省带（省得略多，但换纬度/旋转粘贴或使用存库、导出的蓝图时可能部分断开）。| Cross-latitude structural safety (strongly recommended): every link is validated against all paste poses the game allows (any latitude, any rotation), so merged blueprints never break wherever they are pasted. Disable to optimize for the modeled position only (slightly more savings, but pasting at another latitude/rotation or reusing saved/exported blueprints may partially break).");
+            _restoreQuantizeHeight = Config.Bind("Belt", "RestoreQuantizeHeight", true, "复原高度量化（默认开启）：复原后的传送带高度仅允许 0.5 的倍数；关闭时保留原高度，但带距安全检查仍执行。连接点、坡道等无法安全量化的部分保留；严格网格开启时存在不符合项则整体不应用。 / Restore height quantization (default ON): restored belt heights must be multiples of 0.5; OFF preserves original heights but still enforces belt-distance safety. Unsafe connection/slope adjustments are kept; strict grid rejects the whole result if any node remains noncompliant.");
+            _restoreStrictGrid = Config.Bind("Belt", "RestoreStrictGrid", false, "严格网格复原（默认关闭）：关闭时只复原可安全调整的部分，并列出保留点；开启时要求所有传送带节点 X/Y 坐标均为整数，高度按 RestoreQuantizeHeight 检查，否则整体不应用。无论是否开启，拓扑、连接、带距与碰撞安全检查均不可关闭。 / Strict grid restoration (default OFF): OFF restores safe portions and reports protected nodes; ON requires integer X/Y coordinates for every belt node and checks heights according to RestoreQuantizeHeight, otherwise nothing is applied. Topology, connection, belt-distance and collision safety cannot be disabled.");
+            _uiFontSize = Config.Bind("UI", "FontSize", 21f, "设置窗口字号（14~28）。窗口右下角可拖动调整大小，位置与大小会保存在配置里。");
+            _uiWindowW = Config.Bind("UI", "WindowWidth", 680f, "设置窗口宽度（px）。");
+            _uiWindowH = Config.Bind("UI", "WindowHeight", 900f, "设置窗口高度（px）。");
+            _windowRect = new Rect(240f, 60f, _uiWindowW.Value, _uiWindowH.Value);
             _enabled.SettingChanged += delegate { PushConfigToStatics(); };
             _longerOnGrid.SettingChanged += delegate { PushConfigToStatics(); };
             _slopePathMode.SettingChanged += delegate { PushConfigToStatics(); };
             _shortestUnlimit.SettingChanged += delegate { PushConfigToStatics(); };
             _currentDistance.SettingChanged += delegate { PushConfigToStatics(); };
-            _longitudeDistance.SettingChanged += delegate { PushConfigToStatics(); };
-            _latitudeDistance.SettingChanged += delegate { PushConfigToStatics(); };
             PushConfigToStatics();
             _harmony = new Harmony(Guid);
             LogStartupBanner();
@@ -178,6 +217,8 @@ namespace BlueprintBeltSaver
 
         private void OnDestroy()
         {
+            ClearPending();
+            DestroyOptimizeButton();
             SaveStaticsToConfig();
         }
 
@@ -269,8 +310,6 @@ namespace BlueprintBeltSaver
             LongerBeltPath.longerOnGrid = _longerOnGrid.Value;
             LongerBeltPath.isometricSegmentation = Mathf.Clamp(_slopePathMode.Value, 0, 1);
             LongerBeltPath.currentDistance = Mathf.Clamp(_currentDistance.Value, LongerBeltPath.MinimumDistance, LongerBeltPath.MaximumDistance);
-            LongerBeltPath.longitudeDistance = Mathf.Clamp(_longitudeDistance.Value, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance);
-            LongerBeltPath.latitudeDistance = Mathf.Clamp(_latitudeDistance.Value, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance);
             LongerBeltPath.shortestUnlimit = _shortestUnlimit.Value;
         }
 
@@ -285,8 +324,6 @@ namespace BlueprintBeltSaver
                 _longerOnGrid.Value = LongerBeltPath.longerOnGrid;
                 _slopePathMode.Value = LongerBeltPath.isometricSegmentation;
                 _currentDistance.Value = LongerBeltPath.currentDistance;
-                _longitudeDistance.Value = LongerBeltPath.longitudeDistance;
-                _latitudeDistance.Value = LongerBeltPath.latitudeDistance;
                 _shortestUnlimit.Value = LongerBeltPath.shortestUnlimit;
                 Config.Save();
             }
@@ -302,6 +339,11 @@ namespace BlueprintBeltSaver
         /// loaded assembly; calling it per frame (as the settings window used to) costs milliseconds
         /// and is the reason the window tanked the frame rate.
         /// </summary>
+        /// <summary>蓝图长带优化的单段上限（与徒手拉带解耦，默认取游戏硬上限）。</summary>
+        private float ResolveBlueprintCap()
+            => Mathf.Clamp(_blueprintMaxDistance.Value, (float)LongerBeltPath.MinimumDistance, (float)BeltPathOptimizer.MaximumMeters);
+
+        /// <summary>旧口径：徒手拉带/蓝图共用上限（仅保留给历史代码参考）。</summary>
         private float ResolveCap(out bool fromLongerBelts)
         {
             fromLongerBelts = false;
@@ -411,46 +453,246 @@ namespace BlueprintBeltSaver
             return _wrapLabelStyle;
         }
 
+        /// <summary>放大版样式（玩家 2026-10-18：文本与说明放大）：正文 19px、说明 15px，缓存于 skin。</summary>
+        private GUIStyle BigLabel(int size)
+        {
+            if (_bigLabelStyles == null || !ReferenceEquals(_bigLabelSkin, GUI.skin))
+            {
+                _bigLabelSkin = GUI.skin;
+                _bigLabelStyles = new Dictionary<int, GUIStyle>();
+            }
+            if (!_bigLabelStyles.TryGetValue(size, out var style))
+            {
+                style = new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = size };
+                _bigLabelStyles[size] = style;
+            }
+            return style;
+        }
+
+        private float FontSize() => Mathf.Clamp(_uiFontSize == null ? 21f : _uiFontSize.Value, 14f, 28f);
+
+        /// <summary>字号变化时清空缓存样式（003.9 反馈：只有部分文本跟随字号）。</summary>
+        private void EnsureFontStyles()
+        {
+            if (!Mathf.Approximately(_bigFontSnapshot, FontSize()))
+            {
+                _bigFontSnapshot = FontSize();
+                _bigLabelStyles?.Clear();
+                _bigToggleStyle = null;
+                _bigSliderLabelStyle = null;
+                _bigSectionStyle = null;
+            }
+        }
+
+        private GUIStyle BigToggle()
+        {
+            if (_bigToggleStyle == null || !ReferenceEquals(_bigLabelSkin, GUI.skin))
+            {
+                _bigLabelSkin = GUI.skin;
+                _bigToggleStyle = new GUIStyle(GUI.skin.toggle) { fontSize = (int)FontSize() };
+            }
+            return _bigToggleStyle;
+        }
+
+        private GUIStyle BigSliderLabel()
+        {
+            if (_bigSliderLabelStyle == null || !ReferenceEquals(_bigLabelSkin, GUI.skin))
+            {
+                _bigLabelSkin = GUI.skin;
+                _bigSliderLabelStyle = new GUIStyle(GUI.skin.label) { fontSize = (int)FontSize() };
+            }
+            return _bigSliderLabelStyle;
+        }
+
+        private GUIStyle BigSectionStyle()
+        {
+            if (_bigSectionStyle == null || !ReferenceEquals(_bigLabelSkin, GUI.skin))
+            {
+                _bigLabelSkin = GUI.skin;
+                _bigSectionStyle = new GUIStyle(GUI.skin.label) { fontSize = (int)FontSize() + 3, fontStyle = FontStyle.Bold };
+            }
+            return _bigSectionStyle;
+        }
+
+        /// <summary>可读底色（玩家 003.8 反馈纯黑太深）：半透深蓝灰，Box 样式缓存。</summary>
+        private GUIStyle WindowBg()
+        {
+            if (_windowBgStyle == null || !ReferenceEquals(_bigLabelSkin, GUI.skin))
+            {
+                _bigLabelSkin = GUI.skin;
+                var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                var px = new Color(0.09f, 0.11f, 0.16f, 0.82f);
+                for (int i = 0; i < 16; i++) tex.SetPixel(i % 4, i / 4, px);
+                tex.Apply();
+                _windowBgStyle = new GUIStyle(GUI.skin.box);
+                _windowBgStyle.normal.background = tex;
+            }
+            return _windowBgStyle;
+        }
+
         private void DrawSettingsWindow(int id)
         {
-            var label = WrapLabel();
+            EnsureFontStyles();
+            var big = BigLabel((int)FontSize());
+            var desc = BigLabel((int)FontSize() - 4);
+            var toggle = BigToggle();
+            var sliderLabel = BigSliderLabel();
+            var section = BigSectionStyle();
             var slider = GUI.skin.horizontalSlider;
             var thumb = GUI.skin.horizontalSliderThumb;
-            GUI.DragWindow(new Rect(0f, 0f, _windowRect.width, 22f));
+            GUI.DragWindow(new Rect(0f, 0f, _windowRect.width, 26f));
+            // 背景只铺标题栏以下（003.9 反馈：整窗 Box 会盖住系统标题）；标题自绘加粗醒目
+            GUI.Box(new Rect(0f, 24f, _windowRect.width, _windowRect.height - 24f), GUIContent.none, WindowBg());
+            GUI.Label(new Rect(10f, 1f, _windowRect.width - 44f, 24f), _text.Title, BigSectionStyle());
+            if (_windowRect.width < 420f)
+            {
+                _windowRect.width = 420f;
+            }
+            if (_windowRect.height < 320f)
+            {
+                _windowRect.height = 320f;
+            }
+            // Ctrl+鼠标滚轮调字号（滚轮在窗口内且按住 Ctrl 时拦截滚动事件）
+            var evWheel = Event.current;
+            if (evWheel != null && evWheel.type == EventType.ScrollWheel
+                && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                && new Rect(0f, 0f, _windowRect.width, _windowRect.height).Contains(evWheel.mousePosition))
+            {
+                _uiFontSize.Value = Mathf.Clamp(FontSize() + (evWheel.delta.y < 0f ? 1f : -1f), 14f, 28f);
+                evWheel.Use();
+            }
             GUILayout.BeginVertical();
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Width(_windowRect.width - 8f), GUILayout.Height(_windowRect.height - 56f));
+
+            // —— 基础 ——
+            GUILayout.Label(_text.SecGeneral, section);
+            bool enabledNew = GUILayout.Toggle(_enabled.Value, _text.EnabledToggle, toggle);
+            if (enabledNew != _enabled.Value)
+            {
+                _enabled.Value = enabledNew;
+            }
             if (!_enabled.Value)
             {
-                GUILayout.Label(_text.Disabled, label);
+                GUILayout.Label(_text.Disabled, desc);
             }
-            LongerBeltPath.longerOnGrid = GUILayout.Toggle(LongerBeltPath.longerOnGrid, _text.IfLongerOnGrid);
+            GUILayout.Label(_text.HotkeyInfo, desc);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(_text.LongitudeDistance, GUILayout.Width(150f));
-            LongerBeltPath.longitudeDistance = GUILayout.HorizontalSlider(LongerBeltPath.longitudeDistance, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance, slider, thumb, GUILayout.Width(230f));
-            GUILayout.Label(LongerBeltPath.longitudeDistance.ToString("0.000"), GUILayout.Width(60f));
+            GUILayout.Label(_text.UiFontSizeLabel, sliderLabel, GUILayout.Width(190f));
+            float fs = GUILayout.HorizontalSlider(FontSize(), 14f, 28f, slider, thumb, GUILayout.Width(280f));
+            int fsRounded = Mathf.RoundToInt(fs);
+            if (Mathf.Abs(fsRounded - FontSize()) >= 0.5f)
+            {
+                _uiFontSize.Value = fsRounded;
+            }
+            GUILayout.Label(FontSize().ToString("0"), sliderLabel, GUILayout.Width(40f));
             GUILayout.EndHorizontal();
+
+            // —— 传送带合并 ——
+            GUILayout.Label(_text.SecMerge, section);
+            LongerBeltPath.longerOnGrid = GUILayout.Toggle(LongerBeltPath.longerOnGrid, _text.IfLongerOnGrid, toggle);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(_text.LatitudeDistance, GUILayout.Width(150f));
-            LongerBeltPath.latitudeDistance = GUILayout.HorizontalSlider(LongerBeltPath.latitudeDistance, LongerBeltPath.MinimumGridDistance, LongerBeltPath.MaximumGridDistance, slider, thumb, GUILayout.Width(230f));
-            GUILayout.Label(LongerBeltPath.latitudeDistance.ToString("0.000"), GUILayout.Width(60f));
+            GUILayout.Label(_text.DistanceSetting, sliderLabel, GUILayout.Width(190f));
+            LongerBeltPath.currentDistance = GUILayout.HorizontalSlider(LongerBeltPath.currentDistance, LongerBeltPath.MinimumDistance, LongerBeltPath.MaximumDistance, slider, thumb, GUILayout.Width(280f));
+            GUILayout.Label(LongerBeltPath.currentDistance.ToString("0.000000"), sliderLabel, GUILayout.Width(90f));
             GUILayout.EndHorizontal();
+            GUILayout.Label(_text.DistanceSettingDesc, desc);
+            bool gridExactNew = GUILayout.Toggle(_gridExactMerging.Value, _text.GridExactMerging, toggle);
+            if (gridExactNew != _gridExactMerging.Value)
+            {
+                _gridExactMerging.Value = gridExactNew;
+            }
+            GUILayout.Label(_text.GridExactMergingDesc, desc);
+            GUILayout.Label(_text.PathMode, big);
+            // 互斥勾选框（替代原 SelectionGrid，避免被误解成两个独立按钮）：
+            // 内部是单个整型配置 0/1，点击当前已勾选项不产生变化，任何时刻恰好一项被选中。
+            bool vanillaMode = LongerBeltPath.isometricSegmentation == 0;
+            if (GUILayout.Toggle(vanillaMode, _text.PathModeOriginal, toggle) && !vanillaMode)
+            {
+                LongerBeltPath.isometricSegmentation = 0;
+            }
+            bool isometricMode = LongerBeltPath.isometricSegmentation == 1;
+            if (GUILayout.Toggle(isometricMode, _text.PathModeIsometric, toggle) && !isometricMode)
+            {
+                LongerBeltPath.isometricSegmentation = 1;
+            }
+            GUILayout.Label(_text.PathModeStrings[Mathf.Clamp(LongerBeltPath.isometricSegmentation, 0, 1)], desc);
+            GUILayout.Label(_text.WarningNotice, desc);
+            LongerBeltPath.shortestUnlimit = GUILayout.Toggle(LongerBeltPath.shortestUnlimit, _text.UnlimitInstruction, toggle);
+
+            // —— 分拣器 ——
+            GUILayout.Label(_text.SecSorter, section);
+            bool rebindNew = GUILayout.Toggle(_rebindSorterLinks.Value, _text.RebindSorterLinks, toggle);
+            if (rebindNew != _rebindSorterLinks.Value)
+            {
+                _rebindSorterLinks.Value = rebindNew;
+            }
+            GUILayout.Label(_text.RebindSorterLinksDesc, desc);
+            bool forceRebindNew = GUILayout.Toggle(_sorterForceRebind.Value, _text.SorterForceRebind, toggle);
+            if (forceRebindNew != _sorterForceRebind.Value)
+            {
+                _sorterForceRebind.Value = forceRebindNew;
+            }
+            GUILayout.Label(_text.SorterForceRebindDesc, desc);
+
+            // —— 网格复原 ——
+            GUILayout.Label(_text.RestoreSection, section);
+            bool restoreHeightNew = GUILayout.Toggle(_restoreQuantizeHeight.Value, _text.RestoreQuantizeHeight, toggle);
+            if (restoreHeightNew != _restoreQuantizeHeight.Value) _restoreQuantizeHeight.Value = restoreHeightNew;
+            GUILayout.Label(_text.RestoreQuantizeHeightDesc, desc);
+            bool restoreStrictNew = GUILayout.Toggle(_restoreStrictGrid.Value, _text.RestoreStrictGrid, toggle);
+            if (restoreStrictNew != _restoreStrictGrid.Value) _restoreStrictGrid.Value = restoreStrictNew;
+            GUILayout.Label(_text.RestoreStrictGridDesc, desc);
+
+            // —— 省带建模 ——
+            GUILayout.Label(_text.SecModel, section);
+            bool modelNew = GUILayout.Toggle(_modelAtPlayerPosition.Value, _text.ModelAtPlayerPosition, toggle);
+            if (modelNew != _modelAtPlayerPosition.Value)
+            {
+                _modelAtPlayerPosition.Value = modelNew;
+            }
+            GUILayout.Label(_text.ModelAtPlayerPositionDesc, desc);
+
             GUILayout.BeginHorizontal();
-            GUILayout.Label(_text.DistanceSetting, GUILayout.Width(150f));
-            LongerBeltPath.currentDistance = GUILayout.HorizontalSlider(LongerBeltPath.currentDistance, LongerBeltPath.MinimumDistance, LongerBeltPath.MaximumDistance, slider, thumb, GUILayout.Width(230f));
-            GUILayout.Label(LongerBeltPath.currentDistance.ToString("0.000000"), GUILayout.Width(80f));
+            GUILayout.Label(_text.BlueprintCap, sliderLabel, GUILayout.Width(190f));
+            _blueprintMaxDistance.Value = GUILayout.HorizontalSlider(_blueprintMaxDistance.Value, (float)LongerBeltPath.MinimumDistance, (float)BeltPathOptimizer.MaximumMeters, slider, thumb, GUILayout.Width(280f));
+            GUILayout.Label(_blueprintMaxDistance.Value.ToString("0.000000"), sliderLabel, GUILayout.Width(90f));
             GUILayout.EndHorizontal();
-            GUILayout.Label(_text.PathMode, label);
-            LongerBeltPath.isometricSegmentation = GUILayout.SelectionGrid(LongerBeltPath.isometricSegmentation, _text.PathModeStrings, 1);
-            GUILayout.Label(_text.WarningNotice, label);
-            LongerBeltPath.shortestUnlimit = GUILayout.Toggle(LongerBeltPath.shortestUnlimit, _text.UnlimitInstruction);
-            GUILayout.Label(_text.CapLinkage, label);
-            bool fromLongerBelts;
-            float cap = ResolveCap(out fromLongerBelts);
-            GUILayout.Label($"{_text.CurrentCap}: {cap:F6} m ({(fromLongerBelts ? _text.CapFromLongerBelts : _text.CapFromOwn)})", label);
+            GUILayout.Label(_text.BlueprintCapDesc, desc);
+            GUILayout.Label(_text.CapLinkage, desc);
+            float cap = ResolveBlueprintCap();
+            GUILayout.Label($"{_text.CurrentCap}: {cap:F6} m ({_text.CapFromBlueprint})", big);
             if (!string.IsNullOrEmpty(_status))
             {
-                GUILayout.Label(_status, label);
+                GUILayout.Label(_status, desc);
             }
+            GUILayout.EndScrollView();
             GUILayout.EndVertical();
+            // 右下角拖动改窗口大小（参考 aux 辅助面板的交互；松手写入配置）
+            var handle = new Rect(_windowRect.width - 22f, _windowRect.height - 22f, 22f, 22f);
+            var ev = Event.current;
+            // 绝对定位式拖拽（003.9 增量式不灵敏）：按下记录起点，拖动 = 起点 + 位移
+            if (ev.type == EventType.MouseDown && handle.Contains(ev.mousePosition))
+            {
+                _resizing = true;
+                _resizeStartMouse = ev.mousePosition;
+                _resizeStartW = _windowRect.width;
+                _resizeStartH = _windowRect.height;
+                ev.Use();
+            }
+            if (_resizing && ev.type == EventType.MouseDrag)
+            {
+                _windowRect.width = Mathf.Clamp(_resizeStartW + ev.mousePosition.x - _resizeStartMouse.x, 420f, 1400f);
+                _windowRect.height = Mathf.Clamp(_resizeStartH + ev.mousePosition.y - _resizeStartMouse.y, 320f, 1600f);
+                ev.Use();
+            }
+            if (ev.type == EventType.MouseUp && _resizing)
+            {
+                _resizing = false;
+                _uiWindowW.Value = _windowRect.width;
+                _uiWindowH.Value = _windowRect.height;
+                ev.Use();
+            }
+            GUI.Box(handle, "◢");
             EatInputInRect(_windowRect);
         }
 
@@ -469,6 +711,10 @@ namespace BlueprintBeltSaver
                 if (_optimizeButton != null)
                 {
                     _optimizeButton.SetActive(false);
+                }
+                if (_restoreButton != null)
+                {
+                    _restoreButton.SetActive(false);
                 }
                 return;
             }
@@ -528,6 +774,9 @@ namespace BlueprintBeltSaver
             bool rebuild = _optimizeButton == null
                 || !_optimizeButton.activeInHierarchy
                 || _optimizeButton.transform.parent == null
+                || _restoreButton == null
+                || !_restoreButton.activeInHierarchy
+                || _restoreButton.transform.parent != _optimizeButton.transform.parent
                 || _anchoredAddFieldBtn != addField
                 || _anchoredUnderAddField != wantUnderAddField;
             if (rebuild)
@@ -539,8 +788,19 @@ namespace BlueprintBeltSaver
 
         private void DestroyOptimizeButton()
         {
+            if (_optimizeButtonButton != null) _optimizeButtonButton.onClick.RemoveAllListeners();
+            if (_restoreButtonButton != null) _restoreButtonButton.onClick.RemoveAllListeners();
+            if (_restoreButton != null)
+            {
+                _restoreButton.SetActive(false);
+                UnityEngine.Object.Destroy(_restoreButton);
+            }
+            _restoreButton = null;
+            _restoreButtonText = null;
+            _restoreButtonButton = null;
             if (_optimizeButton != null)
             {
+                _optimizeButton.SetActive(false);
                 UnityEngine.Object.Destroy(_optimizeButton);
             }
             _optimizeButton = null;
@@ -645,6 +905,11 @@ namespace BlueprintBeltSaver
                 {
                     GameObject textGo = UnityEngine.Object.Instantiate(template.gameObject, rect, false);
                     textGo.name = "Text";
+                    foreach (var localizer in textGo.GetComponentsInChildren<Localizer>(true))
+                    {
+                        localizer.enabled = false;
+                        UnityEngine.Object.Destroy(localizer);
+                    }
                     _optimizeButtonText = textGo.GetComponent<Text>();
                     if (_optimizeButtonText != null)
                     {
@@ -666,11 +931,63 @@ namespace BlueprintBeltSaver
                 _optimizeButtonButton.onClick.AddListener(new UnityAction(OnOptimizeButtonClick));
                 _optimizeButton = go;
                 _anchoredAddFieldBtn = addFieldBtn;
-                Log.Info("省带按钮已注入：" + (underAddField ? "新建属性下方" : "复制按钮左侧") + "，尺寸 " + size.x + "x" + size.y);
+                _restoreButton = UnityEngine.Object.Instantiate(go, parent, false);
+                _restoreButton.name = "BlueprintBeltSaver_RestoreBtn";
+                _restoreButtonText = _restoreButton.GetComponentInChildren<Text>(true);
+                _restoreButtonButton = _restoreButton.GetComponent<Button>();
+                _restoreButtonButton.onClick = new Button.ButtonClickedEvent();
+                _restoreButtonButton.onClick.AddListener(new UnityAction(OnRestoreButtonClick));
+                if (_restoreButtonText != null)
+                {
+                    _restoreButtonText.text = _text != null ? _text.RestoreButton : "Restore";
+                }
+                PositionRestoreButton();
+                Log.Info("省带/复原按钮已注入：" + (underAddField ? "新建属性下方" : "复制按钮左侧") + "，尺寸 " + size.x + "x" + size.y + "，复原位于省带左侧");
             }
             catch (Exception ex)
             {
-                Log.Error("injecting the long-belt button failed: " + ex);
+                DestroyOptimizeButton();
+                Log.Error("injecting the long-belt/restore buttons failed: " + ex);
+            }
+        }
+
+        /// <summary>Use transformed screen bounds: sizeDelta alone does not account for pivots or UI scale.</summary>
+        private void PositionRestoreButton()
+        {
+            if (_optimizeButton == null || _restoreButton == null) return;
+            var optimizeRect = _optimizeButton.transform as RectTransform;
+            var restoreRect = _restoreButton.transform as RectTransform;
+            if (optimizeRect == null || restoreRect == null || optimizeRect.parent == null) return;
+            if (restoreRect.sizeDelta != optimizeRect.sizeDelta) restoreRect.sizeDelta = optimizeRect.sizeDelta;
+            var position = restoreRect.anchoredPosition;
+            if (!Mathf.Approximately(position.y, optimizeRect.anchoredPosition.y))
+            {
+                position.y = optimizeRect.anchoredPosition.y;
+                restoreRect.anchoredPosition = position;
+            }
+            var canvas = optimizeRect.GetComponentInParent<Canvas>();
+            Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            float optimizeLeft = float.PositiveInfinity;
+            optimizeRect.GetWorldCorners(_buttonWorldCorners);
+            foreach (var corner in _buttonWorldCorners)
+            {
+                optimizeLeft = Mathf.Min(optimizeLeft, RectTransformUtility.WorldToScreenPoint(camera, corner).x);
+            }
+            float restoreRight = float.NegativeInfinity;
+            restoreRect.GetWorldCorners(_buttonWorldCorners);
+            foreach (var corner in _buttonWorldCorners)
+            {
+                restoreRight = Mathf.Max(restoreRight, RectTransformUtility.WorldToScreenPoint(camera, corner).x);
+            }
+            Transform parent = optimizeRect.parent;
+            float pixelsPerLocalX = RectTransformUtility.WorldToScreenPoint(camera, parent.TransformPoint(Vector3.right)).x
+                - RectTransformUtility.WorldToScreenPoint(camera, parent.TransformPoint(Vector3.zero)).x;
+            if (Mathf.Abs(pixelsPerLocalX) < 0.0001f) return;
+            float shift = optimizeLeft - RestoreButtonGapPixels - restoreRight;
+            if (Mathf.Abs(shift) > 0.01f)
+            {
+                position.x += shift / pixelsPerLocalX;
+                restoreRect.anchoredPosition = position;
             }
         }
 
@@ -716,11 +1033,29 @@ namespace BlueprintBeltSaver
             {
                 _optimizeButtonText.text = _text.OptimizeButton;
             }
+            if (_restoreButton != null && _restoreButton.activeSelf != visible)
+            {
+                _restoreButton.SetActive(visible);
+            }
+            if (_restoreButtonButton != null && _optimizeButtonButton != null
+                && _restoreButtonButton.enabled != _optimizeButtonButton.enabled)
+            {
+                _restoreButtonButton.enabled = _optimizeButtonButton.enabled;
+            }
+            if (_restoreButtonButton != null && _restoreButtonButton.interactable != interactable)
+            {
+                _restoreButtonButton.interactable = interactable;
+            }
+            if (_restoreButtonText != null && _text != null && _restoreButtonText.text != _text.RestoreButton)
+            {
+                _restoreButtonText.text = _text.RestoreButton;
+            }
             if (!logState)
             {
                 return;
             }
-            string state = "已创建=" + (_optimizeButton != null) + ", 锚点=新建属性下方=" + _anchoredUnderAddField + ", 有建筑=" + hasBuildings + ", 已启用=" + _enabled.Value + ", 可见=" + visible + ", 可点击=" + interactable;
+            PositionRestoreButton();
+            string state = "已创建=" + (_optimizeButton != null) + ", 复原已创建=" + (_restoreButton != null) + ", 锚点=新建属性下方=" + _anchoredUnderAddField + ", 有建筑=" + hasBuildings + ", 已启用=" + _enabled.Value + ", 可见=" + visible + ", 可点击=" + interactable;
             if (state != _lastButtonState)
             {
                 _lastButtonState = state;
@@ -730,8 +1065,7 @@ namespace BlueprintBeltSaver
 
         private void OnOptimizeButtonClick()
         {
-            _pendingBlueprint = null;
-            _pendingSourceSnapshot = null;
+            ClearPending();
             if (!_enabled.Value)
             {
                 _status = _text != null ? _text.Disabled : "disabled";
@@ -750,13 +1084,88 @@ namespace BlueprintBeltSaver
             BlueprintData optimized;
             string summary;
             float cap;
-            if (TryOptimize(source, out optimized, out summary, out cap))
+            HashSet<(long, long)> trustedSpans = null;
+            if (_originalSpans != null && _stateBlueprintKey == BlueprintKey(source))
+            {
+                trustedSpans = _originalSpans;
+            }
+            if (TryOptimize(source, out optimized, out summary, out cap, out bool hardFailure, trustedSpans))
             {
                 _pendingBlueprint = optimized;
+                _pendingSourceBlueprint = source;
+                _pendingSourceBuildings = source.buildings;
+                _pendingInspector = _inspector;
                 _pendingSummary = summary;
                 _pendingCap = cap;
                 _pendingSourceSnapshot = SafeSnapshot(source);
                 ShowConfirmDialog(summary);
+            }
+            else if (hardFailure)
+            {
+                ShowFailureDialog(_status);
+            }
+        }
+
+        private void OnRestoreButtonClick()
+        {
+            ClearPending();
+            if (!_enabled.Value)
+            {
+                _status = _text != null ? _text.Disabled : "disabled";
+                return;
+            }
+            if (_inspector == null || _inspector.blueprint == null) return;
+            var source = _inspector.blueprint;
+            if (source.buildings == null || !source.buildings.Any(IsBelt))
+            {
+                _status = _text != null ? _text.RestoreNoBelts : "This blueprint has no belts to restore.";
+                return;
+            }
+            if (TryRestore(source, out var restored, out var summary, out bool hardFailure))
+            {
+                _pendingBlueprint = restored;
+                _pendingSourceBlueprint = source;
+                _pendingSourceBuildings = source.buildings;
+                _pendingInspector = _inspector;
+                _pendingRestore = true;
+                _pendingRestoreQuantizeHeight = _restoreQuantizeHeight.Value;
+                _pendingRestoreStrictGrid = _restoreStrictGrid.Value;
+                _pendingSummary = summary;
+                _pendingSourceSnapshot = SafeSnapshot(source);
+                ShowConfirmDialog(summary);
+            }
+            else if (hardFailure)
+            {
+                ShowFailureDialog(_status, true);
+            }
+        }
+
+        /// <summary>
+        /// 省带失败的用户可见反馈（004.7）：此前只有设置窗里的 _status，游戏内点「省带」
+        /// 失败时毫无反应（玩家报「完全无弹窗」）。用游戏原生消息框告知"已保留原蓝图"与原因，
+        /// 便于玩家把原因连同 Player.log 一起反馈。
+        /// </summary>
+        private void ShowFailureDialog(string reason, bool restore = false)
+        {
+            if (string.IsNullOrEmpty(reason))
+            {
+                reason = _text != null ? (restore ? _text.RestoreUnknownFailure : _text.ConfirmFailed) : "unknown";
+            }
+            int limit = restore ? 4096 : 300;
+            if (reason.Length > limit)
+            {
+                reason = reason.Substring(0, limit) + "…";
+            }
+            string title = _text != null ? (restore ? _text.RestoreFailedTitle : _text.FailedTitle) : "BlueprintBeltSaver";
+            string body = _text != null ? string.Format(restore ? _text.RestoreFailedBody : _text.FailedBody, reason) : reason;
+            try
+            {
+                UIMessageBox.Show(title, body, _text != null ? _text.Confirm : "OK", UIMessageBox.WARNING);
+                Log.Info((restore ? "复原" : "省带") + "失败提示已显示：" + reason);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("showing the failure dialog failed: " + ex);
             }
         }
 
@@ -767,82 +1176,111 @@ namespace BlueprintBeltSaver
         /// </summary>
         private void ShowConfirmDialog(string message)
         {
-            string title = _text != null ? _text.ConfirmTitle : "BlueprintBeltSaver 蓝图长带化";
-            string cancel = "取消";
-            string confirm = "确定";
+            string title = _text != null ? (_pendingRestore ? _text.RestoreConfirmTitle : _text.ConfirmTitle) : "BlueprintBeltSaver";
+            string cancel = _text != null ? _text.Cancel : "Cancel";
+            string confirm = _text != null ? _text.Confirm : "OK";
+            var expectedPending = _pendingBlueprint;
             try
             {
-                // The game localizes its own button captions through this extension.
-                cancel = "取消".Translate();
-                confirm = "确定".Translate();
-            }
-            catch
-            {
-                // Keep the plain Chinese captions when localization is not ready.
-            }
-            try
-            {
-                UIMessageBox.Show(title, message, cancel, confirm, UIMessageBox.WARNING, new UIMessageBox.Response(CancelPending), new UIMessageBox.Response(ApplyPending));
+                UIMessageBox.Show(title, message, cancel, confirm, UIMessageBox.WARNING,
+                    new UIMessageBox.Response(() => { if (ReferenceEquals(_pendingBlueprint, expectedPending)) CancelPending(); }),
+                    new UIMessageBox.Response(() => { if (ReferenceEquals(_pendingBlueprint, expectedPending)) ApplyPending(); }));
                 Log.Info("确认弹窗已显示；" + message.Replace(Environment.NewLine, " | "));
             }
             catch (Exception ex)
             {
                 Log.Error("showing the game message box failed: " + ex);
-                _pendingBlueprint = null;
-                _status = _text != null ? _text.ConfirmFailed : "confirm dialog failed";
+                bool restore = _pendingRestore;
+                ClearPending();
+                _status = _text != null ? (restore ? _text.RestoreConfirmFailed : _text.ConfirmFailed) : "confirm dialog failed";
+                ShowFailureDialog(_status, restore);
             }
         }
 
         private void CancelPending()
         {
+            bool restore = _pendingRestore;
+            ClearPending();
+            _status = _text != null ? (restore ? _text.RestoreCancelled : _text.Cancelled) : "cancelled";
+        }
+
+        private void ClearPending()
+        {
             _pendingBlueprint = null;
-            _status = _text != null ? _text.Cancelled : "cancelled";
+            _pendingSourceBlueprint = null;
+            _pendingSourceBuildings = null;
+            _pendingInspector = null;
+            _pendingSourceSnapshot = null;
+            _pendingSummary = "";
+            _pendingCap = 0f;
+            _pendingRestore = false;
+            _pendingRestoreQuantizeHeight = false;
+            _pendingRestoreStrictGrid = false;
         }
 
         private void ApplyPending()
         {
             var optimized = _pendingBlueprint;
-            _pendingBlueprint = null;
-            if (optimized == null)
+            var expectedSource = _pendingSourceBlueprint;
+            var expectedBuildings = _pendingSourceBuildings;
+            var expectedInspector = _pendingInspector;
+            string sourceSnapshot = _pendingSourceSnapshot;
+            string summary = _pendingSummary;
+            bool restore = _pendingRestore;
+            bool quantizeHeight = _pendingRestoreQuantizeHeight;
+            bool strictGrid = _pendingRestoreStrictGrid;
+            ClearPending();
+            if (optimized == null) return;
+            BlueprintData target = _inspector != null ? _inspector.blueprint : null;
+            if (!_enabled.Value || target == null || !ReferenceEquals(_inspector, expectedInspector)
+                || !ReferenceEquals(target, expectedSource) || !ReferenceEquals(target.buildings, expectedBuildings)
+                || (restore && (quantizeHeight != _restoreQuantizeHeight.Value || strictGrid != _restoreStrictGrid.Value))
+                || (sourceSnapshot != null && sourceSnapshot != SafeSnapshot(target)))
             {
+                _status = _text != null ? (restore ? _text.RestorePendingSourceChanged : _text.PendingSourceChanged) : "The source blueprint changed; nothing was applied.";
+                Log.Warn(_status);
+                ShowFailureDialog(_status, restore);
                 return;
             }
+            var originalBuildings = target.buildings;
+            string originalExternalFields = target.externalFields;
+            string previousSnapshot = _originalSnapshot;
+            var previousSpans = _originalSpans;
+            string previousStateKey = _stateBlueprintKey;
+            string previousObservationKey = _lastObservationKey;
+            float previousNextReoptimize = _nextReoptimize;
+            bool mutated = false;
             try
             {
-                BlueprintData target = _inspector != null ? _inspector.blueprint : null;
-                if (target == null)
+                // Preflight the owned result before touching the inspector's blueprint.
+                optimized.CheckBuildingData();
+                optimized.externalFields = restore ? RemoveOptimizeMarker(target.externalFields) : target.externalFields;
+                if (!restore && !HasOptimizeMarker(optimized))
                 {
-                    Log.Warn("no blueprint is open in the inspector; nothing was applied.");
-                    return;
+                    optimized.externalFields = string.IsNullOrEmpty(optimized.externalFields)
+                        ? OptimizeMarker : optimized.externalFields + ";" + OptimizeMarker;
                 }
-                // 记下原件与"本次建模用的粘贴位置"，供玩家在预览里移动/旋转后按新位置增量重算。
-                _originalSnapshot = _pendingSourceSnapshot ?? SafeSnapshot(target);
-                _pendingSourceSnapshot = null;
-                _originalSpans = SpansFromSnapshot(_originalSnapshot);
-                _lastObservationKey = ObservationKey(ReadPasteObservation());
-                Log.Info("省带位置重算已就绪：原件快照 " + (_originalSnapshot == null ? "不可用（位置变化后不会重算）" : _originalSnapshot.Length + " 字符") +
-                    "，当前位置键 " + _lastObservationKey);
-                // Mutate the instance the inspector already holds instead of swapping the object, so
-                // nothing else can keep pointing at the pre-merge blueprint.
+                optimized.ToBase64String();
+                string originalSnapshot = restore ? null : sourceSnapshot ?? SafeSnapshot(target);
+                // Keep the inspector-owned instance; other consumers can hold references to it.
+                mutated = true;
                 target.buildings = optimized.buildings;
+                target.externalFields = optimized.externalFields;
                 target.CheckBuildingData();
-                // 写入本 MOD 优化标记（externalFields 扩展字段，随保存/加载往返）：之后这张蓝图
-                // 直接从库里拖到地上时，位置复核发现越限也能按当前位置从当前状态重省。
-                try
+                if (restore)
                 {
-                    if (string.IsNullOrEmpty(target.externalFields))
-                    {
-                        target.externalFields = OptimizeMarker;
-                    }
-                    else if (target.externalFields.IndexOf(OptimizeMarker, StringComparison.Ordinal) < 0)
-                    {
-                        target.externalFields = target.externalFields + ";" + OptimizeMarker;
-                    }
+                    ClearOptimizationState();
+                    Log.Info("复原已清除优化标记、原件快照和跨度缓存；不会自动重新省带。");
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Warn("写入优化标记失败（不影响本次省带）：" + ex.Message);
+                    _originalSnapshot = originalSnapshot;
+                    _originalSpans = SpansFromSnapshot(_originalSnapshot);
+                    _stateBlueprintKey = BlueprintKey(target);
+                    _lastObservationKey = "";
+                    Log.Info("省带位置重算已就绪：原件快照 " + (_originalSnapshot == null ? "不可用（位置变化后不会重算）" : _originalSnapshot.Length + " 字符"));
                 }
+                GUIUtility.systemCopyBuffer = target.ToBase64String();
                 try
                 {
                     _inspector.Refresh(true, true, true);
@@ -851,16 +1289,36 @@ namespace BlueprintBeltSaver
                 {
                     Log.Warn("inspector refresh failed: " + ex.Message);
                 }
-                GUIUtility.systemCopyBuffer = target.ToBase64String();
                 SyncPasteTool(target, true);
-                _status = string.Format(_text.ApplyDone, CountBelts(target));
-                Log.Info("已应用优化：" + _pendingSummary.Replace(Environment.NewLine, " | "));
+                _status = string.Format(restore ? _text.RestoreApplyDone : _text.ApplyDone, CountBelts(target));
+                if (restore) _status += Environment.NewLine + summary;
+                Log.Info((restore ? "已应用复原：" : "已应用优化：") + summary.Replace(Environment.NewLine, " | "));
             }
             catch (Exception ex)
             {
-                Log.Error("applying the optimized blueprint failed: " + ex);
-                _status = ex.Message;
+                if (mutated)
+                {
+                    target.buildings = originalBuildings;
+                    target.externalFields = originalExternalFields;
+                    _originalSnapshot = previousSnapshot;
+                    _originalSpans = previousSpans;
+                    _stateBlueprintKey = previousStateKey;
+                    _lastObservationKey = previousObservationKey;
+                    _nextReoptimize = previousNextReoptimize;
+                }
+                Log.Error((restore ? "applying the restored blueprint failed: " : "applying the optimized blueprint failed: ") + ex);
+                _status = restore && _text != null ? _text.RestoreApplyFailed : ex.Message;
+                ShowFailureDialog(_status, restore);
             }
+        }
+
+        private void ClearOptimizationState()
+        {
+            _originalSnapshot = null;
+            _originalSpans = null;
+            _stateBlueprintKey = "";
+            _lastObservationKey = "";
+            _nextReoptimize = 0f;
         }
 
         /// <summary>
@@ -899,6 +1357,25 @@ namespace BlueprintBeltSaver
             {
                 return;
             }
+            // 状态归属校验（玩家实测 bug：省带 A 后选 B，B 跨纬度移动时被整个替换成 A）：
+            // _originalSnapshot/_originalSpans 只属于"应用省带时的那张蓝图"。换了蓝图就立即
+            // 作废这套状态——未打标记的蓝图不做位置重算（其跨度是原件自带）；打标记的
+            // 按"先真原件、后当前状态"的顺序重省（见 ③）。
+            string targetKey = BlueprintKey(target);
+            if (_stateBlueprintKey != targetKey)
+            {
+                _originalSnapshot = null;
+                _originalSpans = null;
+                _stateBlueprintKey = targetKey;
+                if (!HasOptimizeMarker(target))
+                {
+                    return;
+                }
+            }
+            if (_originalSnapshot == null && !HasOptimizeMarker(target))
+            {
+                return;
+            }
             _nextReoptimize = Time.unscaledTime + ReoptimizeInterval;
             _lastObservationKey = key;
             try
@@ -906,15 +1383,79 @@ namespace BlueprintBeltSaver
                 // ② 增量复核：当前位置下现有结果还合格吗？只看"新造跨度"——原件里就有的超限跨度，
                 //    游戏对原件同样拒绝，不是省带造成的，不该触发重算（否则原件本身带断损段的蓝图
                 //    会在每次位置变化时白白重算一次并永远失败）。
-                var live = BeltSpacingCalibration.Resolve(target.areas, target.buildings, IsBelt, observation);
-                var check = VerifyHardLimit(target.buildings, live, _originalSpans);
+                // 004.17：按**真实粘贴姿态**（光标纬度格 + 偏航象限）逐点同式复核（PasteEnvelope 单姿态
+                //    参考系，与 RefreshBuildPreview 同式）；游戏本身拒绝的姿态（跨回归线等）不复核。
+                //    004.17 起省带结果默认对全部合法姿态安全，这里主要兜住旧版本产物与关闭跨纬度安全的场景。
+                var liveFrame = PasteEnvelope.FrameFor(target.areas, target.primaryAreaIdx, observation.Value, out bool liveLegal);
+                if (liveFrame == null || !liveLegal)
+                {
+                    Log.Info($"粘贴位置变化（{key}）：游戏不允许该姿态（跨回归线/空间不足/分段比例），不做复核。");
+                    return;
+                }
+                Func<BlueprintBuilding, BlueprintBuilding, double> liveMeters = (a, b) => PasteEnvelope.DistanceAt(liveFrame, a, b);
+                var check = VerifyHardLimit(target.buildings, liveMeters, _originalSpans);
                 if (check.Over == 0)
                 {
                     Log.Info($"粘贴位置变化（{key}）：现有省带结果仍然合格（最坏新链节 {check.Worst:F4} m" +
                         (check.KeptOver > 0 ? $"；原件同跨度越限 {check.KeptOver} 条，游戏对原件同样拒绝" : "") + $"），无需重算。");
                     return;
                 }
-                // ③A 有原件快照：从原件按新位置重新省带（结果与"一开始就粘在这里"完全一致）。
+                // ③ 位置变化重算（004.9 安全优先重构）：
+                //    当前位置已出现越限链节时，先**从真原件**按新位置重省——原件节点密，
+                //    优化器可以在新纬度重新选切点，只有这种方式能修掉"旧纬度切出的锚点间
+                //    长跨度"（玩家 C1：库内 72° 切出 1940，拖到 28.8° 后 17 条红字，从当前
+                //    状态重省只能修 1 条；从真原件重省得到 1957 条、零越限）。
+                //    原件快照不可用或重省失败，才退回"从当前状态重省"。
+                //    _originalSnapshot/_originalSpans 始终保留**真原件**口径，绝不被当前
+                //    优化结果覆盖——否则下一次复核会把上次造出的长跨度当成"原件缺陷"放行。
+                bool marked = HasOptimizeMarker(target);
+                if (marked)
+                {
+                    BlueprintData rebuilt = null;
+                    string summary = "";
+                    float cap = 0;
+                    bool repaired = false;
+                    if (_originalSnapshot != null)
+                    {
+                        var fromOriginal = new BlueprintData();
+                        if (fromOriginal.FromBase64String(_originalSnapshot) == BlueprintDataIOError.OK
+                            && fromOriginal.buildings != null && fromOriginal.buildings.Length > 0)
+                        {
+                            Log.Info($"粘贴位置变化（{key}）：当前结果在新位置有 {check.Over} 条越限链节，开始从原件按新位置重省（安全优先）。");
+                            repaired = TryOptimize(fromOriginal, out rebuilt, out summary, out cap, out _, _originalSpans);
+                        }
+                        else
+                        {
+                            Log.Warn("原件快照无法还原，改为从当前状态重省。");
+                        }
+                    }
+                    if (!repaired)
+                    {
+                        Log.Info($"粘贴位置变化（{key}）：从原件重省不可用，改为从当前状态重省（保留已有合并）。");
+                        repaired = TryOptimize(target, out rebuilt, out summary, out cap, out _, _originalSpans);
+                    }
+                    if (!repaired)
+                    {
+                        Log.Warn("当前位置下无法得到安全的省带结果，保持当前状态（粘贴预览若红请勿保存，或回到原位置重省）。");
+                        return;
+                    }
+                    target.buildings = rebuilt.buildings;
+                    target.CheckBuildingData();
+                    _stateBlueprintKey = BlueprintKey(target);
+                    try
+                    {
+                        _inspector.Refresh(true, true, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("inspector refresh failed: " + ex.Message);
+                    }
+                    SyncPasteTool(target, false);
+                    _status = string.Format(_text.ApplyDone, CountBelts(target));
+                    Log.Info("已按新粘贴位置重省：" + summary.Replace(Environment.NewLine, " | "));
+                    return;
+                }
+                // ③A 无标记但有原件快照：从原件按新位置重新省带（结果与"一开始就粘在这里"完全一致）。
                 if (_originalSnapshot != null)
                 {
                     // 快照只读取、不清空：清空曾导致"第一次位置重算之后，继续拖动完全不再受检"
@@ -937,7 +1478,8 @@ namespace BlueprintBeltSaver
                     BlueprintData rebuilt;
                     string summary;
                     float cap;
-                    if (!TryOptimize(source, out rebuilt, out summary, out cap))
+                    int beltsBeforeReopt = CountBelts(target);
+                    if (!TryOptimize(source, out rebuilt, out summary, out cap, out _, _originalSpans))
                     {
                         // 新位置下算不出安全结果：把原件放回粘贴工具，宁可玩家自己看到原件，
                         // 也不交付一个会被游戏拒绝「距离太远」的蓝图。
@@ -947,8 +1489,13 @@ namespace BlueprintBeltSaver
                         SyncPasteTool(target, false);
                         return;
                     }
+                    if (CountBelts(rebuilt) > beltsBeforeReopt)
+                    {
+                        Log.Info($"新位置重算带子数反增（{beltsBeforeReopt} → {CountBelts(rebuilt)}）：按新纬度重新切割所致，按安全优先原则应用。");
+                    }
                     target.buildings = rebuilt.buildings;
                     target.CheckBuildingData();
+                    _stateBlueprintKey = BlueprintKey(target);
                     try
                     {
                         _inspector.Refresh(true, true, true);
@@ -960,39 +1507,6 @@ namespace BlueprintBeltSaver
                     SyncPasteTool(target, false);
                     _status = string.Format(_text.ApplyDone, CountBelts(target));
                     Log.Info("已按新粘贴位置重算：" + summary.Replace(Environment.NewLine, " | "));
-                    return;
-                }
-                // ③B 无原件快照，但蓝图带本 MOD 的优化标记（库里保存过的优化结果直接拖到地上）：
-                //     从**当前状态**按新位置重新省带——越限的链会被按当前位置重新插值，不再把
-                //     "按别的纬度优化出的跨度"硬粘到当前位置（玩家实测：反复省带后部分带子过长）。
-                if (HasOptimizeMarker(target))
-                {
-                    string preState = SafeSnapshot(target);
-                    var preSpans = BuildSpanIndex(target.buildings, IsBelt);
-                    Log.Info($"粘贴位置变化（{key}）：当前结果在新位置有 {check.Over} 条越限链节（无原件快照），从当前状态按新位置重省。");
-                    BlueprintData rebuilt;
-                    string summary;
-                    float cap;
-                    if (!TryOptimize(target, out rebuilt, out summary, out cap))
-                    {
-                        Log.Warn("当前位置下无法得到安全的省带结果，保持当前状态（粘贴时游戏可能报「距离太远」）。");
-                        return;
-                    }
-                    _originalSnapshot = preState;
-                    _originalSpans = preSpans;
-                    target.buildings = rebuilt.buildings;
-                    target.CheckBuildingData();
-                    try
-                    {
-                        _inspector.Refresh(true, true, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warn("inspector refresh failed: " + ex.Message);
-                    }
-                    SyncPasteTool(target, false);
-                    _status = string.Format(_text.ApplyDone, CountBelts(target));
-                    Log.Info("已按新粘贴位置从当前状态重省：" + summary.Replace(Environment.NewLine, " | "));
                     return;
                 }
                 Log.Warn($"粘贴位置变化（{key}）：当前结果在新位置有 {check.Over} 条越限链节，但无本 MOD 优化标记也无原件快照，保持原样。");
@@ -1008,7 +1522,15 @@ namespace BlueprintBeltSaver
 
         private static bool HasOptimizeMarker(BlueprintData bp)
             => bp != null && !string.IsNullOrEmpty(bp.externalFields)
-                && bp.externalFields.IndexOf(OptimizeMarker, StringComparison.Ordinal) >= 0;
+                && bp.externalFields.Split(';').Any(field => string.Equals(field, OptimizeMarker, StringComparison.Ordinal));
+
+        private static string RemoveOptimizeMarker(string fields)
+        {
+            if (string.IsNullOrEmpty(fields)) return fields;
+            var parts = fields.Split(';');
+            if (!parts.Any(field => string.Equals(field, OptimizeMarker, StringComparison.Ordinal))) return fields;
+            return string.Join(";", parts.Where(field => !string.Equals(field, OptimizeMarker, StringComparison.Ordinal)).ToArray());
+        }
 
         /// <summary>
         /// Pushes the merged blueprint into the paste tool, but only where the game itself would do
@@ -1092,13 +1614,42 @@ namespace BlueprintBeltSaver
         ///
         /// 位置不可用时返回 null：模型会退回"蓝图自身锚点纬度"，并在位置到手后重算。
         /// </summary>
+        private static string BlueprintKey(BlueprintData bp)
+        {
+            if (bp?.buildings == null || bp.buildings.Length == 0)
+            {
+                return "empty";
+            }
+            var first = bp.buildings[0];
+            var last = bp.buildings[bp.buildings.Length - 1];
+            return $"{bp.buildings.Length}|{first.localOffset_x:F2},{first.localOffset_y:F2},{first.localOffset_z:F2}|{last.localOffset_x:F2},{last.localOffset_y:F2},{last.localOffset_z:F2}";
+        }
+
         private BeltSpacingCalibration.Observation? ReadPasteObservation()
         {
             try
             {
                 if (_inspector == null || _inspector.usage != UIBlueprintInspector.EUsage.Paste)
                 {
-                    return null;
+                    // 非粘贴模式（库内省带）的建模纬度由 cfg 决定：
+                    //   ModelAtPlayerPosition = false（默认）→ 赤道（跨纬度粘贴兼容性最好）；
+                    //   true → 机甲当前位置（弹窗数量即脚下粘贴的最终数量）。
+                    // 粘贴模式下的位置重算不受此项影响，始终按实际粘贴位置。
+                    if (_modelAtPlayerPosition.Value)
+                    {
+                        var player = GameMain.mainPlayer;
+                        if (player != null && GameMain.localPlanet != null)
+                        {
+                            Vector3 pp = player.position;
+                            Vector3 pn = pp.normalized;
+                            if (pn.sqrMagnitude > 0.5f)
+                            {
+                                double playerLat = Math.Asin(Math.Max(-1.0, Math.Min(1.0, pn.y)));
+                                return BeltSpacingCalibration.Observation.FromYaw(playerLat, 0f);
+                            }
+                        }
+                    }
+                    return BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
                 }
                 BuildTool_BlueprintPaste tool = _inspector.pasteBuildTool;
                 if (tool == null || !tool.active || !tool.cursorValid)
@@ -1135,34 +1686,129 @@ namespace BlueprintBeltSaver
                 ? observation.Value.Quadrant + ":" + (observation.Value.AnchorLatitudeRad * 200.2).ToString("F1")
                 : "none";
 
-        private bool TryOptimize(BlueprintData source, out BlueprintData optimized, out string summary, out float cap)
+        private static string WriteRestoreAudit(BlueprintGridRestorer.Report report)
+        {
+            try
+            {
+                string dir = Path.Combine(Paths.ConfigPath, "BlueprintBeltSaver-restore-audit");
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, "protected-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + "-" + System.Guid.NewGuid().ToString("N").Substring(0, 8) + ".csv");
+                File.WriteAllLines(path, new[] { "sourceIndex,area,x,y,height" }.Concat(report.ProtectedPoints), new UTF8Encoding(false));
+                Log.Info("复原完整保留点报告：" + path);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("writing the restoration protected-point report failed: " + ex.Message);
+                return null;
+            }
+        }
+
+        private bool TryRestore(BlueprintData source, out BlueprintData restored, out string summary, out bool hardFailure)
+        {
+            restored = null;
+            summary = "";
+            hardFailure = false;
+            var text = _text ?? BeltSaverTranslate.Create(_textIsChinese);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                bool ok = BlueprintGridRestorer.TryRestore(source, out restored, out var report,
+                    _restoreQuantizeHeight.Value, _restoreStrictGrid.Value);
+                if (ok && (restored?.buildings == null || restored.buildings.Length > MaxBlueprintBuildings))
+                {
+                    ok = false;
+                    report.Reason = "building-limit";
+                }
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format(text.RestoreTotalLine, report.Before, report.After, report.Added, report.Removed));
+                sb.AppendLine(string.Format(text.RestoreRunLine, report.RestoredRuns, report.ProtectedRuns, report.UnaffectedRuns));
+                sb.AppendLine(string.Format(text.RestoreNativeLine, report.NativePlannedRuns, report.SnappedNodes));
+                sb.AppendLine(string.Format(text.RestoreProtectedNodes, report.ProtectedNodes));
+                if (!string.IsNullOrEmpty(report.ProtectionDetails))
+                {
+                    sb.AppendLine(text.RestoreProtectionDetails);
+                    sb.AppendLine(_textIsChinese ? report.ProtectionDetails.Replace("area=", "区域=") : report.ProtectionDetails);
+                    string audit = WriteRestoreAudit(report);
+                    sb.AppendLine(string.IsNullOrEmpty(audit) ? text.RestoreProtectionReportFailed : string.Format(text.RestoreProtectionReport, audit));
+                }
+                if (ok && report.RestoredRuns == 0 && report.SnappedNodes == 0) sb.AppendLine(text.RestoreNoChange);
+                sb.AppendLine();
+                sb.AppendLine(text.RestoreMode);
+                summary = sb.ToString().TrimEnd();
+                Log.Info($"网格复原耗时 {watch.Elapsed.TotalMilliseconds:F1} ms；传送带 {report.Before} → {report.After}，新增 {report.Added}，移除 {report.Removed}，已复原区段 {report.RestoredRuns}，保护区段 {report.ProtectedRuns}，未调整区段 {report.UnaffectedRuns}；通过={ok}，原因={report.Reason}");
+                Log.Info($"原生网格规划 {report.NativePlannedRuns} 区段，安全规范化 {report.SnappedNodes} 节点；原件过短排除姿态 {report.ExcludedShortSourcePoses} 个。");
+                if (!ok)
+                {
+                    restored = null;
+                    hardFailure = true;
+                    _status = text.RestoreFailureReason(report.Reason);
+                    if (report.Before > 0) _status += Environment.NewLine + Environment.NewLine + text.RestoreNotAppliedPreview + Environment.NewLine + summary;
+                    Log.Error("belt grid restoration failed, the blueprint is left untouched: " + report.Reason);
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                restored = null;
+                hardFailure = true;
+                _status = text.RestoreUnknownFailure;
+                Log.Error("belt grid restoration failed, the blueprint is left untouched: " + ex);
+                return false;
+            }
+        }
+
+        private bool TryOptimize(BlueprintData source, out BlueprintData optimized, out string summary, out float cap, out bool hardFailure, HashSet<(long, long)> trustedOriginalSpans = null)
         {
             optimized = null;
             summary = "";
-            bool fromLongerBelts;
-            cap = ResolveCap(out fromLongerBelts);
+            hardFailure = false;
+            cap = ResolveBlueprintCap();
             var watch = System.Diagnostics.Stopwatch.StartNew();
             double modelMs = 0;
             try
             {
+                // 004.15 门禁反馈重跑循环：拓扑门禁报跨线/引用丢失时，把失败附件的目标窗口
+                // （目标+原始前后邻居，按 source 数组位置传递，Clone 之间对象身份不通）作为
+                // 额外锚点重跑（≤4 轮）。锚点即链边界，窗口内原折线形状原样保留 → 目标跨度
+                // 与基线逐字相同，binder 不再二次重绑（1080 分流器#1971/#1973 实证闭环）。
+                List<int> extraAnchors = null;
+                PasteEnvelope envelope = null;
+                for (int attempt = 0; ; attempt++)
+                {
                 BlueprintData bp = source.Clone();
-                if (bp == null || bp.buildings == null)
+                if (bp == null || bp.buildings == null || bp.buildings.Length == 0)
                 {
                     // 游戏的 Clone 是 ToBase64String → FromBase64String 往返，失败时返回 null
-                    // 而不是抛异常。拿到空说明原件无法安全序列化往返，直接放弃本次省带。
+                    // 而不是抛异常。拿到空（null 或零建筑）说明原件无法安全序列化往返
+                    // （如 80环带 样本缺头部字段），直接放弃本次省带，保留原件。
                     Log.Warn("原件蓝图序列化往返失败（Clone 返回空）；保留原件。");
-                    _status = _text.NoChange;
+                    _status = _text.CloneFailed;
+                    hardFailure = true;
                     return false;
                 }
                 // 原件"格位跨度"索引：Optimize 会就地改写引用，必须趁引用还是原件时按
                 // (区域,x,y)→(区域,x,y) 记下原件已有的全部带-带跨度。VerifyHardLimit 用它区分
                 // "新造跨度"（省带造出来的，必须全部 ≤ 硬上限）与"原件同跨度"（游戏对原件
                 // 同样拒绝的断损段，合不合并都一样，不该由省带来背锅）。
-                var originalSpans = BuildSpanIndex(bp.buildings, IsBelt);
+                // "原件同跨度"豁免口径（004.9 修正）：
+                //   优先用**真原件**的跨度（调用方从 _originalSpans/快照传入）；
+                //   来源本身是原件（未打优化标记）时，当前跨度就是原件跨度；
+                //   带优化标记但没有快照的蓝图：严格口径（不豁免任何跨度）——不能把上一次
+                //   优化造出的长跨度当成"原件缺陷"放行（玩家 C1 拖动后 17 条红字即此）。
+                HashSet<(long, long)> originalSpans = trustedOriginalSpans;
+                if (originalSpans == null)
+                {
+                    originalSpans = HasOptimizeMarker(source)
+                        ? new HashSet<(long, long)>()
+                        : BuildSpanIndex(bp.buildings, IsBelt);
+                }
                 int before = CountBelts(bp);
                 // 安全余量：模型已经与游戏逐点同式（误差只来自 float 与浮点累积），
                 // 因此余量只需要吸收"顶点被 float 截断 + 游戏端浮点累积"这一点点，取 15% 太浪费，
                 // 0.98 对应约 2% 余量（硬上限 2.3022 m 处约 4.6 cm），实测足以覆盖全部蓝图。
+                // 004.17：跨纬度安全改为全合法粘贴姿态包络（无采样缝隙），BandMargin 退役。
                 float capForOptimize = cap * SafetyMargin;
                 bool usedResample = !_gridExactMerging.Value;
                 // Iron rule guard: on a blueprint that spans several latitude bands, pin the neighbourhood
@@ -1173,6 +1819,12 @@ namespace BlueprintBeltSaver
                 // 粘贴位置拿不到时（蓝图库、尚未进入放置状态）由模型自己在合法纬度里按"实测省带量"
                 // 挑一个默认值（MeasureSavingsAt 就是那个试算回调），并在位置到手后重算。
                 var observation = ReadPasteObservation();
+                if (!observation.HasValue && _crossLatitudeSafety.Value)
+                {
+                    // 004.17：跨纬度安全开启时距离取全合法姿态包络，与观测纬度无关；不必再为
+                    // "挑默认纬度"跑三次试算合并（MeasureSavingsAt），间距模型只用于日志/跨带标记。
+                    observation = BeltSpacingCalibration.Observation.FromYaw(0.0, 0f);
+                }
                 bool searchLogged = false;
                 var calibration = BeltSpacingCalibration.Resolve(bp.areas, bp.buildings, IsBelt, observation,
                     (latDeg, stride) =>
@@ -1186,15 +1838,62 @@ namespace BlueprintBeltSaver
                     });
                 modelMs = watch.Elapsed.TotalMilliseconds;
                 Log.Info("间距模型：" + calibration);
+                // 004.17 跨纬度结构安全 = 全合法粘贴姿态包络（默认开）：游戏判定合法的全部粘贴姿态
+                // （偏航 × 光标纬度格）中、原件能干净粘贴的那些姿态上取最坏距离，几何与
+                // RefreshBuildPreview 逐字同式 → 长带化产物在任意纬度、任意朝向粘贴都不断链。
+                // 包络只取决于合并前的几何，门禁反馈重跑各轮共用一份（首轮 Clone 上建）。
+                if (envelope == null)
+                {
+                    envelope = CrossLatitudeSafety.Envelope(bp.areas, bp.primaryAreaIdx, bp.buildings, IsBelt);
+                    Log.Info("粘贴包络：" + envelope);
+                }
+                // 关闭时退回单姿态精确模型（本次观测姿态，非法时吸附到最近的合法姿态）。
                 Func<BlueprintBuilding, BlueprintBuilding, double> meters =
-                    (a, b) => BeltSpacingCalibration.Distance(a, b, calibration);
+                    CrossLatitudeSafety.Wrap(envelope, observation, _crossLatitudeSafety.Value);
+                // 原件最坏链节（与门禁同一距离口径；合并会就地改写引用，必须在 Optimize 之前量）。
+                double originalWorst = 0.0;
+                foreach (var n in bp.buildings)
+                {
+                    if (n == null || !IsBelt(n) || n.outputObj == null || !IsBelt(n.outputObj)) continue;
+                    double d = meters(n, n.outputObj);
+                    if (!double.IsNaN(d) && !double.IsInfinity(d) && d > originalWorst) originalWorst = d;
+                }
                 BeltPathOptimizer.Report report;
                 bool pinOverLimit = calibration.MultiBand;
                 // Snapshot before the first run: the optimizer rewires links in place, and the
                 // fallback below needs the untouched blueprint.
                 string snapshot = usedResample ? null : SafeSnapshot(bp);
                 var preMerge = bp.buildings;
-                bp.buildings = BeltPathOptimizer.Optimize(bp.buildings, IsBelt, b => capForOptimize, meters, out report, _rebindSorterLinks.Value, !usedResample, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
+                // 准则⑦ 基线（004.12-c 修正）：在合并改写引用**之前**记录 Clone 侧的线路归属
+                // 与非带建筑引用的所在线。Clone 是游戏自身的拷贝行为——序列化端点重载时按
+                // 位置重新吸附，贴近邻线时会吸附到邻线节点（1080 分流器#238 实证：原件 44 线
+                // → Clone 后 36 线），并非优化器所为；门禁只对账"优化器造成的跨线改写"。
+                // 引用是就地改写的，基线事后不可恢复，必须在此抓取。
+                var preMergeLines = LinesOfBlueprint(preMerge, IsBelt);
+                // 004.15：基线引用快照必须连**目标对象**一起抓——Optimize 会就地改写
+                // preMerge 的引用，事后读 preMerge[i].inputObj/outputObj 拿到的是改写后的
+                // 新节点；门禁反馈重跑需要的是基线目标本体（锚定窗口用）。
+                var preMergeRefs = new Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)>();
+                for (int i = 0; i < preMerge.Length; i++)
+                {
+                    var n = preMerge[i];
+                    if (n == null || IsBelt(n)) continue;
+                    var inT = n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null;
+                    var outT = n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null;
+                    int inLine = inT != null && preMergeLines.TryGetValue(inT, out int li) ? li : -1;
+                    int outLine = outT != null && preMergeLines.TryGetValue(outT, out int lo) ? lo : -1;
+                    preMergeRefs[i] = (inT, outT, inLine, outLine);
+                }
+                // 004.15：带节点的基线引用图同样要快照（T 的引用也会被就地改写，重跑窗口
+                // 需要 T 的"基线邻居"而非现邻居）。
+                var beltBaseRefs = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                foreach (var n in preMerge)
+                {
+                    if (n == null || !IsBelt(n)) continue;
+                    beltBaseRefs[n] = (n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null,
+                                       n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null);
+                }
+                bp.buildings = BeltPathOptimizer.Optimize(bp.buildings, IsBelt, b => capForOptimize, meters, out report, _rebindSorterLinks.Value, !usedResample, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value, extraAnchors);
                 int after = CountBelts(bp);
                 if (!usedResample && snapshot != null)
                 {
@@ -1209,7 +1908,23 @@ namespace BlueprintBeltSaver
                     {
                         BeltPathOptimizer.Report trialReport;
                         var trialPreMerge = trial.buildings;
-                        var trialBuildings = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, b => capForOptimize, meters, out trialReport, _rebindSorterLinks.Value, false, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value);
+                        // 004.12-d：trial 分支的基线必须单独抓取——trial 与 work 是两套对象
+                        // （CreateNew 独立解析），基线线路表按对象身份键控，跨分支不通用；
+                        // 采纳插值后门禁/线感知 binder 必须换用 trial 侧基线（曾因沿用 work 侧
+                        // 基线导致对账恒空、游戏内所有蓝图被门禁误拒）。
+                        var trialPreMergeLines = LinesOfBlueprint(trialPreMerge, IsBelt);
+                        var trialPreMergeRefs = new Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)>();
+                        for (int i = 0; i < trialPreMerge.Length; i++)
+                        {
+                            var n = trialPreMerge[i];
+                            if (n == null || IsBelt(n)) continue;
+                            var inT = n.inputObj != null && IsBelt(n.inputObj) ? n.inputObj : null;
+                            var outT = n.outputObj != null && IsBelt(n.outputObj) ? n.outputObj : null;
+                            int inLine = inT != null && trialPreMergeLines.TryGetValue(inT, out int li2) ? li2 : -1;
+                            int outLine = outT != null && trialPreMergeLines.TryGetValue(outT, out int lo2) ? lo2 : -1;
+                            trialPreMergeRefs[i] = (inT, outT, inLine, outLine);
+                        }
+                        var trialBuildings = BeltPathOptimizer.Optimize(trial.buildings, IsBelt, b => capForOptimize, meters, out trialReport, _rebindSorterLinks.Value, false, pinOverLimit, _sorterForceRebind.Value && _rebindSorterLinks.Value, extraAnchors);
                         int trialAfter = 0;
                         foreach (var building in trialBuildings)
                         {
@@ -1218,30 +1933,59 @@ namespace BlueprintBeltSaver
                                 trialAfter++;
                             }
                         }
-                        if (trialAfter >= after)
+                        // 双模式采纳规则（004.8 修正）：
+                        //   ① 试验必须通过硬上限自检（Over == 0）；
+                        //   ② 试验结果必须**比原件更少带**（trialAfter < before）——省带 MOD 不应交付
+                        //      "带子变多"的结果；
+                        //   ③ 两者都安全时只认"省得更多"（trialAfter < after）；只有格点结果不安全
+                        //      （Over > 0）时才允许插值兜底（即便比格点多，只要仍少于原件）。
+                        // 旧规则用"KeptOver（原件自带超限链节的保留数）更少"作优先条件：插值会为了
+                        // 补切原件自带的断损链节而净增两百多条带（【极地】495 → 731、37.5@72° 1893
+                        // → 1916，实测），违背省带目标；原件自带的超限链节游戏本来就会拒绝那几节，
+                        // 合不合并都不会更差，不该由省带买单。（003.2 的 80环带案例仍被 ③ 覆盖：
+                        // 那次是格点结果 Over > 0，靠插值兜底。）
+                        var trialCheck = VerifyHardLimit(trialBuildings, meters, originalSpans);
+                        var gridCheck = VerifyHardLimit(bp.buildings, meters, originalSpans);
+                        bool trialSafer = trialCheck.Over == 0 && trialAfter < before &&
+                            (gridCheck.Over > 0 || trialAfter < after);
+                        if (trialSafer)
                         {
-                            Log.Info($"插值模式无额外收益（保点 {before} → {after}，插值 → {trialAfter}），保留保点结果。");
+                            Log.Info($"插值模式更优：{before} → {trialAfter}（保点模式 → {after}），采用插值结果（最坏新链节 {trialCheck.Worst:F4} m；原件同跨度越限 {trialCheck.KeptOver} 条保持原状）。");
+                            trial.buildings = trialBuildings;
+                            trial.CheckBuildingData();
+                            // 004.12-d：trial 是 CreateNew 产物（私有构造不调 Reset，缺头部字段），
+                            // 直接作为结果会让后续 Clone/导出序列化失败（本轮游戏内实测：优化成功
+                            // 但导出 Clone 返回空）。把结果搬回**头部完整的 source 底板**再交付。
+                            var rebuilt = source.Clone();
+                            rebuilt.buildings = trialBuildings;
+                            rebuilt.CheckBuildingData();
+                            bp = rebuilt;
+                            preMerge = trialPreMerge;
+                            // 基线同步切换到 trial 分支（对象身份按分支键控，见上方抓取注释）。
+                            preMergeLines = trialPreMergeLines;
+                            preMergeRefs = trialPreMergeRefs;
+                            after = trialAfter;
+                            report = trialReport;
+                            usedResample = true;
+                        }
+                        else if (trialAfter > after)
+                        {
+                            // 插值试验带数反增：旧规则会为了少保留几条"原件自带超限链节"而采纳它
+                            // （极地 495→731），004.8 起一律不采纳。
+                            Log.Info($"插值试验带数反增（{before} → {trialAfter}），保留保点结果 {before} → {after}。");
+                        }
+                        else if (trialAfter == after)
+                        {
+                            // 诊断（003.3 回归排查）：插值试验未合并时输出逐链状态行，
+                            // 定位是 no_reduction 还是 distance_rejected / machine_tail_unfit。
+                            Log.Info($"插值模式无额外收益（保点 {before} → {after}，插值 → {trialAfter}），保留保点结果。" +
+                                "试验链路状态：" + string.Join("；", trialReport.Chains.Take(6)));
                         }
                         else
                         {
                             // 采纳前先按"只看新造跨度"的硬上限口径自检插值结果；原型经 Optimize 的
                             // 逐跨度复测（> 上限即拒绝整条链），这里是对同一模型的第二次独立复核。
-                            var trialCheck = VerifyHardLimit(trialBuildings, calibration, originalSpans);
-                            if (trialCheck.Over > 0)
-                            {
-                                Log.Warn($"插值模式可省 {before - trialAfter} 节但硬上限自检不过（越限新链节 {trialCheck.Over} 条），保留保点结果 {before} → {after}。");
-                            }
-                            else
-                            {
-                                Log.Info($"插值模式省带更多：{before} → {trialAfter}（保点模式 → {after}），采用插值结果（最坏新链节 {trialCheck.Worst:F4} m）。");
-                                trial.buildings = trialBuildings;
-                                trial.CheckBuildingData();
-                                bp = trial;
-                                preMerge = trialPreMerge;
-                                after = trialAfter;
-                                report = trialReport;
-                                usedResample = true;
-                            }
+                            Log.Warn($"插值模式可省 {before - trialAfter} 节但硬上限自检不过（越限新链节 {trialCheck.Over} 条），保留保点结果 {before} → {after}。");
                         }
                     }
                 }
@@ -1250,7 +1994,35 @@ namespace BlueprintBeltSaver
                 // target (the game nulls the reference and the sorter is dead in game). Every inserter
                 // end is verified here and re-bound when it is empty, dangling or beyond the game's
                 // reach; machine ends are never touched.
-                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters);
+                // 线感知 binder（004.12-c）：给 binder 提供"任意结果节点 → 基线线路号"函数——
+                // 幸存节点直查基线；新增（插值）节点经 结果线→基线 映射回溯（幸存者对账）。
+                var resultLinesForBinder = LinesOfBlueprint(bp.buildings, IsBelt);
+                // 004.15：基线目标快照（端点→优化前目标对象），供 binder 识别"原链接保留"。
+                var ownerBaseTargets = new Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)>();
+                for (int i = 0; i < preMerge.Length; i++)
+                {
+                    if (preMerge[i] != null && !IsBelt(preMerge[i]) && preMergeRefs.TryGetValue(i, out var pr0))
+                        ownerBaseTargets[preMerge[i]] = (pr0.inT, pr0.outT);
+                }
+                var r2oForBinder = new Dictionary<int, int>();
+                foreach (var kv in resultLinesForBinder)
+                {
+                    if (!preMergeLines.TryGetValue(kv.Key, out int o)) continue;
+                    if (r2oForBinder.TryGetValue(kv.Value, out var o0) && o0 != o) continue;
+                    r2oForBinder[kv.Value] = o;
+                }
+                int LineOfForBinder(BlueprintBuilding n)
+                    => n == null ? -1
+                     : preMergeLines.TryGetValue(n, out int pl) ? pl
+                     : resultLinesForBinder.TryGetValue(n, out int rl) && r2oForBinder.TryGetValue(rl, out int bl) ? bl
+                     : -1;
+                var binderReport = InserterBinder.Repair(bp.buildings, IsBelt, meters, LineOfForBinder,
+                    (o, isInput, cand) =>
+                    {
+                        // 004.15 基线保留：该端在优化前快照中的目标就是 cand（对象同一）→ 原链接保留。
+                        return ownerBaseTargets.TryGetValue(o, out var t) &&
+                            (isInput ? ReferenceEquals(t.inT, cand) : ReferenceEquals(t.outT, cand));
+                    });
                 Log.Info("分拣器校验：" + binderReport);
                 // Full savings are taken first; only then is every inserter judged. If a merged piece no
                 // longer passes through the window the game needs (1.414 m from the inserter body or
@@ -1275,38 +2047,114 @@ namespace BlueprintBeltSaver
                 {
                     Log.Error($"optimized blueprint has {bp.buildings?.Length ?? 0} buildings, above the {MaxBlueprintBuildings} limit; keeping the original.");
                     _status = _text.TooManyBuildings;
+                    hardFailure = true;
                     return false;
                 }
-                WriteAudit(report, cap, fromLongerBelts);
-                summary = BuildSummary(bp, before, after, cap, fromLongerBelts, report, usedResample, binderReport);
+                WriteAudit(report, cap);
+                summary = BuildSummary(bp, before, after, cap, report, usedResample, binderReport);
                 Log.Info($"干跑：传送带 {before} → {after}（分拣器连接重绑={_rebindSorterLinks.Value}，保留原节点={!usedResample}）；{report}");
                 // 铁律①的自检：合并结果的每一条**新造**带-带链节都要在**本模型**下 ≤ 硬上限。
                 // 由于本模型与游戏逐点同式，这条自检就是对游戏 sqrMagnitude > 5.3 的直接复核。
                 // 原件同跨度的超限链节单独计数：它们在原件里就存在，游戏对原件同样拒绝那几节带，
                 // 合并不会让任何一节带变得比原件更差；因它们放弃整次省带只会白扔收益。
                 double beforeCheckMs = watch.Elapsed.TotalMilliseconds;
-                var check = VerifyHardLimit(bp.buildings, calibration, originalSpans);
+                var check = VerifyHardLimit(bp.buildings, meters, originalSpans);
                 double checkMs = watch.Elapsed.TotalMilliseconds - beforeCheckMs;
                 double mergeMs = beforeCheckMs - modelMs;
                 Log.Info($"省带耗时：{watch.Elapsed.TotalMilliseconds:F1} ms（模型 {modelMs:F1} ms / 合并 {mergeMs:F1} ms / 校验 {checkMs:F1} ms）；" +
                     $"模型下最坏新链节 {check.Worst:F4} m，越限新链节 {check.Over} 条（上限 {BeltPathOptimizer.MaximumMeters:F4} m），" +
-                    $"原件同跨度越限 {check.KeptOver} 条，原件最坏链节 {calibration.LongestOriginalLink:F4} m");
+                    $"原件同跨度越限 {check.KeptOver} 条，原件最坏链节 {originalWorst:F4} m");
                 if (check.Over > 0)
                 {
                     // 自检没过：不交付一个会因省带新增「距离太远」的蓝图。
                     Log.Error($"省带结果模型自检不过（越限新链节 {check.Over} 条，最坏 {check.Worst:F4} m），已放弃本次省带，保留原件。");
-                    _status = _text.NoChange;
+                    _status = _text.SelfCheckFailed;
+                    hardFailure = true;
                     return false;
                 }
+                if (_crossLatitudeSafety.Value)
+                {
+                    // 004.17 精确闸门（准则①/⑧ 的最终复核）：保护集全部粘贴姿态逐个展开，按游戏
+                    // float 公式算 lpos、用 sqrMagnitude 判定（不走包络的解析化简）。任一新造跨度在任一
+                    // 姿态越限即放弃本次省带——包络与闸门是两条独立计算路径，互为校验。
+                    var gateSpans = originalSpans;
+                    var gate = envelope.Gate(bp.buildings, IsBelt,
+                        (a, b) => gateSpans != null && gateSpans.Contains((SpanSideKey(a), SpanSideKey(b))));
+                    Log.Info($"粘贴姿态闸门：{gate.Frames} 个姿态逐个复核，最坏新链节 {gate.Worst:F4} m，越限新链节 {gate.Over} 条" +
+                        (gate.KeptOver > 0 ? $"，原件同跨度越限 {gate.KeptOver} 条（游戏对原件同样拒绝）" : ""));
+                    if (gate.Over > 0)
+                    {
+                        Log.Error($"省带结果未通过粘贴姿态闸门（越限新链节 {gate.Over} 条；首例 {gate.First}），已放弃本次省带，保留原件。");
+                        _status = _text.SelfCheckFailed;
+                        hardFailure = true;
+                        return false;
+                    }
+                }
+                // 准则⑦（2026-11-01）：拓扑硬门禁——长带化不得改变传送带拓扑。
+                // 线路条数（带-带连通分量）前后必须一致；不允许分裂（断链）与串线（吸附到
+                // 别的物品条）；分拣器/机器的带引用必须仍指向原线路。任一违反即放弃本次省带。
+                var topo = VerifyTopology(preMergeLines, preMergeRefs, preMerge, bp.buildings, IsBelt);
+                if (!topo.Ok)
+                {
+                    // 004.15 门禁反馈重跑：跨线重绑/引用丢失可由「锚定目标窗口」修复——用基线
+                    // 快照里的目标本体（preMerge 引用已被就地改写，不能现读）。
+                    if (topo.FailPos >= 0 && attempt < 3 && preMergeRefs.TryGetValue(topo.FailPos, out var failRef))
+                    {
+                        if (extraAnchors == null) extraAnchors = new List<int>();
+                        AddAnchorWindow(preMerge, topo.FailInput ? failRef.inT : failRef.outT, beltBaseRefs, extraAnchors);
+                        Log.Warn($"拓扑门禁第 {attempt + 1} 次拦截（{topo.Reason}），锚定目标窗口后重跑第 {attempt + 2} 轮。");
+                        continue;
+                    }
+                    Log.Error($"省带结果拓扑自检不过（{topo.Reason}），已放弃本次省带，保留原件。");
+                    _status = _text.TopologyFailed;
+                    hardFailure = true;
+                    return false;
+                }
+                Log.Info($"拓扑自检通过：线路 {topo.LinesBefore} 条不变，分拣器/机器带引用 {topo.Refs} 条全部在原线路。");
                 optimized = bp;
                 return true;
+                } // 004.15 门禁反馈重跑循环
             }
             catch (Exception ex)
             {
                 Log.Error("belt optimization failed, the blueprint is left untouched: " + ex);
                 _status = ex.Message;
+                hardFailure = true;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 004.15 门禁反馈锚点窗口：基线目标本体 + 其**基线**前后邻居（beltBaseRefs 快照——
+        /// preMerge 的引用已被就地改写，现读邻居不可靠）。三者同为 preMerge 数组成员，顺序与
+        /// source 一致，位置直接传给下一轮 Optimize 的 extraAnchorPositions（跨 Clone 对象身份
+        /// 不通，必须按位置传递）。目标与其邻居同时锚成链边界后，原链接逐字保留，跨度与
+        /// 基线一致 → binder 兼容、引用永不跨线。
+        /// </summary>
+        private static void AddAnchorWindow(BlueprintBuilding[] preMerge, BlueprintBuilding target,
+            Dictionary<BlueprintBuilding, (BlueprintBuilding inT, BlueprintBuilding outT)> beltBaseRefs,
+            List<int> positions)
+        {
+            if (preMerge == null || target == null) return;
+            AddAnchorNode(preMerge, positions, target);
+            if (beltBaseRefs != null && beltBaseRefs.TryGetValue(target, out var baseRefs))
+            {
+                AddAnchorNode(preMerge, positions, baseRefs.inT);
+                AddAnchorNode(preMerge, positions, baseRefs.outT);
+            }
+            else
+            {
+                // 兜底：无基线快照时退回现读邻居（可能已被改写，但不至于比没有强）。
+                AddAnchorNode(preMerge, positions, target.inputObj);
+                AddAnchorNode(preMerge, positions, target.outputObj);
+            }
+        }
+
+        private static void AddAnchorNode(BlueprintBuilding[] preMerge, List<int> positions, BlueprintBuilding n)
+        {
+            if (n == null || !IsBelt(n)) return;
+            int p = Array.IndexOf(preMerge, n);
+            if (p >= 0 && !positions.Contains(p)) positions.Add(p);
         }
 
         /// <summary>
@@ -1337,13 +2185,164 @@ namespace BlueprintBeltSaver
         }
 
         /// <summary>
+        /// 准则⑦的拓扑自检结果：Ok=false 时 Reason 说明违反项。
+        /// </summary>
+        private readonly struct TopoCheck
+        {
+            internal readonly bool Ok;
+            internal readonly string Reason;
+            internal readonly int LinesBefore, LinesAfter, Refs, AmbiguousRefs;
+            // 004.15 门禁反馈重跑：FailPos = preMerge 数组中失败附件的位置（顺序与 source 一致），
+            // FailInput = 失败端；仅跨线重绑/引用丢失两类可由「锚定目标窗口重跑」修复，其余 -1。
+            internal readonly int FailPos;
+            internal readonly bool FailInput;
+            internal TopoCheck(bool ok, string reason, int linesBefore, int linesAfter, int refs, int ambiguousRefs = 0,
+                int failPos = -1, bool failInput = false)
+            {
+                Ok = ok; Reason = reason; LinesBefore = linesBefore; LinesAfter = linesAfter; Refs = refs; AmbiguousRefs = ambiguousRefs;
+                FailPos = failPos; FailInput = failInput;
+            }
+        }
+
+        /// <summary>
+        /// 拓扑硬门禁（2026-11-01 准则）：对比优化前后的传送带连接图。
+        /// original = 原件（未被改动）；preMerge = 优化前的深拷贝（顺序与 original 一致，
+        /// 非带建筑的引用会被优化就地改写，用它读"当前"引用）；result = 优化结果。
+        /// 校验：①线路数（连通分量数）一致；②每条原线的幸存节点只落入一条结果线（无分裂），
+        /// 且每条结果线只含一条原线的节点（无串线）；③分拣器/机器的带引用目标仍在原线路。
+        /// </summary>
+        /// <summary>
+        /// 传送带线路归属（带-带连通分量编号），供拓扑门禁抓基线与对账。
+        /// </summary>
+        private static Dictionary<BlueprintBuilding, int> LinesOfBlueprint(BlueprintBuilding[] buildings, Func<BlueprintBuilding, bool> isBelt)
+        {
+            var lineOf = new Dictionary<BlueprintBuilding, int>();
+            if (buildings == null)
+            {
+                return lineOf;
+            }
+            var belts = buildings.Where(isBelt).ToArray();
+            var parent = belts.ToDictionary(x => x, x => x);
+            BlueprintBuilding Find(BlueprintBuilding x)
+            {
+                while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+                return x;
+            }
+            foreach (var b in belts)
+            {
+                if (b.outputObj != null && isBelt(b.outputObj) && parent.ContainsKey(b.outputObj))
+                { var ra = Find(b); var rb = Find(b.outputObj); if (ra != rb) parent[ra] = rb; }
+                if (b.inputObj != null && isBelt(b.inputObj) && parent.ContainsKey(b.inputObj))
+                { var ra = Find(b); var rb = Find(b.inputObj); if (ra != rb) parent[ra] = rb; }
+            }
+            int next = 0; var rootId = new Dictionary<BlueprintBuilding, int>();
+            foreach (var b in belts)
+            {
+                var r = Find(b);
+                if (!rootId.TryGetValue(r, out int id)) id = rootId[r] = next++;
+                lineOf[b] = id;
+            }
+            return lineOf;
+        }
+
+        private static TopoCheck VerifyTopology(Dictionary<BlueprintBuilding, int> preLines,
+            Dictionary<int, (BlueprintBuilding inT, BlueprintBuilding outT, int inLine, int outLine)> preRefs,
+            BlueprintBuilding[] preMerge,
+            BlueprintBuilding[] result, Func<BlueprintBuilding, bool> isBelt)
+        {
+            if (preMerge == null || result == null || preLines == null || preMerge.Length == 0)
+            {
+                return new TopoCheck(false, "输入为空", 0, 0, 0);
+            }
+            var after = LinesOfBlueprint(result, isBelt);
+            int linesBefore = preLines.Values.Distinct().Count();
+            int linesAfter = after.Values.Distinct().Count();
+            // 幸存节点对账：preMerge 与 result 同源（Optimize 就地改写引用、保留对象子集），
+            // 对象身份可直接比较；基线线路 = 合并前抓取的 preLines（Clone 后、改写前）。
+            var resultSet = new HashSet<BlueprintBuilding>(result);
+            var o2r = new Dictionary<int, int>();
+            var r2o = new Dictionary<int, int>();
+            for (int i = 0; i < preMerge.Length; i++)
+            {
+                var cur = preMerge[i];
+                if (cur == null || !isBelt(cur) || !preLines.TryGetValue(cur, out int o)) continue;
+                if (!after.TryGetValue(cur, out int r) || !resultSet.Contains(cur)) continue;
+                if (o2r.TryGetValue(o, out var r0) && r0 != r)
+                    return new TopoCheck(false, $"原线#{o} 分裂到结果线 {r0}/{r}（断链）", linesBefore, linesAfter, 0);
+                o2r[o] = r;
+                if (r2o.TryGetValue(r, out var o0) && o0 != o)
+                    return new TopoCheck(false, $"结果线#{r} 串接了原线 {o0}/{o}（串线）", linesBefore, linesAfter, 0);
+                r2o[r] = o;
+            }
+            if (linesBefore != linesAfter)
+                return new TopoCheck(false, $"线路数 {linesBefore} → {linesAfter}", linesBefore, linesAfter, 0);
+            // 分拣器/机器带引用：与基线（Clone 后、合并前）对账——只拦优化器造成的跨线改写。
+            // Clone 自身的端点重吸附（游戏拷贝行为）在 preRefs 基线里已被豁免。
+            int refs = 0;
+            int ambiguousRefs = 0;
+            var posLines = new Dictionary<(long, long), HashSet<int>>();
+            foreach (var kv in preLines)
+            {
+                var key = PosKeyA(kv.Key);
+                if (!posLines.TryGetValue(key, out var set)) set = posLines[key] = new HashSet<int>();
+                set.Add(kv.Value);
+            }
+            for (int i = 0; i < preMerge.Length; i++)
+            {
+                var cur = preMerge[i];
+                if (cur == null || isBelt(cur) || !preRefs.TryGetValue(i, out var pr)) continue;
+                foreach (var sideIsInput in new[] { true, false })
+                {
+                    int preLine = sideIsInput ? pr.inLine : pr.outLine;
+                    if (preLine < 0) continue;
+                    refs++;
+                    var targetNow = sideIsInput ? cur.inputObj : cur.outputObj;
+                    if (targetNow == null || !isBelt(targetNow) || !after.TryGetValue(targetNow, out int rLine))
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端带引用丢失", linesBefore, linesAfter, refs, 0, i, sideIsInput);
+                    if (!o2r.TryGetValue(preLine, out var mapped) || mapped != rLine)
+                    {
+                        // 004.12-d 位置歧义豁免：目标格位在基线中同时存在原线路的节点（数据病态：
+                        // 同格位双节点分属两线），游戏自身粘贴解析同样线路不定——"跨线"判定在
+                        // 歧义位置不成立（原蓝图粘贴也一样），计入歧义计数，不判失败。
+                        if (PositionAmbiguous(targetNow, preLine, posLines))
+                        {
+                            ambiguousRefs++;
+                            continue;
+                        }
+                        return new TopoCheck(false, $"建筑#{cur.index} 的{(sideIsInput ? "输入" : "输出")}端被跨线重绑（基线线#{preLine} → 结果线#{rLine}，游戏会把分拣器吸到别的物品条上）", linesBefore, linesAfter, refs, 0, i, sideIsInput);
+                    }
+                }
+            }
+            return new TopoCheck(true, "", linesBefore, linesAfter, refs, ambiguousRefs);
+        }
+
+        /// <summary>格位键：区域 + 量化坐标（位置歧义判定用）。</summary>
+        private static (long area, long xy) PosKeyA(BlueprintBuilding b)
+        {
+            long area = (long)(b.areaIndex & 0xFF) << 56;
+            long xy = ((long)Math.Round(b.localOffset_x * 8192.0) << 20) ^ (long)Math.Round(b.localOffset_y * 8192.0);
+            return (area, xy);
+        }
+
+        /// <summary>位置歧义：目标格位在基线中同时存在 preLine 线路与其它线路的节点
+        /// （数据病态：同格位双节点分属两线），此时"跨线"判定不成立。</summary>
+        private static bool PositionAmbiguous(BlueprintBuilding target, int preLine,
+            Dictionary<(long, long), HashSet<int>> posLines)
+        {
+            if (target == null) return false;
+            var key = PosKeyA(target);
+            return posLines.TryGetValue(key, out var set) && set.Contains(preLine) && set.Count > 1;
+        }
+
+        /// <summary>
         /// 逐条复核合并结果的带-带链节是否在游戏硬上限（sqrMagnitude &gt; 5.3）之内。
         /// 只查"带 → 带"的连接，与 BuildTool_BlueprintPaste ≈2087 行的判据一致；
         /// 带 → 非带 用的是另一套（16 / 28）阈值，不在此列。
         /// <paramref name="originalSpans"/> 为原件"格位跨度"集合；为 null 时退回旧行为
         /// （所有越限链节都算在 Over 里，宁可保守）。
         /// </summary>
-        private static LimitCheck VerifyHardLimit(BlueprintBuilding[] buildings, BeltSpacingCalibration.Result model,
+        private static LimitCheck VerifyHardLimit(BlueprintBuilding[] buildings,
+            Func<BlueprintBuilding, BlueprintBuilding, double> meters,
             HashSet<(long, long)> originalSpans)
         {
             if (buildings == null)
@@ -1361,7 +2360,8 @@ namespace BlueprintBeltSaver
                 {
                     continue;
                 }
-                double distance = BeltSpacingCalibration.Distance(building, building.outputObj, model);
+                // 004.17：meters 已按配置包装为"全合法粘贴姿态包络"（跨纬度安全）或单姿态精确模型。
+                double distance = meters(building, building.outputObj);
                 if (double.IsNaN(distance) || double.IsInfinity(distance))
                 {
                     continue;
@@ -1578,7 +2578,7 @@ namespace BlueprintBeltSaver
         {
             try
             {
-                return bp.ToBase64String();
+                return BlueprintGridRestorer.CloneOwned(bp).ToBase64String();
             }
             catch (Exception ex)
             {
@@ -1587,7 +2587,7 @@ namespace BlueprintBeltSaver
             }
         }
 
-        private string BuildSummary(BlueprintData optimized, int before, int after, float cap, bool fromLongerBelts, BeltPathOptimizer.Report report, bool usedResample, InserterBinder.Report binderReport)
+        private string BuildSummary(BlueprintData optimized, int before, int after, float cap, BeltPathOptimizer.Report report, bool usedResample, InserterBinder.Report binderReport)
         {
             var tiers = new SortedSet<int>();
             foreach (var building in optimized.buildings)
@@ -1631,7 +2631,7 @@ namespace BlueprintBeltSaver
                 }
             }
             sb.AppendLine();
-            sb.AppendLine($"{_text.CurrentCap}: {cap:F6} m ({(fromLongerBelts ? _text.CapFromLongerBelts : _text.CapFromOwn)})");
+            sb.AppendLine($"{_text.CurrentCap}: {cap:F6} m ({_text.CapFromBlueprint})");
             sb.AppendLine(usedResample ? _text.ModeResampled : _text.ModeKeptOriginal);
             sb.AppendLine(string.Format(_text.SorterCheck, binderReport.Inserters, binderReport.EmptyBefore, binderReport.Rebond, binderReport.Unresolved, binderReport.Verified));
             if (_rebindSorterLinks.Value)
@@ -1727,7 +2727,7 @@ namespace BlueprintBeltSaver
             return count;
         }
 
-        private static void WriteAudit(BeltPathOptimizer.Report report, float cap, bool fromLongerBelts)
+        private static void WriteAudit(BeltPathOptimizer.Report report, float cap)
         {
             try
             {
@@ -1736,7 +2736,7 @@ namespace BlueprintBeltSaver
                 string file = Path.Combine(folder, "chains-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + ".csv");
                 var lines = new List<string>
                 {
-                    "# cap_m=" + cap.ToString("F6") + " source=" + (fromLongerBelts ? "LongerBelts" : "own-config"),
+                    "# cap_m=" + cap.ToString("F6") + " source=blueprint-config",
                     "# " + report.ToString()
                 };
                 lines.AddRange(report.Chains);

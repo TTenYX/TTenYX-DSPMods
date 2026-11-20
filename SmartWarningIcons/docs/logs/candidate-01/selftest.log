@@ -1,0 +1,4 @@
+SmartWarningIcons in-game regression 2026-11-20T07:23:34.1233898+08:00
+FAIL fatal :: System.TimeoutException: Game did not reach test stage 0.
+  at SmartWarningIcons.Tests.SelfTestPlugin.Update () [0x0002c] in <8749e6b4ce004e5397d9675dbb7d8f29>:0 
+SUMMARY PASS=0 FAIL=1

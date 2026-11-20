@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>BBSaver.SelfTest</AssemblyName>
+    <RootNamespace>BBSaver.SelfTest</RootNamespace>
+    <Nullable>disable</Nullable>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.IMGUIModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.TextRenderingModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.UIModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/UnityEngine.dll</HintPath></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>D:/Program Files (x86)/Steam/steamapps/common/Dyson Sphere Program/DSPGAME_Data/Managed/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="BepInEx"><HintPath>C:/Users/Administrator/AppData/Roaming/r2modmanPlus-local/DysonSphereProgram/profiles/TEST/BepInEx/core/BepInEx.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>C:/Users/Administrator/AppData/Roaming/r2modmanPlus-local/DysonSphereProgram/profiles/TEST/BepInEx/core/0Harmony.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

@@ -24,15 +24,110 @@ namespace BlueprintBeltSaver
     {
         internal const float MinimumDistance = 0.400001f;
         internal const float MaximumDistance = 2.301172f;
-        internal const float MinimumGridDistance = 1f;
-        internal const float MaximumGridDistance = 3f;
+        // 004.18：格数步长（MinimumGridDistance/MaximumGridDistance）随格数分段一并退役。
 
         internal static bool longerOnGrid;
-        internal static float longitudeDistance = 1.75f;
-        internal static float latitudeDistance = 1.5f;
+        // 004.18：经纬线分段已改为按实际米制长度均匀分段（用户定稿），格数步长参数退役。
         internal static float currentDistance = 1.9f;
         internal static int isometricSegmentation;
         internal static bool shortestUnlimit;
+
+        /// <summary>
+        /// 托管版 slerp（与 Unity Vector3.Slerp 语义一致：方向球面插值、模长线性插值）。
+        /// 不用 Vector3.Slerp 的原因：它是引擎 internal call，离线校验台（net8.0 进程）无法执行，
+        /// 拉带生成就无法做米制托底的离线断言；共线/反共线边界这里显式走线性混合，比引擎实现更稳。
+        /// </summary>
+        private static Vector3 SlerpStable(Vector3 a, Vector3 b, float t)
+        {
+            float lengthA = a.magnitude, lengthB = b.magnitude;
+            if (lengthA < 1e-8f || lengthB < 1e-8f)
+            {
+                return new Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+            }
+            var na = new Vector3(a.x / lengthA, a.y / lengthA, a.z / lengthA);
+            var nb = new Vector3(b.x / lengthB, b.y / lengthB, b.z / lengthB);
+            float dot = Mathf.Clamp(Vector3.Dot(na, nb), -1f, 1f);
+            float theta = Mathf.Acos(dot);
+            float scaleA, scaleB;
+            if (theta < 1e-4f)
+            {
+                scaleA = 1f - t;
+                scaleB = t;
+            }
+            else
+            {
+                float sin = Mathf.Sin(theta);
+                scaleA = Mathf.Sin((1f - t) * theta) / sin;
+                scaleB = Mathf.Sin(t * theta) / sin;
+            }
+            var mixed = na * scaleA + nb * scaleB;
+            float mixedMagnitude = mixed.magnitude;
+            if (mixedMagnitude < 1e-8f)
+            {
+                mixed = na;
+                mixedMagnitude = 1f;
+            }
+            float length = lengthA + (lengthB - lengthA) * t;
+            return new Vector3(mixed.x / mixedMagnitude * length, mixed.y / mixedMagnitude * length, mixed.z / mixedMagnitude * length);
+        }
+
+        /// <summary>
+        /// 米制弦长托底（用户 2026-11-18 定稿）：格数只是期望步长，拉带交付前把每段实际弦长
+        /// 钳到面板「最远距离」与游戏硬上限常量中的较小者——超限段在球面上 slerp 加密，
+        /// 确保拉出的带子保存成蓝图后在原版粘贴判据（位移平方 &gt; 5.3）下一定不报「距离太远」。
+        /// 不加额外余量：托底量的是本星球当前高度的真实弦长（无省带的跨姿态包络问题），
+        /// 而 2.301172 &lt; √5.3 ≈ 2.301776（平方 5.2954 &lt; 5.3）本身严格合法，顶格设置不应被加密
+        /// （2026-11-18 用户实测：×0.98 会把顶格测地线拉带全部加密、节点翻倍，长带效果消失）。
+        /// 弱约束间距（shortestUnlimit，慎用通道）开启时保持原行为不做钳制。
+        /// </summary>
+        private static float MetreCap()
+            => Mathf.Clamp(Mathf.Min(currentDistance, MaximumDistance), MinimumDistance, MaximumDistance);
+
+        private static Vector3[] _metreCapBuffer;
+
+        /// <summary>radiusScale：snaps 存单位向量时传真实半径（含高度），已带半径时传 1。</summary>
+        private static int EnforceMetreCap(Vector3[] snaps, int count, float radiusScale, int limit)
+        {
+            if (shortestUnlimit || count < 2)
+            {
+                return count;
+            }
+            float cap = MetreCap();
+            int extra = 0;
+            for (int i = 0; i < count - 1; i++)
+            {
+                float chord = Vector3.Distance(snaps[i], snaps[i + 1]) * radiusScale;
+                if (chord > cap)
+                {
+                    extra += Mathf.CeilToInt(chord / cap) - 1;
+                }
+            }
+            if (extra == 0)
+            {
+                return count;
+            }
+            if (_metreCapBuffer == null || _metreCapBuffer.Length < count + extra)
+            {
+                _metreCapBuffer = new Vector3[Math.Max(count + extra, limit + 16)];
+            }
+            int write = 0;
+            _metreCapBuffer[write++] = snaps[0];
+            for (int i = 1; i < count; i++)
+            {
+                float chord = Vector3.Distance(snaps[i - 1], snaps[i]) * radiusScale;
+                int pieces = chord > cap ? Mathf.CeilToInt(chord / cap) : 1;
+                for (int k = 1; k < pieces; k++)
+                {
+                    // Slerp keeps unit snaps unit and radius-carrying snaps on the same radial blend.
+                    float t = (float)k / pieces;
+                    _metreCapBuffer[write++] = SlerpStable(snaps[i - 1], snaps[i], t);
+                }
+                _metreCapBuffer[write++] = snaps[i];
+            }
+            int final = Mathf.Min(write, limit);
+            Array.Copy(_metreCapBuffer, snaps, final);
+            return final;
+        }
 
         internal static int LongerSnapLineNonAlloc(PlanetGrid planetGrid, Vector3 begin, Vector3 end, int path, Vector3[] snaps, out int swerveIndex)
         {
@@ -48,6 +143,7 @@ namespace BlueprintBeltSaver
                 return 0;
             }
 
+            float radiusScale = begin.magnitude; // real radius incl. altitude, before Normalize
             begin.Normalize();
             end.Normalize();
             float beginLatitude = Mathf.Asin(begin.y);
@@ -94,6 +190,8 @@ namespace BlueprintBeltSaver
             if (path == 1)
             {
                 // Latitude leg first, then the longitude leg.
+                // 004.18（用户定稿）：格数步长退役，两腿均按实际米制弦长均匀分段
+                // （段长 ≤ MetreCap()，段数最少 = 最省带，节点不再吸附格点）。
                 float segmentCount = PlanetGrid.DetermineLongitudeSegmentCount(
                     Mathf.FloorToInt(Mathf.Max(0f, Mathf.Abs(beginLatitude / 6.283185f * planetGrid.segment) - 0.1f)),
                     planetGrid.segment);
@@ -104,43 +202,50 @@ namespace BlueprintBeltSaver
                 }
                 float targetLongitude = beginLongitude + deltaLongitude;
                 float deltaLatitude = endLatitude - beginLatitude;
-                int longitudeSnaps = (int)(Mathf.Abs(deltaLongitude) / 1.2566370614357f * segmentCount / latitudeDistance) + 1;
-                if (Mathf.Abs(deltaLongitude) < 1e-4f)
-                {
-                    longitudeSnaps = 0;
-                }
-                int latitudeSnaps = (int)(Mathf.Abs(deltaLatitude) / 0.0062831853f / longitudeDistance) + 1;
+                float cap = MetreCap();
                 float cosLatitude = Mathf.Cos(beginLatitude);
-                for (int i = 1; i <= longitudeSnaps; i++)
+                var beginUnit = new Vector3(
+                    cosLatitude * Mathf.Sin(beginLongitude),
+                    Mathf.Sin(beginLatitude),
+                    0f - cosLatitude * Mathf.Cos(beginLongitude));
+                var corner = new Vector3(
+                    cosLatitude * Mathf.Sin(targetLongitude),
+                    Mathf.Sin(beginLatitude),
+                    0f - cosLatitude * Mathf.Cos(targetLongitude));
+                // Longitude leg: stay on the begin latitude (explicit parametrisation; a slerp would
+                // drift onto the great circle). Steps from the leg ARC length (r·cosφ·Δλ) — the
+                // chord under-counts by ~0.1%, enough to leave every segment marginally over cap.
+                float longitudeArc = Mathf.Abs(deltaLongitude) * radiusScale * Mathf.Cos(beginLatitude);
+                int longitudeSteps = longitudeArc > 1e-3f ? Mathf.Max(1, Mathf.CeilToInt(longitudeArc / cap)) : 0;
+                for (int i = 1; i <= longitudeSteps; i++)
                 {
                     if (count >= limit)
                     {
                         break;
                     }
-                    float step = deltaLongitude * i / longitudeSnaps;
+                    float step = deltaLongitude * i / longitudeSteps;
                     snaps[count++] = new Vector3(
                         cosLatitude * Mathf.Sin(beginLongitude + step),
                         Mathf.Sin(beginLatitude),
                         0f - cosLatitude * Mathf.Cos(beginLongitude + step));
                 }
                 swerveIndex = count;
-                Vector3 corner = new Vector3(
-                    cosLatitude * Mathf.Sin(targetLongitude),
-                    Mathf.Sin(beginLatitude),
-                    0f - cosLatitude * Mathf.Cos(targetLongitude));
                 if ((endNormalized - corner).magnitude < 0.00251f)
                 {
-                    return count;
+                    return EnforceMetreCap(snaps, count, radiusScale, limit);
                 }
-                for (int j = 1; j <= latitudeSnaps; j++)
+                // Latitude leg: along the meridian (great circle), slerp is exact.
+                float latitudeArc = Mathf.Abs(deltaLatitude) * radiusScale;
+                int latitudeSteps = latitudeArc > 1e-3f ? Mathf.Max(1, Mathf.CeilToInt(latitudeArc / cap)) : 0;
+                for (int j = 1; j <= latitudeSteps; j++)
                 {
                     if (count >= limit)
                     {
                         break;
                     }
-                    snaps[count++] = Vector3.Slerp(corner, endNormalized, (float)j / latitudeSnaps).normalized;
+                    snaps[count++] = SlerpStable(corner, endNormalized, (float)j / latitudeSteps);
                 }
-                return count;
+                return EnforceMetreCap(snaps, count, radiusScale, limit);
             }
             else
             {
@@ -154,43 +259,44 @@ namespace BlueprintBeltSaver
                     endLatitude = endLatitude < 0f ? -3.141593f - endLatitude : 3.141593f - endLatitude;
                 }
                 float deltaLatitude = endLatitude - beginLatitude;
-                int longitudeSnaps = (int)(Mathf.Abs(deltaLongitude) / 1.2566370614357f * segmentCount / latitudeDistance) + 1;
-                int latitudeSnaps = (int)(Mathf.Abs(deltaLatitude) / 0.0062831853f / longitudeDistance) + 1;
-                if (Mathf.Abs(deltaLatitude) < 1e-4f)
-                {
-                    latitudeSnaps = 0;
-                }
+                float cap = MetreCap();
                 float cosLatitude = Mathf.Cos(endLatitude);
-                Vector3 corner = new Vector3(
+                var corner = new Vector3(
                     cosLatitude * Mathf.Sin(beginLongitude),
                     Mathf.Sin(endLatitude),
                     0f - cosLatitude * Mathf.Cos(beginLongitude));
-                for (int k = 1; k <= latitudeSnaps; k++)
+                // Latitude leg: along the end meridian (great circle), slerp is exact.
+                float latitudeArc = Mathf.Abs(deltaLatitude) * radiusScale;
+                int latitudeSteps = latitudeArc > 1e-3f ? Mathf.Max(1, Mathf.CeilToInt(latitudeArc / cap)) : 0;
+                for (int k = 1; k <= latitudeSteps; k++)
                 {
                     if (count >= limit)
                     {
                         break;
                     }
-                    snaps[count++] = Vector3.Slerp(beginNormalized, corner, (float)k / latitudeSnaps).normalized;
+                    snaps[count++] = SlerpStable(beginNormalized, corner, (float)k / latitudeSteps);
                 }
                 swerveIndex = count;
-                if (Mathf.Abs(deltaLongitude) / 1.2566370614357f * segmentCount < 0.4f)
+                // Longitude leg: stay on the end latitude (arc length r·cosφ·Δλ, see above).
+                float longitudeArc = Mathf.Abs(deltaLongitude) * radiusScale * Mathf.Cos(endLatitude);
+                if (longitudeArc <= 1e-3f)
                 {
-                    return count;
+                    return EnforceMetreCap(snaps, count, radiusScale, limit);
                 }
-                for (int l = 1; l <= longitudeSnaps; l++)
+                int longitudeSteps = Mathf.Max(1, Mathf.CeilToInt(longitudeArc / cap));
+                for (int l = 1; l <= longitudeSteps; l++)
                 {
                     if (count >= limit)
                     {
                         break;
                     }
-                    float longitude = beginLongitude + (float)l / longitudeSnaps * deltaLongitude;
+                    float longitude = beginLongitude + (float)l / longitudeSteps * deltaLongitude;
                     snaps[count++] = new Vector3(
                         cosLatitude * Mathf.Sin(longitude),
                         Mathf.Sin(endLatitude),
                         0f - cosLatitude * Mathf.Cos(longitude));
                 }
-                return count;
+                return EnforceMetreCap(snaps, count, radiusScale, limit);
             }
         }
 
@@ -202,6 +308,7 @@ namespace BlueprintBeltSaver
             Vector3 endNormalized = end.normalized;
             float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(beginNormalized, endNormalized), -1f, 1f));
             float geodesicDistance = angle * maxRadius;
+            float radiusScale = begin.magnitude; // unit-snaps exits scale chords by the real radius
             float nodesCount;
             int snapCount;
 
@@ -226,6 +333,7 @@ namespace BlueprintBeltSaver
                         // 1.5.3 correction: the start node must keep the real start radius.
                         snaps[0] = beginNormalized * beginMagnitude;
                         snaps[counts++] = beginNormalized * endMagnitude;
+                        counts = EnforceMetreCap(snaps, counts, 1f, maxSnapsLength);
                         return false;
                     }
                 }
@@ -233,7 +341,7 @@ namespace BlueprintBeltSaver
                 {
                     for (int i = 0; i <= snapCount && counts < maxSnapsLength; i++)
                     {
-                        snaps[counts++] = Vector3.Slerp(beginNormalized, endNormalized, (float)i / snapCount).normalized;
+                        snaps[counts++] = SlerpStable(beginNormalized, endNormalized, (float)i / snapCount);
                     }
                 }
                 if (counts < 2)
@@ -245,6 +353,7 @@ namespace BlueprintBeltSaver
                 {
                     snaps[j] *= beginMagnitude * (counts - 1 - j) / (counts - 1) + endMagnitude * (float)j / (counts - 1);
                 }
+                counts = EnforceMetreCap(snaps, counts, 1f, maxSnapsLength);
                 return false;
             }
 
@@ -263,9 +372,10 @@ namespace BlueprintBeltSaver
             {
                 for (int k = 0; k <= snapCount && counts < maxSnapsLength; k++)
                 {
-                    snaps[counts++] = Vector3.Slerp(beginNormalized, endNormalized, (float)k / snapCount).normalized;
+                    snaps[counts++] = SlerpStable(beginNormalized, endNormalized, (float)k / snapCount);
                 }
             }
+            counts = EnforceMetreCap(snaps, counts, radiusScale, maxSnapsLength);
             return true;
         }
 

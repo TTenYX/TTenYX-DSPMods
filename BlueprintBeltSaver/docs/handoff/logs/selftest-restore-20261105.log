@@ -1,0 +1,515 @@
+BBSaver SelfTest  2026-11-05 13:11:48
+game = ok
+blueprintDir = X:\戴森球计划\【MOD】修改仓库\7.蓝图Blueprints\BlueprintBeltSaver 测试蓝图
+      addon-dump: 19 行 → addon-dump.txt
+PASS mod-assembly-loaded  :: C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\plugins\BlueprintBeltSaver\BlueprintBeltSaver.dll
+PASS reflection-ready  :: optimize=True resolve=True fromYaw=True distance=True
+PASS B-plugin-ready  :: plugin=True tryOptimize=True
+      bisect:1080传送带+360分拣器 src=1640/4266D2E00FEE13A5 clone=1640/4266D2E00FEE13A5 grid(1640)=1640/32A18D675C40967D resample(1602)=1602/100094638D0EC0FD adopt(1602)=1602/100094638D0EC0FD multiBand=False
+PASS B:1080传送带+360分拣器  :: TryOptimize ok=True；summary=传送带总数：0 → 1612（省 -1612）
+
+\csd3-;: 0 → 1612（省 -1612）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 496 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 508
+已重绑分拣器/建筑连接: 543, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1080传送带+360分拣器  :: belts 1640 → 1612，已保存 B_lib_1080传送带+360分拣器.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（低效）v1.1 src=1856/DBCD9296A1BEFBA5 clone=1856/DBCD9296A1BEFBA5 grid(1856)=1856/48B83AA2E7E0CEED resample(1353)=1353/3DEC481F9C846EA4 adopt(1353)=1353/3DEC481F9C846EA4 multiBand=False
+PASS B:1440太阳帆（低效）v1.1  :: TryOptimize ok=True；summary=传送带总数：0 → 1383（省 -1383）
+
+\csd2-;: 0 → 1361（省 -1361）
+\csd3-;: 0 → 22（省 -22）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 462 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 444
+已重绑分拣器/建筑连接: 388, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（低效）v1.1  :: belts 1856 → 1383，已保存 B_lib_1440太阳帆（低效）v1.1.txt（模式 plugin-TryOptimize）
+      bisect:1440太阳帆（高效） src=1159/A97AB822825E6A13 clone=1159/A97AB822825E6A13 grid(1159)=1159/91C15354E232649F resample(896)=896/E93DCBBE02AC98C6 adopt(896)=896/E93DCBBE02AC98C6 multiBand=False
+PASS B:1440太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 898（省 -898）
+
+\csd1-;: 0 → 898（省 -898）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 397, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:1440太阳帆（高效）  :: belts 1159 → 898，已保存 B_lib_1440太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:16.4小火箭 src=2307/376A0AF534BACB31 clone=2307/376A0AF534BACB31 grid(2275)=2275/A1C079584BD90297 resample(1695)=1695/F7E3BE5F5A28B21C adopt(1695)=1695/F7E3BE5F5A28B21C multiBand=False
+PASS B:16.4小火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 1732（省 -1732）
+
+\csd3-;: 0 → 1732（省 -1732）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 312 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 299, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:16.4小火箭  :: belts 2307 → 1732，已保存 B_lib_16.4小火箭.txt（模式 plugin-TryOptimize）
+      bisect:2880太阳帆（高效） src=1159/C79FE46A27945ECA clone=1159/C79FE46A27945ECA grid(1159)=1159/DB7663AF27AF6AEE resample(896)=896/634B20D45399A009 adopt(896)=896/634B20D45399A009 multiBand=False
+PASS B:2880太阳帆（高效）  :: TryOptimize ok=True；summary=传送带总数：0 → 898（省 -898）
+
+\csd3-;: 0 → 898（省 -898）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 428 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 402
+已重绑分拣器/建筑连接: 397, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:2880太阳帆（高效）  :: belts 1159 → 898，已保存 B_lib_2880太阳帆（高效）.txt（模式 plugin-TryOptimize）
+      bisect:37.5小火箭 （需求氘棒） src=1893/2E2EA3263483C597 clone=1893/2E2EA3263483C597 grid(1893)=1893/62A7C6CDDF7E8E45 resample(1857)=1857/F8DAB0F0857EC6E0 adopt(1857)=1857/F8DAB0F0857EC6E0 multiBand=False
+PASS B:37.5小火箭 （需求氘棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 1866（省 -1866）
+
+\csd3-;: 0 → 1866（省 -1866）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 616 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 627
+已重绑分拣器/建筑连接: 666, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:37.5小火箭 （需求氘棒）  :: belts 1893 → 1866，已保存 B_lib_37.5小火箭 （需求氘棒）.txt（模式 plugin-TryOptimize）
+      bisect:65.6低效火箭 src=5010/F543FF96EF4A5A78 clone=5010/F543FF96EF4A5A78 grid(4504)=4504/B800494A62E98673 resample(4194)=4194/B78CA2E6EB8A2B06 adopt(4194)=4194/B78CA2E6EB8A2B06 multiBand=True
+PASS B:65.6低效火箭  :: TryOptimize ok=True；summary=传送带总数：0 → 4146（省 -4146）
+
+\csd3-;: 0 → 4146（省 -4146）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1253 个，原有空端 0，重新绑定 1，无可绑定 0，原连接通过 1271
+已重绑分拣器/建筑连接: 1714, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:65.6低效火箭  :: belts 5010 → 4146，已保存 B_lib_65.6低效火箭.txt（模式 plugin-TryOptimize）
+      bisect:6k太阳帆 src=3175/EA5A78E5205A4BDD clone=3175/EA5A78E5205A4BDD grid(2693)=2693/0117932FFF3ABDF2 resample(2542)=2542/5ACE3993CF2F1539 adopt(2542)=2542/5ACE3993CF2F1539 multiBand=True
+PASS B:6k太阳帆  :: TryOptimize ok=True；summary=传送带总数：0 → 2741（省 -2741）
+
+\csd3-;: 0 → 2741（省 -2741）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 1173 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 1181
+已重绑分拣器/建筑连接: 1486, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:6k太阳帆  :: belts 3175 → 2741，已保存 B_lib_6k太阳帆.txt（模式 plugin-TryOptimize）
+      bisect:80环带 src=80/D2562ACFF6C9B665 clone=80/D2562ACFF6C9B665 grid(80)=80/D2562ACFF6C9B665 resample(48)=48/E49B5F715E65329D adopt(48)=48/E49B5F715E65329D multiBand=False
+PASS B:80环带  :: TryOptimize ok=True；summary=传送带总数：0 → 52（省 -52）
+
+\csd3-;: 0 → 52（省 -52）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 0 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 0
+已重绑分拣器/建筑连接: 0, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:80环带  :: belts 80 → 52，已保存 B_lib_80环带.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（刺笋） src=1097/FF481A611921D330 clone=1097/FF481A611921D330 grid(1097)=1097/19F4A9868178BD28 resample(915)=915/6655CED6D7F4CE10 adopt(915)=915/6655CED6D7F4CE10 multiBand=False
+PASS B:B.150紫糖（刺笋）  :: TryOptimize ok=True；summary=传送带总数：0 → 932（省 -932）
+
+\csd1-;: 0 → 781（省 -781）
+\csd2-;: 0 → 104（省 -104）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 310 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 316
+已重绑分拣器/建筑连接: 321, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（刺笋）  :: belts 1097 → 932，已保存 B_lib_B.150紫糖（刺笋）.txt（模式 plugin-TryOptimize）
+      bisect:B.150紫糖（可燃冰） src=1240/D9024DFADB749681 clone=1240/D9024DFADB749681 grid(1240)=1240/990873C7C6183AA9 resample(1040)=1040/15E5942DC6D85254 adopt(1040)=1040/15E5942DC6D85254 multiBand=False
+PASS B:B.150紫糖（可燃冰）  :: TryOptimize ok=True；summary=传送带总数：0 → 1054（省 -1054）
+
+\csd1-;: 0 → 923（省 -923）
+\csd2-;: 0 → 84（省 -84）
+\csd3-;: 0 → 47（省 -47）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 332 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 338
+已重绑分拣器/建筑连接: 345, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:B.150紫糖（可燃冰）  :: belts 1240 → 1054，已保存 B_lib_B.150紫糖（可燃冰）.txt（模式 plugin-TryOptimize）
+      bisect:C1.150绿糖 src=2163/E3F287DB048A515E clone=2163/E3F287DB048A515E grid(2163)=2163/CB36756EAC7429F6 resample(1752)=1752/4BFDDB5F4AD70C51 adopt(1752)=1752/4BFDDB5F4AD70C51 multiBand=False
+PASS B:C1.150绿糖  :: TryOptimize ok=True；summary=传送带总数：0 → 1769（省 -1769）
+
+\csd1-;: 0 → 1565（省 -1565）
+\csd2-;: 0 → 151（省 -151）
+\csd3-;: 0 → 53（省 -53）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 488 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 496
+已重绑分拣器/建筑连接: 517, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C1.150绿糖  :: belts 2163 → 1769，已保存 B_lib_C1.150绿糖.txt（模式 plugin-TryOptimize）
+      bisect:C2-60-120-240反物质燃料棒（黑棒） src=1000/E05E9CC732601248 clone=1000/E05E9CC732601248 grid(996)=996/2E4A39F8D38FA80A resample(783)=783/4307D829360D7000 adopt(783)=783/4307D829360D7000 multiBand=False
+PASS B:C2-60-120-240反物质燃料棒（黑棒）  :: TryOptimize ok=True；summary=传送带总数：0 → 796（省 -796）
+
+\csd3-;: 0 → 796（省 -796）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 223 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 223
+已重绑分拣器/建筑连接: 204, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:C2-60-120-240反物质燃料棒（黑棒）  :: belts 1000 → 796，已保存 B_lib_C2-60-120-240反物质燃料棒（黑棒）.txt（模式 plugin-TryOptimize）
+      bisect:长带测试图01 src=432/06F6E3893A91CF83 clone=432/06F6E3893A91CF83 grid(432)=432/3023ECA80461FD03 resample(269)=269/210BF408250E49E0 adopt(269)=269/210BF408250E49E0 multiBand=False
+PASS B:长带测试图01  :: TryOptimize ok=True；summary=传送带总数：0 → 300（省 -300）
+
+\csd3-;: 0 → 300（省 -300）
+
+当前蓝图优化间距上限: 2.301172 m (来源：蓝图合并上限（本 MOD）)
+合并方式：按弧长均匀插值（原节点方式无可减少，已改用插值；插值节点不在格点上）。
+分拣器校验：共 17 个，原有空端 0，重新绑定 0，无可绑定 0，原连接通过 34
+已重绑分拣器/建筑连接: 21, 因朝向不一致跳过: 0
+已开启分拣器断链重绑：请在粘贴预览中确认无红色报错且分拣器可正常工作，再保存蓝图。
+PASS B-export:长带测试图01  :: belts 432 → 300，已保存 B_lib_长带测试图01.txt（模式 plugin-TryOptimize）
+PASS e2e-in-game-done  :: 全部蓝图B已生成（或记录拒绝原因）；离线蓝图A已由 --export 生成，随后逐字节对比
+PASS restore-wrapper:1080传送带+360分拣器  :: 传送带节点：1612 → 1675（新增 135，移除 72）
+已复原区段：22；受保护区段：1461；未调整区段：0。
+仍未符合网格要求的保留节点：1130。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#8 区域=0 (132.5217, 3, 0)
+#9 区域=0 (129.5651, 3, 0)
+#10 区域=0 (128.0869, 3, 0)
+#11 区域=0 (126.6086, 3, 0)
+#12 区域=0 (125.1304, 3, 0)
+#13 区域=0 (123.6521, 3, 0)
+#14 区域=0 (122.1739, 3, 0)
+#15 区域=0 (120.6956, 3, 0)
+#16 区域=0 (119.2173, 3, 0)
+#17 区域=0 (117.7391, 3, 0)
+#18 区域=0 (116.2608, 2.9999, 0)
+#19 区域=0 (114.7826, 3, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131131-316-bfbd79e7.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:1080传送带+360分拣器  :: 1612→1675; protected=1130
+PASS restore-protected-report:1080传送带+360分拣器  :: CSV rows=1130
+PASS restore-idempotent:1080传送带+360分拣器  :: restore→serialize→restore
+PASS restore-real-preview:1080传送带+360分拣器  :: game RefreshBuildPreview: poses=454, over=0, worst=2.2442 m
+PASS restore-wrapper:1440太阳帆（低效）v1.1  :: 传送带节点：1383 → 1443（新增 122，移除 62）
+已复原区段：17；受保护区段：1267；未调整区段：0。
+仍未符合网格要求的保留节点：739。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (55.9561, 0.8546, 0.0091)
+#1 区域=0 (55.9544, -0.0197, 0.0225)
+#2 区域=0 (54.9694, -0.0149, 0.0225)
+#3 区域=0 (53.9848, -0.0083, 0)
+#5 区域=0 (58.0071, 0.8532, 0.0091)
+#6 区域=0 (58.0063, -0.0211, 0.0225)
+#20 区域=0 (53.8487, 2.01, 0.0225)
+#21 区域=0 (54.7607, 2.0058, 0.0091)
+#33 区域=0 (60.0497, 1.9975, 0.0225)
+#34 区域=0 (59.167, 1.9995, 0.0091)
+#35 区域=0 (0.5005, 17.9995, 1.0001)
+#36 区域=0 (0.5005, 16.9995, 1)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131133-394-7ce150ad.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:1440太阳帆（低效）v1.1  :: 1383→1443; protected=739
+PASS restore-protected-report:1440太阳帆（低效）v1.1  :: CSV rows=739
+PASS restore-idempotent:1440太阳帆（低效）v1.1  :: restore→serialize→restore
+PASS restore-real-preview:1440太阳帆（低效）v1.1  :: game RefreshBuildPreview: poses=406, over=0, worst=2.2512 m
+PASS restore-wrapper:1440太阳帆（高效）  :: 传送带节点：898 → 912（新增 23，移除 9）
+已复原区段：7；受保护区段：802；未调整区段：0。
+仍未符合网格要求的保留节点：498。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#5 区域=0 (22.987, 2.99, 0.0112)
+#6 区域=0 (22.9752, 3.8543, 0.0091)
+#11 区域=0 (24.9993, 2.9896, 0.0112)
+#12 区域=0 (24.999, 3.8535, 0.0091)
+#74 区域=0 (20.909, 6.0062, 0.0196)
+#75 区域=0 (21.8036, 6.0031, 0.0062)
+#78 区域=0 (27.0122, 5.9993, 0.0098)
+#79 区域=0 (26.149, 5.9993, 0.0061)
+#140 区域=0 (22.9902, 15.9798, 0.0225)
+#141 区域=0 (22.9909, 16.854, 0.0091)
+#156 区域=0 (25.0024, 15.9895, 0.0112)
+#157 区域=0 (25.0054, 16.8532, 0.0091)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131134-948-2fc645b3.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:1440太阳帆（高效）  :: 898→912; protected=498
+PASS restore-protected-report:1440太阳帆（高效）  :: CSV rows=498
+PASS restore-idempotent:1440太阳帆（高效）  :: restore→serialize→restore
+PASS restore-real-preview:1440太阳帆（高效）  :: game RefreshBuildPreview: poses=426, over=0, worst=2.2372 m
+PASS restore-wrapper:16.4小火箭  :: 传送带节点：1732 → 1756（新增 41，移除 17）
+已复原区段：11；受保护区段：1641；未调整区段：0。
+仍未符合网格要求的保留节点：881。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#3 区域=0 (6.3302, 4.0006, 0)
+#9 区域=0 (17.9985, 8.5022, 1)
+#10 区域=0 (18.9985, 8.5064, 1)
+#11 区域=0 (19.9985, 8.5064, 1)
+#12 区域=0 (20.9985, 8.5022, 1)
+#32 区域=0 (26.9926, 20, 2)
+#38 区域=0 (26.9918, 20, 0)
+#63 区域=0 (21, 28, 0.0195)
+#64 区域=0 (21, 28.9793, 0.0195)
+#65 区域=0 (19.9526, 28.9767, 0.0225)
+#68 区域=0 (17, 33.0076, 1.5)
+#74 区域=0 (15.4968, 28.0008, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131136-270-f42f16c9.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:16.4小火箭  :: 1732→1756; protected=881
+PASS restore-protected-report:16.4小火箭  :: CSV rows=881
+PASS restore-idempotent:16.4小火箭  :: restore→serialize→restore
+PASS restore-real-preview:16.4小火箭  :: game RefreshBuildPreview: poses=438, over=0, worst=2.2540 m
+PASS restore-wrapper:2880太阳帆（高效）  :: 传送带节点：898 → 912（新增 23，移除 9）
+已复原区段：7；受保护区段：802；未调整区段：0。
+仍未符合网格要求的保留节点：498。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#5 区域=0 (22.987, 2.99, 0.0112)
+#6 区域=0 (22.9752, 3.8543, 0.0091)
+#11 区域=0 (24.9993, 2.9896, 0.0112)
+#12 区域=0 (24.999, 3.8535, 0.0091)
+#74 区域=0 (20.909, 6.0062, 0.0196)
+#75 区域=0 (21.8036, 6.0031, 0.0062)
+#78 区域=0 (27.0122, 5.9993, 0.0098)
+#79 区域=0 (26.149, 5.9993, 0.0061)
+#140 区域=0 (22.9902, 15.9798, 0.0225)
+#141 区域=0 (22.9909, 16.854, 0.0091)
+#156 区域=0 (25.0024, 15.9895, 0.0112)
+#157 区域=0 (25.0054, 16.8532, 0.0091)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131138-119-0447797c.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:2880太阳帆（高效）  :: 898→912; protected=498
+PASS restore-protected-report:2880太阳帆（高效）  :: CSV rows=498
+PASS restore-idempotent:2880太阳帆（高效）  :: restore→serialize→restore
+PASS restore-real-preview:2880太阳帆（高效）  :: game RefreshBuildPreview: poses=426, over=0, worst=2.2372 m
+PASS restore-wrapper:37.5小火箭 （需求氘棒）  :: 传送带节点：1866 → 1914（新增 112，移除 64）
+已复原区段：20；受保护区段：1722；未调整区段：0。
+仍未符合网格要求的保留节点：1358。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (1, 9.8, 0)
+#1 区域=0 (5.4211, 9.8, 0)
+#2 区域=0 (12.7895, 9.8, 0)
+#3 区域=0 (14.2632, 9.8, 0)
+#4 区域=0 (15.7369, 9.8, 0)
+#5 区域=0 (17.2106, 9.8, 0)
+#6 区域=0 (18.6842, 9.8, 0)
+#7 区域=0 (20.1579, 9.8, 0)
+#8 区域=0 (21.6316, 9.8, 0)
+#9 区域=0 (24.579, 9.8, 0)
+#10 区域=0 (29, 9.8, 0)
+#13 区域=0 (31, 5.75, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131139-482-618be2c5.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:37.5小火箭 （需求氘棒）  :: 1866→1914; protected=1358
+PASS restore-protected-report:37.5小火箭 （需求氘棒）  :: CSV rows=1358
+PASS restore-idempotent:37.5小火箭 （需求氘棒）  :: restore→serialize→restore
+PASS restore-real-preview:37.5小火箭 （需求氘棒）  :: game RefreshBuildPreview: poses=366, over=0, worst=2.2473 m
+PASS restore-wrapper:65.6低效火箭  :: 传送带节点：4146 → 4189（新增 88，移除 45）
+已复原区段：12；受保护区段：4000；未调整区段：0。
+仍未符合网格要求的保留节点：3716。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (14.5001, 4.0021, 4)
+#1 区域=0 (13.9001, 4.0016, 3)
+#2 区域=0 (4.9001, 4.0016, 3)
+#3 区域=0 (14.5001, 4.0002, 1)
+#4 区域=0 (2.5001, 4.0002, 0)
+#6 区域=0 (13.9001, 4.0002, 0)
+#7 区域=0 (10.3001, 4.0002, 4)
+#10 区域=0 (1.7501, 4.0002, 0)
+#13 区域=0 (2.5001, 3.9981, 4)
+#14 区域=0 (1.7501, 3.9981, 4)
+#15 区域=0 (5.9414, 3.9979, 4)
+#16 区域=0 (6.6821, 3.9978, 4)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131141-136-a1ad90c7.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:65.6低效火箭  :: 4146→4189; protected=3716
+PASS restore-protected-report:65.6低效火箭  :: CSV rows=3716
+PASS restore-idempotent:65.6低效火箭  :: restore→serialize→restore
+PASS restore-real-preview:65.6低效火箭  :: game RefreshBuildPreview: poses=2, over=0, worst=2.2430 m
+PASS restore-wrapper:6k太阳帆  :: 传送带节点：2741 → 2741（新增 0，移除 0）
+已复原区段：0；受保护区段：2705；未调整区段：0。
+仍未符合网格要求的保留节点：2710。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (8, 2, 0.75)
+#1 区域=0 (8.049, 1.39, 0.3749)
+#2 区域=0 (6.7886, 1.3276, 0.85)
+#3 区域=0 (5.924, 1.3899, 0.3749)
+#4 区域=0 (4.6636, 1.3276, 0.85)
+#5 区域=0 (3.799, 1.39, 0.3749)
+#6 区域=0 (2.5387, 1.3276, 0.85)
+#7 区域=0 (1.674, 1.3899, 0.3749)
+#8 区域=0 (0.4136, 1.3276, 0.85)
+#9 区域=0 (-0.451, 1.3899, 0.3749)
+#10 区域=0 (6.5015, 1.3149, 3)
+#11 区域=0 (8.005, 1.316, 3)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131141-607-20014c8c.csv
+没有可安全调整的网格节点。确认后仍会清除本 MOD 的优化标记，停止此前的自动重算。
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:6k太阳帆  :: 2741→2741; protected=2710
+PASS restore-protected-report:6k太阳帆  :: CSV rows=2710
+PASS restore-idempotent:6k太阳帆  :: restore→serialize→restore
+PASS restore-real-preview:6k太阳帆  :: game RefreshBuildPreview: poses=2, over=0, worst=2.2543 m
+PASS restore-wrapper:80环带  :: 传送带节点：52 → 80（新增 68，移除 40）
+已复原区段：4；受保护区段：8；未调整区段：0。
+仍未符合网格要求的保留节点：8。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#4 区域=0 (20, 1.5385, 0)
+#15 区域=0 (20, 18.4615, 0)
+#16 区域=0 (1.5385, 0, 0)
+#27 区域=0 (18.4615, 0, 0)
+#28 区域=0 (0, 18.4615, 0)
+#39 区域=0 (0, 1.5385, 0)
+#40 区域=0 (18.4615, 20, 0)
+#51 区域=0 (1.5385, 20, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131141-958-b24419af.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:80环带  :: 52→80; protected=8
+PASS restore-protected-report:80环带  :: CSV rows=8
+PASS restore-idempotent:80环带  :: restore→serialize→restore
+PASS restore-real-preview:80环带  :: game RefreshBuildPreview: poses=884, over=0, worst=2.1931 m
+PASS restore-wrapper:B.150紫糖（刺笋）  :: 传送带节点：932 → 955（新增 53，移除 30）
+已复原区段：8；受保护区段：858；未调整区段：0。
+仍未符合网格要求的保留节点：576。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (60.65, 2.9999, 0)
+#1 区域=0 (51.95, 2.9999, 0)
+#2 区域=0 (47.6, 2.9999, 0)
+#3 区域=0 (46.15, 2.9999, 0)
+#4 区域=0 (40.3499, 2.9999, 0)
+#9 区域=0 (34.9999, 4.1426, 0)
+#10 区域=0 (34.9999, 3.0704, -0.0001)
+#13 区域=0 (34, 1.7141, -0.0001)
+#14 区域=0 (31, 1.7141, 0)
+#15 区域=0 (29.5, 1.7141, -0.0001)
+#16 区域=0 (26.4999, 1.714, 0)
+#17 区域=0 (25, 1.7141, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131142-414-5cdfed1e.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:B.150紫糖（刺笋）  :: 932→955; protected=576
+PASS restore-protected-report:B.150紫糖（刺笋）  :: CSV rows=576
+PASS restore-idempotent:B.150紫糖（刺笋）  :: restore→serialize→restore
+PASS restore-real-preview:B.150紫糖（刺笋）  :: game RefreshBuildPreview: poses=460, over=0, worst=2.2536 m
+PASS restore-wrapper:B.150紫糖（可燃冰）  :: 传送带节点：1054 → 1074（新增 50，移除 30）
+已复原区段：6；受保护区段：975；未调整区段：0。
+仍未符合网格要求的保留节点：675。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#2 区域=0 (59.65, 3.9999, 0)
+#3 区域=0 (56.75, 3.9999, 0.0001)
+#4 区域=0 (55.3, 3.9999, 0)
+#5 区域=0 (53.85, 3.9999, 0)
+#6 区域=0 (52.4, 3.9999, 0)
+#7 区域=0 (50.95, 3.9999, 0)
+#8 区域=0 (49.5, 3.9999, 0)
+#9 区域=0 (46.6, 3.9999, 0)
+#10 区域=0 (45.15, 3.9999, 0)
+#11 区域=0 (43.7, 3.9999, 0)
+#16 区域=0 (33.9999, 5.1426, 0)
+#17 区域=0 (33.9999, 4.0704, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131143-688-e6e05321.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:B.150紫糖（可燃冰）  :: 1054→1074; protected=675
+PASS restore-protected-report:B.150紫糖（可燃冰）  :: CSV rows=675
+PASS restore-idempotent:B.150紫糖（可燃冰）  :: restore→serialize→restore
+PASS restore-real-preview:B.150紫糖（可燃冰）  :: game RefreshBuildPreview: poses=428, over=0, worst=2.2473 m
+PASS restore-wrapper:C1.150绿糖  :: 传送带节点：1769 → 1801（新增 65，移除 33）
+已复原区段：11；受保护区段：1662；未调整区段：3。
+仍未符合网格要求的保留节点：954。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#0 区域=0 (27.989, 10.8541, 0.0091)
+#1 区域=0 (27.9882, 9.9798, 0.0225)
+#13 区域=0 (26.8291, 12.0037, 0.0091)
+#14 区域=0 (25.9447, 12.0059, 0.0225)
+#72 区域=0 (67.3338, 3.8333, 0)
+#73 区域=0 (68.667, 3.8332, 0.0001)
+#74 区域=0 (70.0002, 3.8333, 0)
+#75 区域=0 (71.3338, 3.8333, 0)
+#76 区域=0 (72.667, 3.8333, 0)
+#77 区域=0 (79.3338, 3.8333, 0)
+#78 区域=0 (80.667, 3.8333, 0.0001)
+#79 区域=0 (84.667, 3.8333, 0.0001)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131145-120-7bbc84e4.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:C1.150绿糖  :: 1769→1801; protected=954
+PASS restore-protected-report:C1.150绿糖  :: CSV rows=954
+PASS restore-idempotent:C1.150绿糖  :: restore→serialize→restore
+PASS restore-real-preview:C1.150绿糖  :: game RefreshBuildPreview: poses=376, over=0, worst=2.2511 m
+PASS restore-wrapper:C2-60-120-240反物质燃料棒（黑棒）  :: 传送带节点：796 → 826（新增 55，移除 25）
+已复原区段：12；受保护区段：720；未调整区段：0。
+仍未符合网格要求的保留节点：391。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#10 区域=0 (18.4998, 17.9976, 0)
+#17 区域=0 (23.0001, 8.7499, 0)
+#18 区域=0 (27.4999, 8.7499, 0)
+#19 区域=0 (39.4998, 8.7499, -0.0001)
+#20 区域=0 (51.4998, 8.7499, -0.0001)
+#21 区域=0 (56.0001, 8.7499, -0.0001)
+#29 区域=0 (18.5004, 16.9976, 0)
+#34 区域=0 (23, 10.2501, 0)
+#35 区域=0 (24.5, 10.2502, -0.0001)
+#36 区域=0 (25.9999, 10.2501, 0)
+#37 区域=0 (27.5, 10.2502, 0)
+#38 区域=0 (28.9999, 10.2501, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131146-819-c6c1e7c7.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:C2-60-120-240反物质燃料棒（黑棒）  :: 796→826; protected=391
+PASS restore-protected-report:C2-60-120-240反物质燃料棒（黑棒）  :: CSV rows=391
+PASS restore-idempotent:C2-60-120-240反物质燃料棒（黑棒）  :: restore→serialize→restore
+PASS restore-real-preview:C2-60-120-240反物质燃料棒（黑棒）  :: game RefreshBuildPreview: poses=496, over=0, worst=2.2473 m
+PASS restore-wrapper:长带测试图01  :: 传送带节点：300 → 413（新增 218，移除 105）
+已复原区段：27；受保护区段：133；未调整区段：1。
+仍未符合网格要求的保留节点：101。
+保留点明细（最多显示 12 个；编号、区域、X/Y/高度）：
+#52 区域=0 (13, 9.3333, 0)
+#53 区域=0 (13, 10.6667, 0)
+#56 区域=0 (9, 10.6667, 0)
+#57 区域=0 (9, 9.3333, 0)
+#58 区域=0 (11.6667, 12, 0)
+#59 区域=0 (10.3333, 12, 0)
+#60 区域=0 (14, 8.5, 0)
+#62 区域=0 (14, 11.5, 0)
+#63 区域=0 (9.5, 7, 0)
+#65 区域=0 (12.5, 7, 0)
+#66 区域=0 (8, 11.5, 0)
+#68 区域=0 (8, 8.5, 0)
+完整保留点报告：C:\Users\Administrator\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\TEST\BepInEx\config\BlueprintBeltSaver-restore-audit\protected-20261105-131147-974-ed63f0ba.csv
+
+按现有走向恢复一格网格节点。连接点、弯道、坡道和无法安全调整的部分保留；安全检查始终执行，不受省带设置影响。
+这不是原蓝图备份还原，不能找回未知原蓝图。
+PASS restore-counts:长带测试图01  :: 300→413; protected=101
+PASS restore-protected-report:长带测试图01  :: CSV rows=101
+PASS restore-idempotent:长带测试图01  :: restore→serialize→restore
+PASS restore-real-preview:长带测试图01  :: game RefreshBuildPreview: poses=856, over=0, worst=2.2497 m
+PASS restore-button-left:1  :: screen gap=10.00px; sizes=(80.00, 24.00)
+PASS restore-button-left:1.6  :: screen gap=10.00px; sizes=(80.00, 24.00)
+PASS restore-button-left:0.8  :: screen gap=10.00px; sizes=(80.00, 24.00)
+PASS restore-button-disabled-sync  :: source button disabled
+PASS restore-copy-fallback-layout  :: copy fallback gap=10.00px
+PASS restore-confirm-modal  :: BlueprintBeltSaver 蓝图网格复原
+PASS restore-cancel-immutable  :: cancel did not apply candidate
+PASS restore-apply-clipboard  :: 4→7, clipboard equals applied blueprint
+PASS restore-marker-state-cleared  :: OTHER=BBSOPT=1;keep=value
+PASS restore-stale-confirm-refused  :: changed inspector blueprint cannot receive old pending candidate
+PASS restore-config-confirm-refused  :: configuration changed after preview
+PASS restore-english-label  :: English game label
+SUMMARY PASS=114 FAIL=0

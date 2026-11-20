@@ -1,0 +1,59 @@
+GAME_PARSE OK SHA256=D03149793EE46DF9F727206B79945357567D8F84455F4464AAA71480F797F53C
+NODE 0 item=2001 model=35 area=0 xyz=(13.999943,1.0079272E-05,6.6373505E-05) xyz2=(13.999943,1.0079272E-05,6.6373505E-05) in=-1 out=-1 slots=(0,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 1 item=2001 model=35 area=0 xyz=(13.000117,1.7194052E-05,6.6373505E-05) xyz2=(13.000117,1.7194052E-05,6.6373505E-05) in=-1 out=0 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 2 item=2001 model=35 area=0 xyz=(11.666798,1.778695E-05,5.492941E-05) xyz2=(11.666798,1.778695E-05,5.492941E-05) in=-1 out=1 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 3 item=2001 model=35 area=0 xyz=(10.333468,1.837985E-05,5.492941E-05) xyz2=(10.333468,1.837985E-05,5.492941E-05) in=-1 out=2 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 4 item=2001 model=35 area=0 xyz=(9.0000925,1.7194052E-05,6.6373505E-05) xyz2=(9.0000925,1.7194052E-05,6.6373505E-05) in=-1 out=3 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 5 item=2001 model=35 area=0 xyz=(7.6667542,1.837985E-05,6.6373505E-05) xyz2=(7.6667542,1.837985E-05,6.6373505E-05) in=-1 out=4 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 6 item=2001 model=35 area=0 xyz=(6.333435,1.7194052E-05,6.6373505E-05) xyz2=(6.333435,1.7194052E-05,6.6373505E-05) in=-1 out=5 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 7 item=2001 model=35 area=0 xyz=(5.0001063,1.778695E-05,5.492941E-05) xyz2=(5.0001063,1.778695E-05,5.492941E-05) in=-1 out=6 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 8 item=2001 model=35 area=0 xyz=(3.6667395,1.7194052E-05,6.6373505E-05) xyz2=(3.6667395,1.7194052E-05,6.6373505E-05) in=-1 out=7 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 9 item=2001 model=35 area=0 xyz=(2.9999993,1.1857967E-06,-2.2910538E-06) xyz2=(2.9999993,1.1857967E-06,-2.2910538E-06) in=-1 out=8 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 10 item=2001 model=35 area=0 xyz=(1.9999647,1.1857967E-06,-2.2910538E-06) xyz2=(1.9999647,1.1857967E-06,-2.2910538E-06) in=-1 out=9 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+NODE 11 item=2001 model=35 area=0 xyz=(1.000082,2.0751442E-05,0.00010070578) xyz2=(1.000082,2.0751442E-05,0.00010070578) in=-1 out=10 slots=(1,0,0,1,0,0) metadata=(0,0,2,null)
+NODE 12 item=2001 model=35 area=0 xyz=(-9.4863735E-06,7.707678E-06,5.492941E-05) xyz2=(-9.4863735E-06,7.707678E-06,5.492941E-05) in=-1 out=11 slots=(1,0,0,1,0,0) metadata=(0,0,0,null)
+MOD_SHA256=681B1063F0410D4401F2830973A102DFE4D52A23D0B23DFAEC99F1F00D123D0C
+PATH=12,11,10,9,8,7,6,5,4,3,2,1,0 ENVELOPE=合法粘贴姿态 1536 个（偏航×光标纬度），原件全净 1532 个作为保护集，解析分组 68 个
+AXIS 12->11=0
+AXIS 11->10=0
+AXIS 10->9=0
+AXIS 9->8=0
+AXIS 8->7=0
+AXIS 7->6=0
+AXIS 6->5=0
+AXIS 5->4=0
+AXIS 4->3=0
+AXIS 3->2=0
+AXIS 2->1=0
+AXIS 1->0=0
+SEQUENCE=NULL
+SOURCE_TOO_SHORT yaw0 c-250(-90.00°) min=2.738016E-06 edge=10->9 max=0.00013934098
+SOURCE_TOO_SHORT yaw0 c-249(-89.64°) min=0.26293358 edge=9->8 max=0.52295053
+SOURCE_TOO_SHORT yaw0 c249(89.64°) min=0.26292858 edge=9->8 max=0.52293074
+SOURCE_TOO_SHORT yaw0 c250(90.00°) min=2.737451E-06 edge=1->0 max=0.00013735639
+SOURCE_TOO_SHORT yaw180 c-250(-90.00°) min=2.737451E-06 edge=1->0 max=0.00013735639
+SOURCE_TOO_SHORT yaw180 c-249(-89.64°) min=0.2629286 edge=9->8 max=0.52293074
+SOURCE_TOO_SHORT yaw180 c249(89.64°) min=0.2629336 edge=9->8 max=0.52295065
+SOURCE_TOO_SHORT yaw180 c250(90.00°) min=2.738016E-06 edge=10->9 max=0.00013934098
+SOURCE_MIN_BAD_POSES=8 PROTECTED=1532
+ACTUAL_ANCHOR_SEQUENCE 12,11 => -9.4863735E-06,1.000082
+ACTUAL_ANCHOR_SEQUENCE 11,10,9,8,7,6,5,4,3,2,1,0 => NULL
+REJECT_NEW x=12 pose=yaw0 c-250(-90.00°) left=11 right=13.000117 distances=2.7379233E-06,9.454377E-05
+REJECT_NEW x=11 pose=yaw0 c-250(-90.00°) left=10 right=13.000117 distances=2.7379215E-06,9.4344825E-05
+REJECT_NEW x=10 pose=yaw0 c-250(-90.00°) left=9.0000925 right=13.000117 distances=9.45438E-05,9.403415E-05
+REJECT_NEW x=8 pose=yaw0 c-250(-90.00°) left=7 right=9.0000925 distances=2.7379238E-06,9.454378E-05
+REJECT_NEW x=7 pose=yaw0 c-250(-90.00°) left=6 right=9.0000925 distances=2.737921E-06,9.434484E-05
+REJECT_NEW x=6 pose=yaw0 c-250(-90.00°) left=5.0001063 right=9.0000925 distances=7.985858E-05,9.4034156E-05
+REJECT_NEW x=4 pose=yaw0 c-250(-90.00°) left=2.9999993 right=5.0001063 distances=2.737924E-06,7.9858546E-05
+AFTER_MIN_PRUNE=-9.4863735E-06,1.000082,1.9999647,2.9999993,5.0001063,9.0000925,13.000117,13.999943
+POST_PRUNE_NEW_SPAN 2.9999993->5.0001063 max=3.1472643197377526 threshold=2.2551485600000003
+POST_PRUNE_NEW_SPAN 5.0001063->9.0000925 max=6.216689389494484 threshold=2.2551485600000003
+POST_PRUNE_NEW_SPAN 9.0000925->13.000117 max=6.216747436494558 threshold=2.2551485600000003
+RESTORE height=True ok=True Before=13 After=13 Added=0 Removed=0 RestoredRuns=0 ProtectedRuns=1 ProtectedNodes=5 Reason=
+RESTORE height=False ok=True Before=13 After=13 Added=0 Removed=0 RestoredRuns=0 ProtectedRuns=1 ProtectedNodes=5 Reason=
+NOISE_NORMALIZED_RESTORE ok=True Before=13 After=13 Added=0 Removed=0 RestoredRuns=0 ProtectedRuns=1 ProtectedNodes=5 Reason=
+DIAGNOSTIC_FILTERED_FRAMES=1524 (groups remain conservative original superset)
+FILTERED_SOURCE_DISTANCES min=0.5260507 max=2.1029406
+FILTERED_SEQUENCE=11:(1.000082,2.0751442E-05,0.00010070578) old=True native=True;10:(1.9999647,1.1857967E-06,-2.2910538E-06) old=True native=True;9:(2.9999993,1.1857967E-06,-2.2910538E-06) old=True native=True;0:(4,0,0) old=False native=True;7:(5.0001063,1.778695E-05,5.492941E-05) old=True native=True;0:(6,0,0) old=False native=True;0:(7,0,0) old=False native=True;0:(8,0,0) old=False native=True;4:(9.0000925,1.7194052E-05,6.6373505E-05) old=True native=True;0:(10,0,0) old=False native=True;0:(11,0,0) old=False native=True;0:(12,0,0) old=False native=True;1:(13.000117,1.7194052E-05,6.6373505E-05) old=True native=True;0:(13.999943,1.0079272E-05,6.6373505E-05) old=True native=True
+FILTERED_SEQUENCE_EXACT_DISTANCES min=0.787047 max=1.5785998106002808
+FILTERED_NORMALIZED_SEQUENCE=11:(1,0,0) native=True;10:(2,0,-0) native=True;9:(3,0,-0) native=True;0:(4,0,0) native=True;7:(5,0,0) native=True;0:(6,0,0) native=True;0:(7,0,0) native=True;0:(8,0,0) native=True;4:(9,0,0) native=True;0:(10,0,0) native=True;0:(11,0,0) native=True;0:(12,0,0) native=True;1:(13,0,0) native=True;0:(14,0,0) native=True

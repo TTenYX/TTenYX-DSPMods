@@ -1,0 +1,279 @@
+RestoreCheck 2026-11-05 18:37:26
+API Boolean TryRestore(BlueprintData, BlueprintData ByRef, Report ByRef, Boolean, Boolean) MOD=X:\戴森球计划\【MOD】修改仓库\1.我的MOD\BlueprintBeltSaver\tools\restorecheck\bin\Release\net8.0\BlueprintBeltSaver.dll SHA256=ED5D120FE15AFF8DF25488F6B84429CCA10A1A7520952E08ED89FCBEEEDB2F1F
+  independent oracle rejected E_LINE_SPLIT
+PASS oracle-swapped-tails-same-component-count
+  independent oracle rejected E_ENDPOINT_DIRECTION
+PASS oracle-reversed-direction
+  independent oracle rejected E_ENDPOINT_DIRECTION
+PASS oracle-ring-cut-still-one-component
+  independent oracle rejected E_DEVICE_TARGET
+PASS oracle-device-retarget-same-line
+  independent oracle rejected E_BELT_METADATA
+PASS oracle-belt-metadata-corruption
+PASS oracle-exact-source-fingerprint-all-data
+FIXTURES real game assembly=X:\戴森球计划\【MOD】修改仓库\1.我的MOD\BlueprintBeltSaver\tools\restorecheck\bin\Release\net8.0\Assembly-CSharp.dll
+  ok=True belts=5->7 added=4 removed=2 restored=1 protected=0 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+PASS horizontal-offgrid
+  ok=True belts=5->7 added=4 removed=2 restored=1 protected=0 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+PASS vertical-offgrid
+  ok=True belts=5->7 added=4 removed=2 restored=1 protected=0 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+PASS reversed-offgrid
+  ok=True belts=4->7 added=3 removed=0 restored=1 protected=0 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=50 new-links=6 length=[1.076354,1.148073]m
+  placement frames=50 new-links=6 length=[1.076354,1.148073]m
+PASS long-grid-spans-net-added-allowed
+  ok=True belts=7->7 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=
+PASS same-grid-no-op
+  ok=True belts=6->7 added=5 removed=4 restored=1 protected=0 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=576 new-links=6 length=[0.807268,1.510395]m
+  placement frames=576 new-links=6 length=[0.807268,1.510395]m
+PASS narrow-final-gap-protected
+  ok=True belts=5->8 added=4 removed=1 restored=1 protected=0 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=576 new-links=7 length=[0.538174,1.373091]m
+  placement frames=576 new-links=7 length=[0.538174,1.373091]m
+PASS offgrid-endpoints-exact
+  ok=True belts=5->5 added=0 removed=0 restored=0 protected=4 snapped=0 native=0 excluded-source-short=0 reason=
+PASS fractional-transverse-protected
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS slope-height-protected
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS diagonal-curved-protected
+  ok=True belts=5->7 added=2 removed=0 restored=2 protected=2 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=576 new-links=4 length=[0.538180,1.373086]m
+  placement frames=576 new-links=4 length=[0.538180,1.373086]m
+PASS sharp-turn-exact
+PASS degenerate-coincident-protected
+  ok=True belts=8->8 added=0 removed=0 restored=0 protected=8 snapped=0 native=0 excluded-source-short=0 reason=
+PASS ring-no-new-line
+  ok=True belts=7->9 added=4 removed=2 restored=2 protected=1 snapped=0 native=2 excluded-source-short=0 reason=
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+  placement frames=576 new-links=6 length=[1.076354,1.373091]m
+PASS merge-multiple-inputs-no-invented-line
+  ok=True belts=10->14 added=8 removed=4 restored=2 protected=0 snapped=0 native=2 excluded-source-short=0 reason=
+  placement frames=576 new-links=12 length=[1.076354,1.373091]m
+  placement frames=576 new-links=12 length=[1.076354,1.373091]m
+PASS parallel-lines-no-cross-ancestry
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS seam-protected
+  ok=True belts=7->8 added=2 removed=1 restored=1 protected=4 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=576 new-links=3 length=[1.076350,1.373098]m
+  placement frames=576 new-links=3 length=[1.076350,1.373098]m
+PASS attachment-interior-inserter-machine-exact
+  ok=True belts=7->9 added=3 removed=1 restored=2 protected=3 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=576 new-links=5 length=[0.538180,1.373098]m
+  placement frames=576 new-links=5 length=[0.538180,1.373098]m
+PASS tier-boundary-and-belt-metadata
+  ok=True belts=6->6 added=0 removed=0 restored=0 protected=1 snapped=0 native=0 excluded-source-short=0 reason=
+PASS collision-no-new-pole-hit
+  placement frames=196 new-links=2 length=[0.599379,1.257891]m
+PASS cross-area-seam-attachment-protected
+  ok=False belts=0->0 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=invalid-blueprint
+PASS null-safe-error
+  ok=False belts=0->0 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=invalid-blueprint
+PASS missing-buildings-safe-error
+PASS empty-blueprint-no-op-or-code
+  ok=False belts=0->0 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=nonfinite-coordinate
+PASS nonfinite-safe-error
+  ok=False belts=0->0 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=dangling-reference
+PASS dangling-safe-error
+  placement frames=576 new-links=6 length=[1.087107,1.386810]m
+PASS strict-grid-supported-success
+PASS strict-grid-offgrid-endpoint-rejected
+PASS strict-grid-fractional-transverse-rejected
+PASS height-quantized-default-incompatible-protected
+  placement frames=576 new-links=6 length=[1.085313,1.384524]m
+PASS height-not-quantized-restores-and-preserves
+  placement frames=576 new-links=6 length=[1.085313,1.384524]m
+PASS strict-height-policy-both-configurations
+PASS default-config-independent
+SNAP FIXTURES bounded nearest-coordinate noise <=0.0002; conservative Validate contract unchanged
+  ok=True belts=13->15 added=7 removed=5 restored=1 protected=0 snapped=13 native=1 excluded-source-short=8 reason=
+  source-unworkable-polar-pose yaw=0 latGrid=-250 source-length=[2.738016143400919E-06,0.00013934098062185447]m
+  source-unworkable-polar-pose yaw=0 latGrid=-249 source-length=[0.26293357339587947,0.5229505294940098]m
+  source-unworkable-polar-pose yaw=0 latGrid=249 source-length=[0.2629285861490839,0.522930725511521]m
+  source-unworkable-polar-pose yaw=0 latGrid=250 source-length=[2.737451099509293E-06,0.00013735638531014446]m
+  source-unworkable-polar-pose yaw=180 latGrid=-250 source-length=[2.737451099509293E-06,0.00013735638531014446]m
+  source-unworkable-polar-pose yaw=180 latGrid=-249 source-length=[0.2629286003175326,0.5229307540069986]m
+  source-unworkable-polar-pose yaw=180 latGrid=249 source-length=[0.26293361590041725,0.5229506434715945]m
+  source-unworkable-polar-pose yaw=180 latGrid=250 source-length=[2.738016143400919E-06,0.00013934098062185447]m
+  source-pose-filter old-max-clean=1532 source-working=1524 rejected-source-short=8 rejected-source-long=0 source-collapsed=4; candidate never participates in pose selection
+  placement frames=1524 new-links=14 length=[0.787189,1.578413]m
+  source-unworkable-polar-pose yaw=0 latGrid=-250 source-length=[2.738016143400919E-06,0.00013934098062185447]m
+  source-unworkable-polar-pose yaw=0 latGrid=-249 source-length=[0.26293357339587947,0.5229505294940098]m
+  source-unworkable-polar-pose yaw=0 latGrid=249 source-length=[0.2629285861490839,0.522930725511521]m
+  source-unworkable-polar-pose yaw=0 latGrid=250 source-length=[2.737451099509293E-06,0.00013735638531014446]m
+  source-unworkable-polar-pose yaw=180 latGrid=-250 source-length=[2.737451099509293E-06,0.00013735638531014446]m
+  source-unworkable-polar-pose yaw=180 latGrid=-249 source-length=[0.2629286003175326,0.5229307540069986]m
+  source-unworkable-polar-pose yaw=180 latGrid=249 source-length=[0.26293361590041725,0.5229506434715945]m
+  source-unworkable-polar-pose yaw=180 latGrid=250 source-length=[2.738016143400919E-06,0.00013934098062185447]m
+  source-pose-filter old-max-clean=1532 source-working=1524 rejected-source-short=8 rejected-source-long=0 source-collapsed=4; candidate never participates in pose selection
+  placement frames=1524 new-links=14 length=[0.787189,1.578413]m
+  exact-grid deterministic export SHA256=422E69CCC08CD9E699E5B130EDF382C8E21806866A0A69A0DEEB3B350DAD2B89
+PASS snap-user-case-default-strict-exact-grid-source-determinism
+  ok=True belts=5->6 added=3 removed=2 restored=1 protected=0 snapped=5 native=1 excluded-source-short=0 reason=
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=5 length=[1.076354,1.373091]m
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=5 length=[1.076354,1.373091]m
+  exact-grid deterministic export SHA256=322F0E8714D175672E0F75468C9E6E2A82D07FC6B709790DCF5BDB653532B7E2
+PASS snap-epsilon-interpolants-and-label-preserved
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-oblique-larger-offsets-exactly-protected
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-genuine-fractional-transverse-no-larger-tolerance
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-device-component-pose-and-target-exactly-protected
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=3 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-addon-component-without-serialized-ref-protected
+  ok=True belts=8->8 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-two-near-lines-conflict-prevents-snap
+  ok=True belts=4->4 added=0 removed=0 restored=0 protected=0 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-near-noise-pole-collision-component-protected
+  ok=True belts=8->8 added=0 removed=0 restored=0 protected=8 snapped=8 native=0 excluded-source-short=0 reason=
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=8 length=[1.076356,1.373089]m
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=8 length=[1.076356,1.373089]m
+  exact-grid deterministic export SHA256=F6261F0B0E947F6D54E3A205BB8D09A83AEFC76C39F6281730DB8FB0F411732A
+PASS snap-near-integer-loop-safe-and-directed
+  ok=True belts=16->16 added=0 removed=0 restored=0 protected=16 snapped=0 native=0 excluded-source-short=0 reason=
+PASS snap-near-integer-loop-foreign-conflict-protected
+  ok=True belts=4->5 added=3 removed=2 restored=1 protected=0 snapped=4 native=1 excluded-source-short=0 reason=
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=4 length=[1.085313,1.384524]m
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=4 length=[1.085313,1.384524]m
+  exact-grid deterministic export SHA256=5F9A1197338A4F82E38D46668A1391FF697650B13666475A8C7A1373064584D9
+PASS snap-height-option-false-keeps-original-height
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=3 length=[1.076356,1.373089]m
+PASS snap-oracle-canonical-noise-is-permitted
+  snapping oracle rejected E_SNAP_REFERENCE_RELOCATION
+PASS snap-oracle-no-arbitrary-endpoint-relocation
+  snapping oracle rejected E_ENDPOINT_DIRECTION
+PASS snap-oracle-direction-reversal-rejected
+  snapping oracle rejected E_SNAP_REFERENCE_ATTACHMENT
+PASS snap-oracle-device-target-movement-not-waived
+  snapping oracle rejected E_AMBIGUOUS_ANCHOR
+PASS snap-oracle-foreign-conflict-rejected
+  snapping oracle rejected E_ANCHOR_DATA
+PASS snap-oracle-label-deletion-rejected
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  placement frames=576 new-links=2 length=[1.076356,1.373089]m
+  snapping oracle rejected E_SNAP_DEVICE_COLLISION
+PASS snap-oracle-pole-collision-rejected
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  snapping oracle rejected E_NEW_TOO_LONG
+PASS snap-oracle-new-long-link-rejected-not-filtered
+  source-pose-filter old-max-clean=576 source-working=576 rejected-source-short=0 rejected-source-long=0 source-collapsed=0; candidate never participates in pose selection
+  snapping oracle rejected E_NEW_TOO_SHORT
+PASS snap-oracle-new-short-link-rejected-not-filtered
+  snapping oracle rejected E_EXACT_DEVICE_TARGET
+PASS snap-oracle-secondary-device-target-no-tolerance-waiver
+  snapping oracle rejected E_ENDPOINT_DIRECTION
+PASS snap-oracle-loop-cut-rejected
+BATCH input=X:/戴森球计划/【MOD】修改仓库/7.蓝图Blueprints/BlueprintBeltSaver 测试蓝图 files=14 export=none
+  ok=True belts=1640->1702 added=139 removed=77 restored=22 protected=1484 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=454 new-links=170 length=[0.407123,1.776719]m
+  placement frames=454 new-links=170 length=[0.407123,1.776719]m
+PASS batch:1080传送带+360分拣器
+  ok=True belts=1856->1856 added=0 removed=0 restored=0 protected=1574 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:1440太阳帆（低效）v1.1
+  ok=True belts=1159->1159 added=0 removed=0 restored=0 protected=952 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:1440太阳帆（高效）
+  ok=True belts=2307->2307 added=0 removed=0 restored=0 protected=2069 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:16.4小火箭
+  ok=True belts=1159->1159 added=0 removed=0 restored=0 protected=952 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:2880太阳帆（高效）
+  ok=True belts=1893->1943 added=117 removed=67 restored=22 protected=1744 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=366 new-links=145 length=[0.442028,1.707344]m
+  placement frames=366 new-links=145 length=[0.442028,1.707344]m
+PASS batch:37.5小火箭 （需求氘棒）
+  ok=True belts=5010->5034 added=69 removed=45 restored=8 protected=4820 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=2 new-links=77 length=[0.599878,1.549781]m
+  placement frames=2 new-links=77 length=[0.599878,1.549781]m
+PASS batch:65.6低效火箭
+  ok=True belts=3175->3175 added=0 removed=0 restored=0 protected=3139 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:6k太阳帆
+  ok=True belts=80->80 added=0 removed=0 restored=0 protected=8 snapped=80 native=0 excluded-source-short=0 reason=
+PASS batch:80环带
+  ok=True belts=1097->1113 added=41 removed=25 restored=5 protected=990 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=460 new-links=49 length=[0.737497,1.772399]m
+  placement frames=460 new-links=49 length=[0.737497,1.772399]m
+PASS batch:B.150紫糖（刺笋）
+  ok=True belts=1240->1256 added=41 removed=25 restored=5 protected=1102 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=428 new-links=49 length=[0.734969,1.765470]m
+  placement frames=428 new-links=49 length=[0.734969,1.765470]m
+PASS batch:B.150紫糖（可燃冰）
+  ok=True belts=2163->2169 added=15 removed=9 restored=3 protected=1970 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=376 new-links=18 length=[0.675731,1.634329]m
+  placement frames=376 new-links=18 length=[0.675731,1.634329]m
+PASS batch:C1.150绿糖
+  ok=True belts=1000->1000 added=0 removed=0 restored=0 protected=863 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:C2-60-120-240反物质燃料棒（黑棒）
+  ok=True belts=432->432 added=0 removed=0 restored=0 protected=137 snapped=72 native=0 excluded-source-short=0 reason=
+PASS batch:长带测试图01
+BATCH TOTAL belts=24211->24385 added=422 removed=248 refused=0; net added is permitted for restoration
+BATCH input=X:/戴森球计划/【MOD】修改仓库/7.蓝图Blueprints/BlueprintBeltSaver 长带化导出/蓝图A-游戏外 files=14 export=none
+  ok=True belts=1612->1675 added=135 removed=72 restored=22 protected=1461 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=454 new-links=168 length=[0.407123,1.776719]m
+  placement frames=454 new-links=168 length=[0.407123,1.776719]m
+PASS batch:A_lib_1080传送带+360分拣器
+  ok=True belts=1383->1443 added=122 removed=62 restored=17 protected=1267 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=406 new-links=143 length=[0.416656,1.641907]m
+  placement frames=406 new-links=143 length=[0.416656,1.641907]m
+PASS batch:A_lib_1440太阳帆（低效）v1.1
+  ok=True belts=898->912 added=23 removed=9 restored=7 protected=802 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+PASS batch:A_lib_1440太阳帆（高效）
+  ok=True belts=1732->1756 added=41 removed=17 restored=11 protected=1641 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=438 new-links=58 length=[0.400436,1.791086]m
+  placement frames=438 new-links=58 length=[0.400436,1.791086]m
+PASS batch:A_lib_16.4小火箭
+  ok=True belts=898->912 added=23 removed=9 restored=7 protected=802 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+  placement frames=426 new-links=31 length=[0.430542,1.572505]m
+PASS batch:A_lib_2880太阳帆（高效）
+  ok=True belts=1866->1914 added=112 removed=64 restored=20 protected=1722 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=366 new-links=138 length=[0.442028,1.707344]m
+  placement frames=366 new-links=138 length=[0.442028,1.707344]m
+PASS batch:A_lib_37.5小火箭 （需求氘棒）
+  ok=True belts=4146->4189 added=88 removed=45 restored=12 protected=4000 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=2 new-links=103 length=[0.401334,1.671114]m
+  placement frames=2 new-links=103 length=[0.401334,1.671114]m
+PASS batch:A_lib_65.6低效火箭
+  ok=True belts=2741->2741 added=0 removed=0 restored=0 protected=2705 snapped=0 native=0 excluded-source-short=0 reason=
+PASS batch:A_lib_6k太阳帆
+  ok=True belts=52->80 added=68 removed=40 restored=4 protected=8 snapped=4 native=0 excluded-source-short=0 reason=
+  placement frames=884 new-links=72 length=[0.494343,1.425518]m
+  placement frames=884 new-links=72 length=[0.494343,1.425518]m
+PASS batch:A_lib_80环带
+  ok=True belts=932->955 added=53 removed=30 restored=8 protected=858 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=460 new-links=66 length=[0.479515,1.790859]m
+  placement frames=460 new-links=66 length=[0.479515,1.790859]m
+PASS batch:A_lib_B.150紫糖（刺笋）
+  ok=True belts=1054->1074 added=50 removed=30 restored=6 protected=975 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=428 new-links=59 length=[0.482479,1.784009]m
+  placement frames=428 new-links=59 length=[0.482479,1.784009]m
+PASS batch:A_lib_B.150紫糖（可燃冰）
+  ok=True belts=1769->1801 added=65 removed=33 restored=11 protected=1662 snapped=0 native=1 excluded-source-short=0 reason=
+  placement frames=376 new-links=79 length=[0.426963,1.734198]m
+  placement frames=376 new-links=79 length=[0.426963,1.734198]m
+PASS batch:A_lib_C1.150绿糖
+  ok=True belts=796->826 added=55 removed=25 restored=12 protected=720 snapped=0 native=0 excluded-source-short=0 reason=
+  placement frames=496 new-links=73 length=[0.530115,1.736109]m
+  placement frames=496 new-links=73 length=[0.530115,1.736109]m
+PASS batch:A_lib_C2-60-120-240反物质燃料棒（黑棒）
+  ok=True belts=300->413 added=218 removed=105 restored=27 protected=133 snapped=13 native=0 excluded-source-short=0 reason=
+  placement frames=856 new-links=278 length=[0.411972,1.425518]m
+  placement frames=856 new-links=278 length=[0.411972,1.425518]m
+PASS batch:A_lib_长带测试图01
+BATCH TOTAL belts=20179->20691 added=1053 removed=541 refused=0; net added is permitted for restoration
+SUMMARY PASS=88 FAIL=0 REFUSED=0 EXIT=0

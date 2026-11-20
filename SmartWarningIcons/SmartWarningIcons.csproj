@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>SmartWarningIcons</RootNamespace>
+    <AssemblyName>SmartWarningIcons</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
+    <PackageReference Include="DysonSphereProgram.GameLibs" Version="0.10.35.29088-r.0" IncludeAssets="compile" />
+  </ItemGroup>
+
+</Project>
