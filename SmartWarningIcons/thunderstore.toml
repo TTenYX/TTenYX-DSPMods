@@ -1,0 +1,49 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "TTenYX"
+name = "SmartWarningIcons"
+versionNumber = "0.1.0"
+description = "Splits the generic not-working sign into red insufficient-input and yellow output-piled-up icons, plus a configurable vein-depletion warning. 红色缺原料 + 黄色产物堆砌 + 可配置矿脉枯竭。"
+websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/SmartWarningIcons"
+containsNsfwContent = false
+
+[package.dependencies]
+xiaoye97-BepInEx = "5.4.17"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./dist"
+
+[[build.copy]]
+source = "./bin/Release/netstandard2.1/SmartWarningIcons.dll"
+target = "SmartWarningIcons.dll"
+
+[[build.copy]]
+source = "./assets/InsufficientInput.png"
+target = "assets/InsufficientInput.png"
+
+[[build.copy]]
+source = "./assets/InsufficientInputSmall.png"
+target = "assets/InsufficientInputSmall.png"
+
+[[build.copy]]
+source = "./assets/OutputPile.png"
+target = "assets/OutputPile.png"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[[build.copy]]
+source = "./assets/OutputPileSmall.png"
+target = "assets/OutputPileSmall.png"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "dyson-sphere-program", ]
+
+[publish.categories]
+dyson-sphere-program = [ "quality-of-life", ]

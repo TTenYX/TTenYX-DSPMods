@@ -1,0 +1,8 @@
+Profile=isolated BepInEx core and SmartWarningIcons only
+MOD SHA256=114F168445702EB4D69E48C24C8646BE24ED01718B884610D1CDCB311B2AFC6E; deployed copy identical; four assets identical
+Game Assembly-CSharp SHA256=EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C
+Sandbox=C:\Users\Administrator\AppData\Local\Temp\SmartWarningIcons-bdd230a0e0bd4aa49b42eb144e22c54d
+START pid=2060 time=2026-11-20T07:31:33.1075669+08:00
+EXIT pid=2060 code=0 time=2026-11-20T07:32:09.1053562+08:00
+Sandbox removed; original installation path and original saves were not targets of this run.
+RESULT PASS

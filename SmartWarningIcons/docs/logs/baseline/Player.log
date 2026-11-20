@@ -1,0 +1,726 @@
+Mono path[0] = 'C:/Users/Administrator/AppData/Local/Temp/SmartWarningIcons-92c35035f358417a8ae811316dc4b1da/game/DSPGAME_Data/Managed'
+Mono config path = 'C:/Users/Administrator/AppData/Local/Temp/SmartWarningIcons-92c35035f358417a8ae811316dc4b1da/game/MonoBleedingEdge/etc'
+Fallback handler could not load library C:/Users/Administrator/AppData/Local/Temp/SmartWarningIcons-92c35035f358417a8ae811316dc4b1da/game/DSPGAME_Data/MonoBleedingEdge/data-000001DB8FAEC160.dll
+Fallback handler could not load library C:/Users/Administrator/AppData/Local/Temp/SmartWarningIcons-92c35035f358417a8ae811316dc4b1da/game/DSPGAME_Data/MonoBleedingEdge/data-000001DB9536F040.dll
+Input System module state changed to: Initialized.
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+Initialize engine version: 2022.3.62f3c1 (1623fc0bbb97)
+[Subsystems] Discovering subsystems at path C:/Users/Administrator/AppData/Local/Temp/SmartWarningIcons-92c35035f358417a8ae811316dc4b1da/game/DSPGAME_Data/UnitySubsystems
+GfxDevice: creating device client; threaded=1; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: AMD Radeon RX 7900 XTX (ID=0x744c)
+    Vendor:   ATI
+    VRAM:     24560 MB
+    Driver:   32.0.21013.1000
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.039 seconds
+- Finished resetting the current domain, in  0.001 seconds
+<RI> Initializing input.
+<RI> Input initialized.
+D3D11 device created for Microsoft Media Foundation video decoding.
+<RI> Initialized touch support.
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+UnloadTime: 1.505300 ms
+[Message:   BepInEx] BepInEx 5.4.17.0 - DSPGAME (2026/1/22 21:18:38)
+[Info   :   BepInEx] Running under Unity v2022.3.62.1451004
+[Info   :   BepInEx] CLR runtime version: 4.0.30319.42000
+[Info   :   BepInEx] Supports SRE: True
+[Info   :   BepInEx] System platform: Bits64, Windows
+[Message:   BepInEx] Preloader started
+[Info   :   BepInEx] Loaded 1 patcher method from [BepInEx.Preloader 5.4.17.0]
+[Info   :   BepInEx] 1 patcher plugin loaded
+[Info   :   BepInEx] Patching [UnityEngine.CoreModule] with [BepInEx.Chainloader]
+[Message:   BepInEx] Preloader finished
+[Message:   BepInEx] Chainloader ready
+[Message:   BepInEx] Chainloader started
+[Info   :   BepInEx] 2 plugins to load
+[Warning:   BepInEx] Plugin [SmartWarningIcons.SelfTest 0.1.0] targets a wrong version of BepInEx (5.4.20.0) and might not work until you update
+[Warning:   BepInEx] Plugin [SmartWarningIcons 0.1.0] targets a wrong version of BepInEx (5.4.20.0) and might not work until you update
+[Info   :   BepInEx] Loading [SmartWarningIcons 0.1.0]
+[Info   :SmartWarningIcons] SmartWarningIcons 0.1.0 loaded (GUID: TTenYX.DSP.SmartWarningIcons)
+[Info   :   BepInEx] Loading [SmartWarningIcons.SelfTest 0.1.0]
+[Info   :SmartWarningIcons.SelfTest] Waiting for isolated game launch.
+[Message:   BepInEx] Chainloader startup complete
+[Info   :SmartWarningIcons] 警告图集已替换：signType 31 → 缺原料（红），signType 25 → 产物堆砌（黄），图集 1024×2048
+Releasing render texture that is set to be RenderTexture.active!
+Steam成就数据同步成功！游戏总成就数量：128
+No achievement save file!
+No Property file!
+Frame 1 Load Complete
+Game loaded, time cost: 0.1713942s
+Icon set generated. Time cost: 0.056 s
+Frame 3 Load Complete
+Frame 5 Load Complete
+Compute Thread Log: 
+DenebKaitos - I号星
+Generate Terrain 0.23550 s
+Generate Vegetables 0.01738 s
+Generate Veins 0.00877 s
+Compute Thread Log: 
+DenebKaitos - II号星
+Generate Terrain 0.14307 s
+Generate Vegetables 0.01823 s
+Generate Veins 0.00247 s
+Compute Thread Log: 
+DenebKaitos - III号星
+Generate Terrain 0.00434 s
+Generate Vegetables 0.00000 s
+Generate Veins 0.00000 s
+Compute Thread Log: 
+DenebKaitos - IV号星
+Generate Terrain 0.30340 s
+Generate Vegetables 0.01753 s
+Generate Veins 0.00148 s
+Compute Thread Log: 
+DenebKaitos - V号星
+Generate Terrain 0.11143 s
+Generate Vegetables 0.02554 s
+Generate Veins 0.00133 s
+Compute Thread Log: 
+DenebKaitos - VI号星
+Generate Terrain 0.13639 s
+Generate Vegetables 0.01159 s
+Generate Veins 0.00144 s
+Frame 9 Load Complete
+GameMain.Begin()
+CpuTopology 获取成功
+---- CPU 拓扑信息 ----
+物理核心数: 24
+最大性能等级: 1 （属于混合架构）
+逻辑处理器数：32
+逻辑处理器组数：1
+
+---- 物理核心详情 ----
+核心[00] 组[0] 性能等级 1 → 逻辑处理器: 0,1
+核心[01] 组[0] 性能等级 1 → 逻辑处理器: 2,3
+核心[02] 组[0] 性能等级 1 → 逻辑处理器: 4,5
+核心[03] 组[0] 性能等级 1 → 逻辑处理器: 6,7
+核心[04] 组[0] 性能等级 1 → 逻辑处理器: 8,9
+核心[05] 组[0] 性能等级 1 → 逻辑处理器: 10,11
+核心[06] 组[0] 性能等级 1 → 逻辑处理器: 12,13
+核心[07] 组[0] 性能等级 1 → 逻辑处理器: 14,15
+核心[08] 组[0] 性能等级 0 → 逻辑处理器: 16
+核心[09] 组[0] 性能等级 0 → 逻辑处理器: 17
+核心[10] 组[0] 性能等级 0 → 逻辑处理器: 18
+核心[11] 组[0] 性能等级 0 → 逻辑处理器: 19
+核心[12] 组[0] 性能等级 0 → 逻辑处理器: 20
+核心[13] 组[0] 性能等级 0 → 逻辑处理器: 21
+核心[14] 组[0] 性能等级 0 → 逻辑处理器: 22
+核心[15] 组[0] 性能等级 0 → 逻辑处理器: 23
+核心[16] 组[0] 性能等级 0 → 逻辑处理器: 24
+核心[17] 组[0] 性能等级 0 → 逻辑处理器: 25
+核心[18] 组[0] 性能等级 0 → 逻辑处理器: 26
+核心[19] 组[0] 性能等级 0 → 逻辑处理器: 27
+核心[20] 组[0] 性能等级 0 → 逻辑处理器: 28
+核心[21] 组[0] 性能等级 0 → 逻辑处理器: 29
+核心[22] 组[0] 性能等级 0 → 逻辑处理器: 30
+核心[23] 组[0] 性能等级 0 → 逻辑处理器: 31
+
+Task Enum
+BeforeUniverse = 51
+Universe = 101
+UniverseSimulator = 151
+PropertySystem = 301
+DataPrepare = 400
+Physics = 501
+Player = 601
+GalacticTransport = 701
+GalacticDigital = 751
+DysonSphereBeforeTick = 801
+FactoryBegin = 1001
+FactoryBeforeTick = 1100
+FactoryBeforePower = 1201
+EnemyGroundPrepare = 1250
+FactoryPowerSystem = 1301
+FactoryTransportInput = 1321
+EnemyGroundCombat = 1350
+FactoryConstructionSystem = 1400
+FactoryFacility = 1601
+EnemyGround = 1651
+FactoryLabResearch = 1700
+FactoryTransport = 1751
+FactoryLabOutput = 1800
+FactoryInserter = 2000
+FactoryStorage = 2101
+FactoryTank = 2121
+FactoryCargoPath = 2200
+FactorySplitter = 2259
+FactoryCargoTrafficMisc = 2300
+FactoryTransportOutput = 2401
+FactoryPresentCargo = 2501
+FactoryDigital = 2601
+FactoryRuin = 2701
+FactoryEnd = 2801
+CombatGround = 3001
+DefenseGround = 3100
+DefenseGroundTurret = 3151
+TrashSystem = 3201
+DysonSphere = 3301
+DysonSwarm = 3320
+DysonSwarmPost = 3321
+DysonSphereRocket = 3351
+SpaceSector = 3401
+EnemyGroundPostTick = 3501
+CombatGroundPostTick = 3601
+DefenseGroundPostTick = 3701
+SpaceSectorPostTick = 3801
+Audio = 3900
+Statistics = 4001
+WarningSystem = 4100
+StatisticsPostTick = 4201
+Scenario = 4301
+CollectPreferences = 4401
+Game loaded. Loading total time: 1.854 s
+Frame 10 Load Complete
+全部预加载9650个对象39.03 s
+GameMain.End()
+[Info   :SmartWarningIcons.SelfTest] Isolated sandbox requested.
+GameMain.OnDestroy()
+GameData.Destroy()
+Frame 1 Load Complete
+Icon set generated. Time cost: 0.055 s
+UIRoot.OnGameMainObjectCreated()
+UIGame OnOpen
+Frame 3 Load Complete
+Frame 5 Load Complete
+Compute Thread Log: 
+Arrioph - I号星
+Generate Terrain 0.19572 s
+Generate Vegetables 0.01531 s
+Generate Veins 0.00150 s
+Compute Thread Log: 
+Arrioph - II号星
+Generate Terrain 0.00428 s
+Generate Vegetables 0.00000 s
+Generate Veins 0.00000 s
+Compute Thread Log: 
+Arrioph - III号星
+Generate Terrain 0.13017 s
+Generate Vegetables 0.03796 s
+Generate Veins 0.00385 s
+Compute Thread Log: 
+Arrioph - IV号星
+Generate Terrain 0.18639 s
+Generate Vegetables 0.01999 s
+Generate Veins 0.00095 s
+Loading [Arrioph - III号星] factory
+step 0 complete
+vege count = 20618
+step 1 complete : vegetation model & physics
+vein count = 533
+step 2 complete : vein model & physics
+step 3 complete : prebuild model & physics
+step 4 complete : entity model & physics
+step 5 complete : craft model & physics
+step 6 complete : enemy model & physics
+step 7 complete : ruin model & physics
+step 8 complete : create rendering batch and sync buffers, time cost: 1.195 ms
+Frame 9 Load Complete
+GameMain.Begin()
+Game Creation Time: UTC-2026-11-19 23:22:34
+CpuTopology 获取成功
+---- CPU 拓扑信息 ----
+物理核心数: 24
+最大性能等级: 1 （属于混合架构）
+逻辑处理器数：32
+逻辑处理器组数：1
+
+---- 物理核心详情 ----
+核心[00] 组[0] 性能等级 1 → 逻辑处理器: 0,1
+核心[01] 组[0] 性能等级 1 → 逻辑处理器: 2,3
+核心[02] 组[0] 性能等级 1 → 逻辑处理器: 4,5
+核心[03] 组[0] 性能等级 1 → 逻辑处理器: 6,7
+核心[04] 组[0] 性能等级 1 → 逻辑处理器: 8,9
+核心[05] 组[0] 性能等级 1 → 逻辑处理器: 10,11
+核心[06] 组[0] 性能等级 1 → 逻辑处理器: 12,13
+核心[07] 组[0] 性能等级 1 → 逻辑处理器: 14,15
+核心[08] 组[0] 性能等级 0 → 逻辑处理器: 16
+核心[09] 组[0] 性能等级 0 → 逻辑处理器: 17
+核心[10] 组[0] 性能等级 0 → 逻辑处理器: 18
+核心[11] 组[0] 性能等级 0 → 逻辑处理器: 19
+核心[12] 组[0] 性能等级 0 → 逻辑处理器: 20
+核心[13] 组[0] 性能等级 0 → 逻辑处理器: 21
+核心[14] 组[0] 性能等级 0 → 逻辑处理器: 22
+核心[15] 组[0] 性能等级 0 → 逻辑处理器: 23
+核心[16] 组[0] 性能等级 0 → 逻辑处理器: 24
+核心[17] 组[0] 性能等级 0 → 逻辑处理器: 25
+核心[18] 组[0] 性能等级 0 → 逻辑处理器: 26
+核心[19] 组[0] 性能等级 0 → 逻辑处理器: 27
+核心[20] 组[0] 性能等级 0 → 逻辑处理器: 28
+核心[21] 组[0] 性能等级 0 → 逻辑处理器: 29
+核心[22] 组[0] 性能等级 0 → 逻辑处理器: 30
+核心[23] 组[0] 性能等级 0 → 逻辑处理器: 31
+
+Task Enum
+BeforeUniverse = 51
+Universe = 101
+UniverseSimulator = 151
+PropertySystem = 301
+DataPrepare = 400
+Physics = 501
+Player = 601
+GalacticTransport = 701
+GalacticDigital = 751
+DysonSphereBeforeTick = 801
+FactoryBegin = 1001
+FactoryBeforeTick = 1100
+FactoryBeforePower = 1201
+EnemyGroundPrepare = 1250
+FactoryPowerSystem = 1301
+FactoryTransportInput = 1321
+EnemyGroundCombat = 1350
+FactoryConstructionSystem = 1400
+FactoryFacility = 1601
+EnemyGround = 1651
+FactoryLabResearch = 1700
+FactoryTransport = 1751
+FactoryLabOutput = 1800
+FactoryInserter = 2000
+FactoryStorage = 2101
+FactoryTank = 2121
+FactoryCargoPath = 2200
+FactorySplitter = 2259
+FactoryCargoTrafficMisc = 2300
+FactoryTransportOutput = 2401
+FactoryPresentCargo = 2501
+FactoryDigital = 2601
+FactoryRuin = 2701
+FactoryEnd = 2801
+CombatGround = 3001
+DefenseGround = 3100
+DefenseGroundTurret = 3151
+TrashSystem = 3201
+DysonSphere = 3301
+DysonSwarm = 3320
+DysonSwarmPost = 3321
+DysonSphereRocket = 3351
+SpaceSector = 3401
+EnemyGroundPostTick = 3501
+CombatGroundPostTick = 3601
+DefenseGroundPostTick = 3701
+SpaceSectorPostTick = 3801
+Audio = 3900
+Statistics = 4001
+WarningSystem = 4100
+StatisticsPostTick = 4201
+Scenario = 4301
+CollectPreferences = 4401
+Game loaded. Loading total time: 1.744 s
+Frame 10 Load Complete
+start change playlist
+refresh music playlist
+[Info   :SmartWarningIcons] 警告图集已替换：signType 31 → 缺原料（红），signType 25 → 产物堆砌（黄），图集 1024×2048
+[Info   :SmartWarningIcons.SelfTest] SUMMARY PASS=30 FAIL=9
+GameMain.End()
+UIRoot.OnGameEnd()
+UIGame OnClose
+UIRunner.HandleApplicationQuit()
+GameMain.OnDestroy()
+GameData.Destroy()
+! Player Controller 提前销毁 !
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+Memory Statistics:
+[ALLOC_TEMP_TLS] TLS Allocator
+  StackAllocators : 
+    [ALLOC_TEMP_MAIN]
+      Peak usage frame count: [2.0 KB-4.0 KB]: 3831 frames, [4.0 KB-8.0 KB]: 54 frames, [8.0 KB-16.0 KB]: 281 frames, [16.0 KB-32.0 KB]: 129 frames, [32.0 KB-64.0 KB]: 76 frames, [64.0 KB-128.0 KB]: 180 frames, [128.0 KB-256.0 KB]: 6 frames, [256.0 KB-0.5 MB]: 569 frames, [0.5 MB-1.0 MB]: 2 frames, [1.0 MB-2.0 MB]: 199 frames, [4.0 MB-8.0 MB]: 1 frames
+      Initial Block Size 4.0 MB
+      Current Block Size 7.7 MB
+      Peak Allocated Bytes 7.7 MB
+      Overflow Count 20
+    [ALLOC_TEMP_Job.Worker 18]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Loading.PreloadManager]
+      Initial Block Size 256.0 KB
+      Current Block Size 0.5 MB
+      Peak Allocated Bytes 510.5 KB
+      Overflow Count 110
+    [ALLOC_TEMP_Background Job.Worker 8]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 10]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 16]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 6]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 4]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 27]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 14]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 17]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 3]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 12]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 1]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_AssetGarbageCollectorHelper] x 31
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 138 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 5]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 13]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 11]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 2]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 3]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 0]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 20]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 11]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 4]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BatchDeleteObjects]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 30]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 248 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 6]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 0]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 368 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 21]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 26]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 328 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 5]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 9]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 25]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 368 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 14]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 29]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 368 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 13]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_EnlightenWorker] x 16
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 15]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 2]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 7]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 22]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_UnityGfxDeviceWorker]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 99.5 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 28]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 408 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 9]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 8]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 7]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 25.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 23]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 1]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 29.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 10]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 15]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 24]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 19]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 12]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 3.9 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Loading.AsyncRead]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 426 B
+      Overflow Count 0
+[ALLOC_DEFAULT] Dual Thread Allocator
+  Peak main deferred allocation count 172166
+    [ALLOC_BUCKET]
+      Large Block size 4.0 MB
+      Used Block count 1
+      Peak Allocated bytes 4.0 MB
+      Failed Allocations. Bucket layout:
+        16B: 43 Subsections = 44032 buckets. Failed count: 481933
+        32B: 16 Subsections = 8192 buckets. Failed count: 143987
+        48B: 38 Subsections = 12970 buckets. Failed count: 287277
+        64B: 33 Subsections = 8448 buckets. Failed count: 98195
+        80B: 119 Subsections = 24371 buckets. Failed count: 36625
+        96B: 3 Subsections = 512 buckets. Failed count: 18921
+        112B: 2 Subsections = 292 buckets. Failed count: 26360
+        128B: 2 Subsections = 256 buckets. Failed count: 124648
+    [ALLOC_DEFAULT_MAIN]
+      Peak usage frame count: [1.00 GB-2.00 GB]: 5328 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 85
+      Peak Allocated memory 1.49 GB
+      Peak Large allocation bytes 213.2 MB
+    [ALLOC_DEFAULT_THREAD]
+      Peak usage frame count: [256.0 MB-0.50 GB]: 5328 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 4
+      Peak Allocated memory 302.2 MB
+      Peak Large allocation bytes 275.9 MB
+[ALLOC_TEMP_JOB_1_FRAME]
+  Initial Block Size 2.0 MB
+  Used Block Count 0
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_2_FRAMES]
+  Initial Block Size 2.0 MB
+  Used Block Count 0
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_4_FRAMES (JobTemp)]
+  Initial Block Size 2.0 MB
+  Used Block Count 1
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_ASYNC (Background)]
+  Initial Block Size 1.0 MB
+  Used Block Count 1
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_GFX] Dual Thread Allocator
+  Peak main deferred allocation count 74
+    [ALLOC_BUCKET]
+      Large Block size 4.0 MB
+      Used Block count 1
+      Peak Allocated bytes 4.0 MB
+      Failed Allocations. Bucket layout:
+        16B: 43 Subsections = 44032 buckets. Failed count: 481933
+        32B: 16 Subsections = 8192 buckets. Failed count: 143987
+        48B: 38 Subsections = 12970 buckets. Failed count: 287277
+        64B: 33 Subsections = 8448 buckets. Failed count: 98195
+        80B: 119 Subsections = 24371 buckets. Failed count: 36625
+        96B: 3 Subsections = 512 buckets. Failed count: 18921
+        112B: 2 Subsections = 292 buckets. Failed count: 26360
+        128B: 2 Subsections = 256 buckets. Failed count: 124648
+    [ALLOC_GFX_MAIN]
+      Peak usage frame count: [128.0 MB-256.0 MB]: 5273 frames, [256.0 MB-0.50 GB]: 55 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 15
+      Peak Allocated memory 274.5 MB
+      Peak Large allocation bytes 52.4 MB
+    [ALLOC_GFX_THREAD]
+      Peak usage frame count: [8.0 MB-16.0 MB]: 4129 frames, [16.0 MB-32.0 MB]: 1199 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 2
+      Peak Allocated memory 16.1 MB
+      Peak Large allocation bytes 0 B
+[ALLOC_CACHEOBJECTS] Dual Thread Allocator
+  Peak main deferred allocation count 4
+    [ALLOC_BUCKET]
+      Large Block size 4.0 MB
+      Used Block count 1
+      Peak Allocated bytes 4.0 MB
+      Failed Allocations. Bucket layout:
+        16B: 43 Subsections = 44032 buckets. Failed count: 481933
+        32B: 16 Subsections = 8192 buckets. Failed count: 143987
+        48B: 38 Subsections = 12970 buckets. Failed count: 287277
+        64B: 33 Subsections = 8448 buckets. Failed count: 98195
+        80B: 119 Subsections = 24371 buckets. Failed count: 36625
+        96B: 3 Subsections = 512 buckets. Failed count: 18921
+        112B: 2 Subsections = 292 buckets. Failed count: 26360
+        128B: 2 Subsections = 256 buckets. Failed count: 124648
+    [ALLOC_CACHEOBJECTS_MAIN]
+      Peak usage frame count: [128.0 MB-256.0 MB]: 5328 frames
+      Requested Block Size 4.0 MB
+      Peak Block count 46
+      Peak Allocated memory 193.9 MB
+      Peak Large allocation bytes 32.9 MB
+    [ALLOC_CACHEOBJECTS_THREAD]
+      Peak usage frame count: [32.0 MB-64.0 MB]: 5327 frames, [64.0 MB-128.0 MB]: 1 frames
+      Requested Block Size 4.0 MB
+      Peak Block count 21
+      Peak Allocated memory 94.8 MB
+      Peak Large allocation bytes 30.3 MB
+[ALLOC_TYPETREE] Dual Thread Allocator
+  Peak main deferred allocation count 0
+    [ALLOC_BUCKET]
+      Large Block size 4.0 MB
+      Used Block count 1
+      Peak Allocated bytes 4.0 MB
+      Failed Allocations. Bucket layout:
+        16B: 43 Subsections = 44032 buckets. Failed count: 481933
+        32B: 16 Subsections = 8192 buckets. Failed count: 143987
+        48B: 38 Subsections = 12970 buckets. Failed count: 287277
+        64B: 33 Subsections = 8448 buckets. Failed count: 98195
+        80B: 119 Subsections = 24371 buckets. Failed count: 36625
+        96B: 3 Subsections = 512 buckets. Failed count: 18921
+        112B: 2 Subsections = 292 buckets. Failed count: 26360
+        128B: 2 Subsections = 256 buckets. Failed count: 124648
+    [ALLOC_TYPETREE_MAIN]
+      Peak usage frame count: [32.0 KB-64.0 KB]: 4818 frames, [64.0 KB-128.0 KB]: 510 frames
+      Requested Block Size 2.0 MB
+      Peak Block count 1
+      Peak Allocated memory 80.0 KB
+      Peak Large allocation bytes 0 B
+    [ALLOC_TYPETREE_THREAD]
+      Peak usage frame count: [16.0 KB-32.0 KB]: 5328 frames
+      Requested Block Size 2.0 MB
+      Peak Block count 1
+      Peak Allocated memory 19.3 KB
+      Peak Large allocation bytes 0 B
