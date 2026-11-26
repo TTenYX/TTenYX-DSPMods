@@ -361,6 +361,39 @@ namespace SmartWarningIcons.Tests
             Case("miner minimum exactly at threshold", f => { Miner(f); f.Local.veinPool[1].amount = f.Local.veinPool[2].amount = 1000; }, 3, 0);
             Case("water pump excluded", f => Miner(f, EMinerType.Water), 3, 0);
             Case("oil extractor excluded", f => Miner(f, EMinerType.Oil), 3, 0);
+
+            void SetUtilizationLevel(Fixture f, int level)
+            {
+                f.Data.history.techStates = new Dictionary<int, TechState> { [3606] = new TechState { curLevel = level } };
+            }
+            Check("infinite resources hide the depletion sign", () =>
+            {
+                var f = new Fixture();
+                f.Data.gameDesc = new GameDesc { resourceMultiplier = 100f };
+                Miner(f);
+                f.Local.veinPool[2].amount--;
+                f.Tick();
+                return f.Expect(3, 0) + "; total 999 < threshold 1000 but resources are infinite";
+            });
+            Check("vein utilization level 390 hides the depletion sign", () =>
+            {
+                var f = new Fixture();
+                SetUtilizationLevel(f, 390);
+                Miner(f);
+                f.Local.veinPool[2].amount--;
+                f.Tick();
+                return f.Expect(3, 0) + "; tech 3606 at level 390, total 999";
+            });
+            Case("vein utilization level 389 still warns", f =>
+            { SetUtilizationLevel(f, 389); Miner(f); f.Local.veinPool[2].amount--; }, 3, SignData.CUT_PRODUCTION_SOON);
+            Check("blank history without tech dictionary still warns", () =>
+            {
+                var f = new Fixture();
+                Miner(f);
+                f.Local.veinPool[2].amount--;
+                f.Tick();
+                return f.Expect(3, SignData.CUT_PRODUCTION_SOON) + "; techStates dict is null";
+            });
             Case("vein depletion disabled leaves native warning intact", f =>
             { vein.Value = false; Miner(f); f.Local.entitySignPool[3].signType = SignData.CUT_PRODUCTION_SOON; }, 3, SignData.CUT_PRODUCTION_SOON);
             vein.Value = true;

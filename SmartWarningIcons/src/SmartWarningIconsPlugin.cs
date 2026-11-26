@@ -18,7 +18,7 @@ namespace SmartWarningIcons
     {
         public const string Guid = "TTenYX.DSP.SmartWarningIcons";
         public const string Name = "SmartWarningIcons";
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
 
         internal static ManualLogSource Log;
         internal static string PluginDir;
