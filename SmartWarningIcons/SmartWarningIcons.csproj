@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="tests/**/*.cs" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
