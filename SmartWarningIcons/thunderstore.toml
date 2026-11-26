@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "TTenYX"
 name = "SmartWarningIcons"
-versionNumber = "1.1.0"
+versionNumber = "1.1.1"
 description = "Splits the generic not-working sign into red insufficient-input and yellow output-piled-up icons, plus a configurable vein-depletion warning. 红色缺原料 + 黄色产物堆砌 + 可配置矿脉枯竭。"
 websiteUrl = "https://github.com/TTenYX/TTenYX-DSPMods/tree/main/SmartWarningIcons"
 containsNsfwContent = false
