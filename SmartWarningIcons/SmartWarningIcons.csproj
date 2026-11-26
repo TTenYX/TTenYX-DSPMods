@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <LangVersion>latest</LangVersion>
     <RootNamespace>SmartWarningIcons</RootNamespace>
     <AssemblyName>SmartWarningIcons</AssemblyName>

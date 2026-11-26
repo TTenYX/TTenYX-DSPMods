@@ -53,7 +53,7 @@ namespace SmartWarningIcons
 
         private static Texture2D LoadTexture(string name, int size)
         {
-            var bytes = File.ReadAllBytes(Path.Combine(SmartWarningIconsPlugin.PluginDir, "assets", name));
+            var bytes = File.ReadAllBytes(ResolveAssetPath(name));
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             try
             {
@@ -67,6 +67,19 @@ namespace SmartWarningIcons
                 Object.Destroy(texture);
                 throw;
             }
+        }
+
+        private static string ResolveAssetPath(string name)
+        {
+            var root = SmartWarningIconsPlugin.PluginDir;
+            // 常规安装图标在 assets/ 子目录；个别管理器或手动解压会把包内文件平铺到插件根目录，两处都找。
+            var nested = Path.Combine(root, "assets", name);
+            if (File.Exists(nested))
+                return nested;
+            var flat = Path.Combine(root, name);
+            if (File.Exists(flat))
+                return flat;
+            throw new FileNotFoundException($"Icon asset not found under assets/ or the plugin folder: {name}");
         }
 
         /// <summary>恢复被换回的图集；正常帧只比较当前材质的纹理引用。</summary>
