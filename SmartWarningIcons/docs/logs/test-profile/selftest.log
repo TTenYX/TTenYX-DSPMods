@@ -1,7 +1,0 @@
-SmartWarningIcons in-game regression 2026-11-20T07:27:33.0225178+08:00
-Runtime: DSP 0.10.35.29151; Unity 2022.3.62f3c1; GPU Direct3D11 / AMD Radeon RX 7900 XTX
-PASS private save folder :: C:\Users\Administrator\AppData\Local\Temp\SmartWarningIcons-60b6a3d156b34ea5aa864c6b8e0d852d\documents\Dyson Sphere Program\Save
-PASS new sandbox and live factory ticks :: planet=103; factory ticks observed=120
-PASS TEST loaded the new atlas :: 1024x2048; both 256x256 cells match PNG samples
-PASS TEST red/yellow signal sprites and buttons :: 18 options; custom signals 531/525 and masks 0x40000000/0x01000000 present
-SUMMARY PASS=4 FAIL=0
